@@ -1,0 +1,33 @@
+[package]
+name = "folded_streaming_rans"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+debug = true
+
+[dependencies]
+readonly = "0.2.11"
+anyhow = "1.0.75"
+sux = { git =  "https://github.com/vigna/sux-rs", branch = "compact" }
+itertools = "0.11.0"
+bitvec = "1.0.1"
+sucds = "0.8.1"
+
+# Packages listed there are shared by tests, benchmarks, and examples. They are not, however, linked into regular
+# builds of your library
+[dev-dependencies]
+criterion = "0.5.1"
+pprof = { version = "0.13.0", features = ["flamegraph", "criterion", "frame-pointer"] }
+rand = "0.8.5"
+rand_distr = "0.4.3"
+dsi-progress-logger = "0.2.2"
+stderrlog = "0.5.4"
+rstest = "0.18.2"
+
+[[bench]]
+name = "bench_main"
+harness = false
+
+
+
