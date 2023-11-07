@@ -1,8 +1,6 @@
-[![Actions Status](https://github.com/LorenzoCimini/streaming_rans/workflows/Build%20and%20Test/badge.svg)](https://github.com/LorenzoCimini/streaming_rans/actions)
-
 # StreamingFoldedAns
 This library implements a folded streaming range asymmetric numeral system coder. This coder uses a 64-bit state 
-and 32 bit renormalization step as well as other constrained discussed below.
+and 32 bit renormalization with some other constrains discussed below.
 
 ### Constraints
 #### K
@@ -39,7 +37,7 @@ don't need to store the upper bound of the state's allowed interval.
 Usually, ANS-based coders decode symbols in reverse order (i.e. LIFO order). To prioritize decoding speed, this implementation 
 encode symbols in reverse order and decode in correct input order.
 
-#### Frequencies approximation process
+#### Symbol folding
 Our context is characterized by an extreme long sequence of different symbols. For this reason, this implementation uses the
 technique called "symbol folding" (from Moffat and Petri's [paper](https://dl.acm.org/doi/10.1145/3397175)) in order to reduce the size of the alphabet. 
 After the folding process, the symbols are bucketed into buckets of size multiple of `RADIX`, each of one representing 
@@ -49,17 +47,15 @@ a specific set of symbols.
 ---
 ### Decoder
 #### Implementing the symbol(y) primitive
-
-#### Streaming invariants
-In this case we will use the lower bound of the interval, equal to $2^{log_{2}M} * K$ to be sure that we always stay within
-the allowed range.
-
-## TODOs
-1. Non sprecare i bit dovuti all'inizializzazione dello stato.
-2. Potremmo voler memorizzare le frequenze originali piuttosto che quelle approssimate dal momento che saranno con tutta
-   probabilità più piccole e, di conseguenza, occuperanno meno spazio.
+This primitive is implemented in three flavors:
+1. Using a vector containing, in each position, the data associated to the symbol equal to the position itself. This solution 
+   is the fastest one but implies a lot of overhead;
+2. using EliasFano, that used the predecessor primitive in order to find the index associated to correct the symbol;
+3. using a Rank9Sel bit vector, that uses the rank primitive in order to find the index associated to the symbol.
 
 
-## PS:
-1. Symbol is now u64. Usize is architecture dependent, so it's not a good idea to use it as a symbol since we could want to
-   encode/decode on different architectures. Thus, using usize, would be a problem.
+## Open points
+1. We can encode some information in the initial state in order to avoid wasting bits;
+2. We could store real frequencies instead of the approximated ones since they are likely to be smaller.
+
+   

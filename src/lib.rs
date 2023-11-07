@@ -16,6 +16,7 @@ pub const LOG2_B: u8 = 32;
 /// # Note
 /// This implementation assumes that the maximum symbol is u16::MAX. If more symbols are present,
 /// RADIX and FIDELITY should be changed since ANS gets worse with a lot of symbols.
+///
 /// Moreover, since most of the DS used within the project are tables where symbols data is located
 /// in the index equal to the symbol, this type can be interpreted as the maximum symbol index we can
 /// have
