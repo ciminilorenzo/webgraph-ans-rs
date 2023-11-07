@@ -4,5 +4,6 @@ mod benchmarks;
 
 criterion_main! {
     benchmarks::model_for_decoder::decoder_benches,
-    benchmarks::encoder::encoder_benches
+    benchmarks::encoder::encoder_benches,
+    benchmarks::decoder::decoder_benches,
 }

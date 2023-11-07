@@ -2,9 +2,9 @@ use std::cmp::max;
 
 use bitvec::prelude::{BitVec, Msb0};
 use bitvec::view::BitView;
+use bitvec::field::BitField;
 
 use anyhow::{bail, Result};
-use bitvec::field::BitField;
 
 use crate::{RawSymbol, Symbol};
 use crate::utils::{entropy, cross_entropy};

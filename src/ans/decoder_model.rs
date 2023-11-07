@@ -35,15 +35,17 @@ impl EliasFanoFrame {
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
 
         let mut symbols = Vec::with_capacity(nonzero_symbols);
-        let mut frame_builder = EliasFanoBuilder::new(
-            nonzero_symbols + 1,
-            (1 << log2_frame_size) + 1);
+        let mut frame_builder = EliasFanoBuilder::new(nonzero_symbols + 1, (1 << log2_frame_size) + 1);
 
         for (sym, sym_data) in table.iter().enumerate() {
             if sym_data.freq == 0 { continue; }
 
             frame_builder.push(sym_data.cumul_freq as usize).unwrap();
-            symbols.push(DecoderModelEntry {symbol: sym as Symbol, freq: sym_data.freq as u32, cumul_freq: sym_data.cumul_freq as u32});
+            symbols.push(DecoderModelEntry {
+                symbol: sym as Symbol,
+                freq: sym_data.freq as u32,
+                cumul_freq: sym_data.cumul_freq as u32
+            });
         }
         frame_builder.push(1 << log2_frame_size).unwrap();
 
@@ -114,6 +116,7 @@ impl Index<State> for VecFrame {
 }
 
 
+#[derive(Clone)]
 pub struct Rank9SelFrame {
 
     /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.

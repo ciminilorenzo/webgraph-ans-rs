@@ -1,6 +1,6 @@
-# StreamingFoldedAns
+# Folded Streaming Range ANS Coder
 This library implements a folded streaming range asymmetric numeral system coder. This coder uses a 64-bit state 
-and 32 bit renormalization with some other constrains discussed below.
+and 32 bit renormalization step with some other constrains discussed below.
 
 ### Constraints
 #### K
@@ -35,7 +35,7 @@ the upper bound for each symbol (the maximum 'safe' starting point for each symb
 don't need to store the upper bound of the state's allowed interval.
 #### Encoding direction
 Usually, ANS-based coders decode symbols in reverse order (i.e. LIFO order). To prioritize decoding speed, this implementation 
-encode symbols in reverse order and decode in correct input order.
+encodes symbols in reverse order in order to have the decoded sequence in the correct order.
 
 #### Symbol folding
 Our context is characterized by an extreme long sequence of different symbols. For this reason, this implementation uses the

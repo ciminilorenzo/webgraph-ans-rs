@@ -22,7 +22,6 @@ pub struct FoldedANSModel4Encoder {
 
 impl FoldedANSModel4Encoder {
 
-    // ASSUMPION: firsts natural numbers are the most frequent
     pub fn new(input: &[RawSymbol], radix: u8, fidelity: u8) -> Self {
         let presumed_max_bucket = fold_symbol(MAX_RAW_SYMBOL, false, None, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];

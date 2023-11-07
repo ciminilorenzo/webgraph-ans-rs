@@ -43,7 +43,7 @@ pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T> where
     /// Logarithm (base 2) of the frame size.
     log2_frame_size: u8,
 }
-// trait bound on T: Index<State> with output = DecoderModelEntry
+
 impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDELITY, T> where
     T: Index<State, Output = DecoderModelEntry>
 {
