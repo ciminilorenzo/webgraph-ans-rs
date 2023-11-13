@@ -63,6 +63,7 @@ impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDE
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&mut self) -> Vec<RawSymbol> {
         let mut decoded = Vec::new(); // if we save the size of the encoded list, we can preallocate the right amount of space!
+        let mut iter = self.normalized_bits.rchunks(LOG2_B as usize);
 
         loop {
             let slot = self.state & self.frame_mask as State;
@@ -73,11 +74,10 @@ impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDE
             self.state = (self.state >> self.log2_frame_size) * symbol_entry.freq as State + slot as State - symbol_entry.cumul_freq as State;
 
             if self.state <= self.lower_bound {
-                if self.normalized_bits.is_empty() { break; }
-
-                // TODO: try to bench with https://docs.rs/bitvec/1.0.1/bitvec/slice/struct.BitSlice.html#method.windows instead of this
-                let bits = self.normalized_bits.drain(self.normalized_bits.len() - LOG2_B as usize..).collect::<BitVec>();
-                self.state = ((self.state << LOG2_B) | bits.load::<State>()) as State;
+                match iter.next() {
+                    Some(x) => self.state = ((self.state << LOG2_B) | x.load::<State>()) as State,
+                    None => break,
+                }
             }
         }
         decoded
