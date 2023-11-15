@@ -29,6 +29,17 @@ pub fn cross_entropy(distr: &[usize], m: f64, other_distr: &[usize], other_m: f6
     cross_entropy.neg()
 }
 
+pub fn self_entropy(distr: &[usize], m: f64) -> f64 {
+    let mut self_entropy = 0.0;
+
+    distr.iter().for_each(|freq| {
+        if *freq == 0 { return; }
+
+        self_entropy += *freq as f64 * f64::log2(m / *freq as f64);
+    });
+    self_entropy
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -45,6 +56,14 @@ mod tests {
         let distr = [3_usize,3,4];
         let other_distr = [4_usize,2,4];
         assert_eq!("1.62", format!("{:.2}", cross_entropy(&distr, 10_f64, &other_distr, 10_f64)));
+    }
+
+    #[test]
+    fn test_self_entropy() {
+        let distr = [3,3,2,1,1];
+        let m = 10;
+
+        assert_eq!("21.71", format!("{:.2}", self_entropy(&distr, m as f64)));
     }
 }
 

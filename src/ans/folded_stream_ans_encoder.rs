@@ -93,7 +93,6 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         state
     }
 
-    // TODO: this will write in the output stream
     pub fn serialize(&mut self) -> (Vec<EncoderModelEntry>, State, u8, BitVec, BitVec) {
         (self.model.to_raw_parts(), self.state, self.model.log2_frame_size, self.normalized_bits.clone(), self.folded_bits.clone())
     }

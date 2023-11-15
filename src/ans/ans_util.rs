@@ -26,15 +26,8 @@ pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut Bi
         let bit_to_cut = cuts as u8 * radix;
 
         stream_bits.then(|| {
-            let mask = ((1 << bit_to_cut) - 1) as RawSymbol;
+            let mask = ((1_u64 << bit_to_cut) - 1) as RawSymbol;
 
-            // Now let's push only the bits we actually extracted from the original symbol.
-            // `bits` contains usize bits thus we would push this amount of bits instead of the
-            // `bit_to_cut` number of bits we extracted.
-            // -> We need to split the bitslice.
-            //
-            // Eventually, we are reversing the bit since in the decoder we use the drain method
-            // which takes bits from [here --> to here]
             let mut bits = (symbol & mask)
                 .view_bits::<Msb0>()
                 .to_bitvec()
@@ -70,6 +63,10 @@ pub fn undo_fold_symbol(symbol: Symbol, radix: u8, fidelity: u8, folded_bits: &m
         original_sym
     }
 }
+
+/// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
+/// distribution of frequencies.
+const TETA: f64 = 1.001;
 
 pub fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, usize) {
     let mut total_freq = 0;
@@ -111,10 +108,13 @@ pub fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, 
                     frame_size as f64,
                 );
 
-                if cross_entropy <= entropy * 1.001 {
+                // we are done if the cross entropy of the new distr is lower than the entropy of
+                // the original distribution times a multiplicative factor TETA.
+                if cross_entropy <= entropy * TETA {
                     approx_freqs = new_freqs;
                     break;
                 } else {
+                    // else try with a bigger frame size
                     frame_size *= 2;
                 }
             },

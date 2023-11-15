@@ -5,6 +5,7 @@ edition = "2021"
 
 [profile.release]
 debug = true
+opt-level = 3
 
 [dependencies]
 readonly = "0.2.11"
@@ -14,8 +15,7 @@ itertools = "0.11.0"
 bitvec = "1.0.1"
 sucds = "0.8.1"
 
-# Packages listed there are shared by tests, benchmarks, and examples. They are not, however, linked into regular
-# builds of your library
+
 [dev-dependencies]
 criterion = "0.5.1"
 pprof = { version = "0.13.0", features = ["flamegraph", "criterion", "frame-pointer"] }

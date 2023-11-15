@@ -1,4 +1,4 @@
-use criterion::{BenchmarkId, black_box, Criterion, criterion_group};
+use criterion::{BenchmarkId, Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
 
@@ -41,13 +41,13 @@ fn probing_benchmark(c: &mut Criterion) {
 
     for slot_to_probe in slots_to_probe.iter() {
         group.bench_with_input(BenchmarkId::new("with elias", slot_to_probe), &slot_to_probe,
-                               |b, i| b.iter(|| &elias_frame[black_box(**i as State)]));
+                               |b, i| b.iter(|| &elias_frame[**i as State]));
 
         group.bench_with_input(BenchmarkId::new("with vec", slot_to_probe), &slot_to_probe,
-                               |b, i| b.iter(|| &vec_frame[black_box(**i as State)]));
+                               |b, i| b.iter(|| &vec_frame[**i as State]));
 
         group.bench_with_input(BenchmarkId::new("with Rank9Sel", slot_to_probe), &slot_to_probe,
-                               |b, i| b.iter(|| &bitvec_frame[black_box(**i as State)]));
+                               |b, i| b.iter(|| &bitvec_frame[**i as State]));
 
     }
     group.finish();

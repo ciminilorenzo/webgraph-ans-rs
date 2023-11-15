@@ -2,6 +2,11 @@
 This library implements a folded streaming range asymmetric numeral system coder. This coder uses a 64-bit state 
 and 32 bit renormalization step with some other constrains discussed below.
 
+Our context is characterized by an extreme long sequence of different symbols. For this reason, this implementation uses the
+technique called "symbol folding" (from Moffat and Petri's [paper](https://dl.acm.org/doi/10.1145/3397175)) in order to reduce the size of the alphabet.
+After the folding process, the symbols are bucketed into buckets of size multiple of `RADIX`, each of one representing
+a specific set of symbols.
+
 ### Constraints
 #### K
 According to Moffat and Petri's [paper](https://dl.acm.org/doi/10.1145/3397175) tries, the best value to use is 16 since it generally improves the compression
@@ -11,11 +16,11 @@ effectiveness. For this reason, we set it as default:
  I = [M * 2^4; 2^b * M * 2^4]
 ```
 
-### B
+#### B
 This parameter determines how many bits are extracted/inserted from/to the state during the encoding/decoding process. Let's
 use a 32-bit normalization.
 
-### State's allowed interval
+#### State's allowed interval and M
 Having `B` and `K` fixed according to what it's been said, means that the state's interval is going to be:
 ```
 I = [M * K, M * B * k)
@@ -29,23 +34,20 @@ This implementation assumes that the most frequent symbols are located in the lo
 
 ---
 ### Encoder
-#### Streaming invariants
-In order to be sure that the new state won't fall outside the allowed interval, we will calculate
-the upper bound for each symbol (the maximum 'safe' starting point for each symbol). Thus, we
-don't need to store the upper bound of the state's allowed interval.
+
+#### Structure
+
+
 #### Encoding direction
 Usually, ANS-based coders decode symbols in reverse order (i.e. LIFO order). To prioritize decoding speed, this implementation 
 encodes symbols in reverse order in order to have the decoded sequence in the correct order.
-
-#### Symbol folding
-Our context is characterized by an extreme long sequence of different symbols. For this reason, this implementation uses the
-technique called "symbol folding" (from Moffat and Petri's [paper](https://dl.acm.org/doi/10.1145/3397175)) in order to reduce the size of the alphabet. 
-After the folding process, the symbols are bucketed into buckets of size multiple of `RADIX`, each of one representing 
-a specific set of symbols.
  
 
 ---
 ### Decoder
+
+#### Structure
+
 #### Implementing the symbol(y) primitive
 This primitive is implemented in three flavors:
 1. Using a vector containing, in each position, the data associated to the symbol equal to the position itself. This solution 
@@ -54,7 +56,7 @@ This primitive is implemented in three flavors:
 3. using a Rank9Sel bit vector, that uses the rank primitive in order to find the index associated to the symbol.
 
 
-## Open points
+## Ideas
 1. We can encode some information in the initial state in order to avoid wasting bits;
 2. We could store real frequencies instead of the approximated ones since they are likely to be smaller.
 

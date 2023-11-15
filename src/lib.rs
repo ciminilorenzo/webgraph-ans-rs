@@ -1,5 +1,5 @@
 pub mod ans;
-mod utils;
+pub mod utils;
 
 pub const K: u8 = 16;
 pub const K_LOG2: u8 = 4;

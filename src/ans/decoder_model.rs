@@ -43,8 +43,8 @@ impl EliasFanoFrame {
             frame_builder.push(sym_data.cumul_freq as usize).unwrap();
             symbols.push(DecoderModelEntry {
                 symbol: sym as Symbol,
-                freq: sym_data.freq as u32,
-                cumul_freq: sym_data.cumul_freq as u32
+                freq: sym_data.freq,
+                cumul_freq: sym_data.cumul_freq
             });
         }
         frame_builder.push(1 << log2_frame_size).unwrap();
@@ -94,8 +94,8 @@ impl VecFrame {
                         unsafe {
                             let entry = vec.get_unchecked_mut(i as usize);
                             entry.symbol = symbol as Symbol;
-                            entry.freq = freq as u32;
-                            entry.cumul_freq = cumul_freq as u32;
+                            entry.freq = freq;
+                            entry.cumul_freq = cumul_freq;
                         }
                     }
                     index += 1;
@@ -144,7 +144,7 @@ impl Rank9SelFrame {
                     *bit = true;
                 }
             }
-            symbols.push(DecoderModelEntry {symbol: sym as Symbol, freq: sym_data.freq as u32, cumul_freq: sym_data.cumul_freq as u32});
+            symbols.push(DecoderModelEntry {symbol: sym as Symbol, freq: sym_data.freq, cumul_freq: sym_data.cumul_freq});
         }
 
         Self {

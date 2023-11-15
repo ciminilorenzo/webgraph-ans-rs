@@ -30,12 +30,7 @@ impl FoldedANSModel4Encoder {
 
         for sym in input {
             let folded_sym = fold_symbol(*sym, false, None, radix, fidelity);
-
-            if let Some(sym_freq) = frequencies.get_mut(folded_sym as usize) {
-                *sym_freq += 1;
-            } else {
-                frequencies[folded_sym as usize] += 1;
-            }
+            *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
             max_sym = std::cmp::max(max_sym, folded_sym);
             n += 1;
         }
