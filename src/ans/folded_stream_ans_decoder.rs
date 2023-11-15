@@ -3,9 +3,9 @@ use std::ops::Index;
 use bitvec::field::BitField;
 use bitvec::vec::BitVec;
 
-use crate::{K_LOG2, LOG2_B, RawSymbol, State};
 use crate::ans::ans_util::undo_fold_symbol;
 use crate::ans::decoder_model::DecoderModelEntry;
+use crate::{RawSymbol, State, K_LOG2, LOG2_B};
 
 /// # Folded Streaming ANS-based Encoder
 /// A streaming ANS-based decoder which uses the technique called "symbol folding" (from Moffat and Petri's
@@ -21,8 +21,9 @@ use crate::ans::decoder_model::DecoderModelEntry;
 ///
 /// #### FIDELITY
 /// to write
-pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T> where
-    T: Index<State, Output = DecoderModelEntry>
+pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
+where
+    T: Index<State, Output = DecoderModelEntry>,
 {
     model: T,
 
@@ -44,11 +45,17 @@ pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T> where
     log2_frame_size: u8,
 }
 
-impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDELITY, T> where
-    T: Index<State, Output = DecoderModelEntry>
+impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDELITY, T>
+where
+    T: Index<State, Output = DecoderModelEntry>,
 {
-
-    pub fn new (state: State, model: T, log2_frame_size: u8, normalized_bits: BitVec, folded_bits: BitVec) -> Self {
+    pub fn new(
+        state: State,
+        model: T,
+        log2_frame_size: u8,
+        normalized_bits: BitVec,
+        folded_bits: BitVec,
+    ) -> Self {
         Self {
             model,
             normalized_bits,
@@ -63,19 +70,26 @@ impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDE
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&mut self) -> Vec<RawSymbol> {
         let mut decoded = Vec::new(); // if we save the size of the encoded list, we can preallocate the right amount of space!
-        let mut normalized_bits_iter = self.normalized_bits.rchunks(LOG2_B as usize);
+        let mut iter = self.normalized_bits.rchunks(LOG2_B as usize);
 
         loop {
             let slot = self.state & self.frame_mask as State;
             let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
-            decoded.push(undo_fold_symbol(symbol_entry.symbol, RADIX, FIDELITY, &mut self.folded_bits));
+            decoded.push(undo_fold_symbol(
+                symbol_entry.symbol,
+                RADIX,
+                FIDELITY,
+                &mut self.folded_bits,
+            ));
 
-            self.state = (self.state >> self.log2_frame_size) * symbol_entry.freq as State + slot as State - symbol_entry.cumul_freq as State;
+            self.state = (self.state >> self.log2_frame_size) * symbol_entry.freq as State
+                + slot as State
+                - symbol_entry.cumul_freq as State;
 
             if self.state <= self.lower_bound {
-                match normalized_bits_iter.next() {
-                    Some(bits) => self.state = ((self.state << LOG2_B) | bits.load::<State>()) as State,
+                match iter.next() {
+                    Some(x) => self.state = ((self.state << LOG2_B) | x.load::<State>()) as State,
                     None => break,
                 }
             }
@@ -89,4 +103,3 @@ impl <const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDE
         todo!()
     }
 }
-
