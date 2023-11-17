@@ -30,7 +30,7 @@ pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
 
     pub model: FoldedANSModel4Encoder,
 
-    state: [u64; 4],
+    states: [u64; 4],
 
     /// The normalized bits during the encoding process.
     normalized_bits: BitVec,
@@ -41,7 +41,7 @@ pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
     /// Original sequence of symbols.
     input_sequence: Vec<RawSymbol>,
 
-    /// The biggest singleton symbol, i.e. the biggest unfolded symbol.
+    /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
     folding_threshold: RawSymbol,
 }
 
