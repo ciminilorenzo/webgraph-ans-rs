@@ -1,4 +1,4 @@
-use folded_streaming_rans::ans::encoder_model::FoldedANSModel4Encoder;
+use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::ans::EncoderModelEntry;
 
 

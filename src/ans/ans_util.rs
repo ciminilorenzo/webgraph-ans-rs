@@ -17,35 +17,27 @@ use crate::utils::{entropy, cross_entropy};
 /// # Panics
 /// - if the caller wants to stream bits out even though no BitVec reference is provided;
 /// - if the folded symbol is bigger than u16::MAX.
-pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut BitVec>, radix: u8, fidelity: u8) -> Symbol {
+pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut BitVec::<usize, Msb0>>, radix: u8, fidelity: u8) -> Symbol {
     let mut offset = 0;
-    let threshold = 1 << (radix + fidelity - 1);
+    let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
+    let bit_to_cut = cuts as u8 * radix;
 
-    if symbol >= threshold {
-        let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
-        let bit_to_cut = cuts as u8 * radix;
-
-        stream_bits.then(|| {
-            let mask = ((1_u64 << bit_to_cut) - 1) as RawSymbol;
-
-            let mut bits = (symbol & mask)
+    stream_bits.then(|| {
+        out
+            .unwrap_or_else(|| panic!("Cannot stream bits out without a BitVec!"))
+            .extend_from_bitslice(symbol
                 .view_bits::<Msb0>()
-                .to_bitvec()
-                .drain(RawSymbol::BITS as usize - bit_to_cut as usize..).collect::<BitVec>();
-            bits.reverse();
+                .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
+            );
+    });
 
-            out
-                .unwrap_or_else(|| panic!("Cannot stream bits out without a BitVec!"))
-                .extend_from_bitslice(&bits);
-        });
-
-        symbol >>= bit_to_cut;
-        offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-    }
+    symbol >>= bit_to_cut;
+    offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
     u16::try_from(symbol + offset).expect("Folded symbol is bigger than u16::MAX")
 }
 
-pub fn undo_fold_symbol(symbol: Symbol, radix: u8, fidelity: u8, folded_bits: &mut BitVec) -> RawSymbol {
+// radix è 8 nel loro repo -> buttano fuori/dentro tot byte alla volta
+pub fn undo_fold_symbol(symbol: Symbol, radix: u8, fidelity: u8, folded_bits: &mut BitVec<usize, Msb0>) -> RawSymbol {
     let offset = ((1 << (fidelity - 1)) * ((1 << radix) - 1)) as RawSymbol;
     let threshold = (1 << (fidelity + radix - 1)) as RawSymbol;
     let symbol = symbol as RawSymbol;
@@ -56,10 +48,9 @@ pub fn undo_fold_symbol(symbol: Symbol, radix: u8, fidelity: u8, folded_bits: &m
         let folds_numer = (symbol - threshold) / offset + 1;
         let mut original_sym = symbol - (offset * folds_numer);
         let bits = folded_bits
-            .drain(folded_bits.len() - (radix as usize * folds_numer as usize)..)
-            .collect::<BitVec>();
+            .drain(folded_bits.len() - (radix as usize * folds_numer as usize)..);
 
-        original_sym = (original_sym << (folds_numer * (radix as RawSymbol))) | bits.load::<RawSymbol>();
+        original_sym = (original_sym << (folds_numer * (radix as RawSymbol))) | bits.as_bitslice().load_be::<RawSymbol>();
         original_sym
     }
 }

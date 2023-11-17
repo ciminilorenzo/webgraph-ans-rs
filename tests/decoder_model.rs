@@ -1,7 +1,7 @@
 use rstest::*;
 
-use folded_streaming_rans::ans::decoder_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
-use folded_streaming_rans::ans::encoder_model::FoldedANSModel4Encoder;
+use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
+use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::{RawSymbol, State, Symbol};
 
 

@@ -10,7 +10,7 @@ use crate::ans::EncoderModelEntry;
 use crate::{State, Symbol};
 
 #[readonly::make]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DecoderModelEntry {
     pub symbol: Symbol,
     pub freq: u32,
@@ -78,7 +78,7 @@ impl VecFrame {
     pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
 
-        let mut vec = vec![DecoderModelEntry {symbol: 0, freq: 0, cumul_freq: 0}; 1 << log2_frame_size];
+        let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
         let mut last_slot = 0;
         let mut index = 0;
 

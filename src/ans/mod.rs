@@ -1,11 +1,13 @@
 use bitvec::vec::BitVec;
+
 use crate::{Freq, State};
 
-pub mod folded_stream_ans_encoder;
-pub mod folded_stream_ans_decoder;
-pub mod encoder_model;
+pub mod encoder;
+pub mod decoder;
+pub mod enc_model;
+pub mod dec_model;
+
 mod ans_util;
-pub mod decoder_model;
 
 
 #[readonly::make]

@@ -1,10 +1,10 @@
-use criterion::{Criterion, criterion_group, SamplingMode};
+use criterion::{black_box, Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
 
-use folded_streaming_rans::ans::decoder_model::Rank9SelFrame;
-use folded_streaming_rans::ans::folded_stream_ans_decoder::FoldedStreamANSDecoder;
-use folded_streaming_rans::ans::folded_stream_ans_encoder::FoldedStreamANSCoder;
+use folded_streaming_rans::ans::dec_model::VecFrame;
+use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
+use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 
 use crate::benchmarks::get_symbols;
 use crate::benchmarks::{RADIX, FIDELITY};
@@ -16,21 +16,23 @@ fn decode_benchmark(c: &mut Criterion) {
     coder.encode_all();
 
     let data = coder.serialize();
-    let frame = Rank9SelFrame::new(&data.0, data.2);
 
     let mut group = c.benchmark_group("decoder benchmark");
-    group.sampling_mode(SamplingMode::Flat);
+    group.measurement_time(std::time::Duration::from_secs(10));
+    group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
+    group.sample_size(10);
     group.bench_function("decoding", |b| {
         b.iter_batched(
             || {
-                let decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, Rank9SelFrame>::new(
-                    data.1,
-                    frame.clone(),
+                let decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, VecFrame>::new(
+                    &data.1,
+                    data.3,
                     data.2,
-                    data.3.clone(),
                     data.4.clone(),
+                    data.5.clone(),
+                    data.0,
                 );
-                decoder
+                black_box(decoder)
             },
             |mut decoder| decoder.decode_all(),
             criterion::BatchSize::SmallInput,

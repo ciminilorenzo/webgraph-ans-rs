@@ -1,12 +1,12 @@
-use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 
 use pprof::criterion::{Output, PProfProfiler};
 
 use rand::prelude::{SliceRandom, SmallRng};
 use rand::SeedableRng;
 
-use folded_streaming_rans::ans::decoder_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
-use folded_streaming_rans::ans::encoder_model::FoldedANSModel4Encoder;
+use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
+use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::State;
 
 use crate::benchmarks::{get_symbols, FIDELITY, RADIX};
@@ -26,7 +26,6 @@ fn probing_benchmark(c: &mut Criterion) {
     let encoder_model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
     let table = encoder_model.to_raw_parts();
     let log_m = encoder_model.log2_frame_size;
-    dbg!(log_m);
     let slots_to_probe = get_slots_to_probe(log_m);
 
     let vec_frame = VecFrame::new(&table, log_m);
@@ -35,8 +34,6 @@ fn probing_benchmark(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("Probing");
     group.sample_size(10);
-    group.measurement_time(std::time::Duration::from_secs(10));
-    group.warm_up_time(std::time::Duration::from_secs(1));
 
     group.bench_function("with elias", |b| {
         b.iter(|| {
@@ -65,7 +62,7 @@ fn probing_benchmark(c: &mut Criterion) {
 }
 
 criterion_group! {
-name = decoder_benches;
-config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
-targets = probing_benchmark
+    name = decoder_benches;
+    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
+    targets = probing_benchmark
 }
