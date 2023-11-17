@@ -58,7 +58,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         let model = FoldedANSModel4Encoder::new(&input, RADIX, FIDELITY);
 
         Self {
-            state: [0; 4], // wasting 64 bits for each state
+            states: [0; 4], // wasting 64 bits for each state
             model,
             normalized_bits: BitVec::new(),
             folded_bits: BitVec::new(),
@@ -90,7 +90,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
             states[3] = self.encode_symbol(chunk[0], states[3], &mut normalized_bits, &mut folded_bits);
         });
 
-        self.state = states;
+        self.states = states;
         self.normalized_bits = normalized_bits;
         self.folded_bits = folded_bits;
     }
@@ -124,7 +124,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         (
             self.input_sequence.len() as u64,
             self.model.to_raw_parts(),
-            self.state,
+            self.states,
             self.model.log2_frame_size,
             self.normalized_bits.clone(),
             self.folded_bits.clone()
