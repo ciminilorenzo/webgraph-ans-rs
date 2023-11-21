@@ -26,6 +26,7 @@ const MASK: u64 = 0xFFFFFFFF;
 /// #### FIDELITY
 /// to write
 #[readonly::make]
+#[derive(Clone)]
 pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
 
     pub model: FoldedANSModel4Encoder,
@@ -36,7 +37,7 @@ pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
     normalized_bits: BitVec,
 
     /// The folded bits during the encoding process for those symbols which are bucketed.
-    folded_bits: BitVec::<usize, Msb0>,
+    folded_bits: BitVec<usize, Msb0>,
 
     /// Original sequence of symbols.
     input_sequence: Vec<RawSymbol>,
@@ -95,7 +96,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         self.folded_bits = folded_bits;
     }
 
-    fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut BitVec, folded_bits: &mut BitVec::<usize, Msb0>) -> State {
+    fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut BitVec, folded_bits: &mut BitVec<usize, Msb0>) -> State {
         let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
             fold_symbol(symbol, true, Some(folded_bits), RADIX, FIDELITY)
         };
@@ -120,7 +121,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         state
     }
 
-    pub fn serialize(&mut self) -> (u64, Vec<EncoderModelEntry>, [State; 4], u8, BitVec, BitVec::<usize, Msb0>) {
+    pub fn serialize(&mut self) -> (u64, Vec<EncoderModelEntry>, [State; 4], u8, BitVec, BitVec<usize, Msb0>) {
         (
             self.input_sequence.len() as u64,
             self.model.to_raw_parts(),

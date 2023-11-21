@@ -4,12 +4,13 @@ use crate::{LOG2_B, K_LOG2, Symbol, RawSymbol};
 use crate::ans::ans_util::*;
 use crate::ans::EncoderModelEntry;
 
+// TODO: to change
 /// The maximum symbol we expect to see in the input.
 const MAX_RAW_SYMBOL: RawSymbol = 100_000_000_000;
 
 
 #[readonly::make]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FoldedANSModel4Encoder {
 
     /// Contains, for each index, the data associated to the symbol equal to that index.

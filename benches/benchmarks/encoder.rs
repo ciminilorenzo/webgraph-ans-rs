@@ -1,4 +1,4 @@
-use criterion::{Criterion, criterion_group};
+use criterion::{BatchSize, Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
 
@@ -9,16 +9,16 @@ use crate::benchmarks::{RADIX, FIDELITY};
 
 fn encoding_benchmark(c: &mut Criterion) {
     let symbols = get_symbols();
-
     let mut group = c.benchmark_group("coder benchmark");
-    group.measurement_time(std::time::Duration::from_secs(10));
-    group.sample_size(10);
+
+    group.measurement_time(std::time::Duration::from_secs(30));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
+    group.sample_size(100);
+
+    let encoder = FoldedStreamANSCoder::<RADIX, FIDELITY>::new(symbols);
+
     group.bench_function("encoding", |b| {
-        let mut encoder = FoldedStreamANSCoder::<RADIX, FIDELITY>::new(symbols.clone());
-        b.iter(|| {
-            encoder.encode_all()
-        })
+        b.iter_batched(|| encoder.clone(), |mut coder| coder.encode_all(), BatchSize::SmallInput)
     });
     group.finish()
 }

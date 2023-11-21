@@ -1,11 +1,12 @@
+use std::mem;
 use std::ops::Index;
+
 use bitvec::field::BitField;
 use bitvec::order::{Lsb0, Msb0};
-use bitvec::slice::RChunks;
-
+use bitvec::slice::{Iter, RChunks};
 use bitvec::vec::BitVec;
 
-use crate::ans::ans_util::undo_fold_symbol;
+use crate::ans::ans_util::unfold_symbol;
 use crate::ans::dec_model::{DecoderModelEntry, VecFrame};
 use crate::{RawSymbol, State, K_LOG2, LOG2_B};
 use crate::ans::EncoderModelEntry;
@@ -25,6 +26,7 @@ use crate::ans::EncoderModelEntry;
 ///
 /// #### FIDELITY
 /// to write
+#[derive(Clone)]
 pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
     where
         T: Index<State, Output = DecoderModelEntry>
@@ -50,6 +52,12 @@ pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
 
     /// The length of the sequence to decode.
     sequence_length: u64,
+
+    /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
+    folding_threshold: u64,
+
+    /// Number of buckets of the same size.
+    folding_offset: u64,
 }
 
 impl<const RADIX: u8, const FIDELITY: u8> FoldedStreamANSDecoder<RADIX, FIDELITY, VecFrame> {
@@ -60,21 +68,17 @@ impl<const RADIX: u8, const FIDELITY: u8> FoldedStreamANSDecoder<RADIX, FIDELITY
     /// By default, this constructor creates a new instance by using a [`VecFrame`] as a frame. This
     /// means that the frame is not space-efficient, but it's the fastest one. Thus, if you want to create
     /// the model with a more space-efficient frame, you should use the [this](Self::with_frame) constructor.
-    pub fn new (
-        table: &[EncoderModelEntry],
-        log2_frame_size: u8,
-        states: [State; 4],
-        normalized_bits: BitVec,
-        folded_bits: BitVec::<usize, Msb0>,
-        sequence_length: u64,
-    ) -> Self
-    {
-        let model = VecFrame::new(table, log2_frame_size);
+    pub fn new (table: &[EncoderModelEntry], log2_frame_size: u8, states: [State; 4], normalized_bits: BitVec, folded_bits: BitVec<usize, Msb0>, sequence_length: u64) -> Self {
+        let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
+        let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+        let model_with_vec = VecFrame::new(table, log2_frame_size);
 
         Self {
-            model,
+            model: model_with_vec,
             normalized_bits,
             folded_bits,
+            folding_offset,
+            folding_threshold,
             lower_bound: 1 << (log2_frame_size + K_LOG2),
             states,
             frame_mask: (1 << log2_frame_size) - 1,
@@ -96,6 +100,8 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
             model,
             normalized_bits,
             folded_bits,
+            folding_offset: ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol,
+            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as RawSymbol,
             lower_bound: 1 << (log2_frame_size + K_LOG2),
             states,
             frame_mask: (1 << log2_frame_size) - 1,
@@ -107,14 +113,16 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&mut self) -> Vec<RawSymbol> {
         let mut decoded_sym = Vec::with_capacity(self.sequence_length as usize);
-        let binding = self.normalized_bits.clone(); // TODO: avoid clone?
-        let mut iter= binding.rchunks(LOG2_B as usize);
+        let normalized_bits = mem::take(&mut self.normalized_bits);
+        let mut norm_bits_chunks = normalized_bits.rchunks(LOG2_B as usize);
+        let mut folded_bits_iter = self.folded_bits.iter();
+
         let threshold = self.sequence_length - (self.sequence_length % 4);
         let mut current_symbol_index = 0;
 
         while current_symbol_index < threshold {
             for state_index in (0..self.states.len()).rev() {
-                let (sym, new_state) = self.decode_sym(self.states[state_index], &mut iter);
+                let (sym, new_state) = self.decode_sym(self.states[state_index], &mut norm_bits_chunks, &mut folded_bits_iter);
                 decoded_sym.push(sym);
                 self.states[state_index] = new_state;
                 current_symbol_index += 1;
@@ -122,7 +130,7 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
         }
 
         while current_symbol_index < self.sequence_length {
-            let (sym, new_state) = self.decode_sym(self.states[0], &mut iter);
+            let (sym, new_state) = self.decode_sym(self.states[0], &mut norm_bits_chunks, &mut folded_bits_iter);
             decoded_sym.push(sym);
             self.states[0] = new_state;
             current_symbol_index += 1;
@@ -130,7 +138,7 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
         decoded_sym
     }
 
-    fn decode_sym(&mut self, mut state: State, normalized_bits_iter: &mut RChunks<usize, Lsb0>) -> (RawSymbol, State) {
+    fn decode_sym(&self, mut state: State, normalized_bits_iter: &mut RChunks<usize, Lsb0>, folded_bits: &mut Iter<usize, Msb0>) -> (RawSymbol, State) {
         let slot = state & self.frame_mask as State;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
@@ -143,12 +151,12 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
             state = ((state << LOG2_B) | bits.load::<State>()) as State;
         }
 
-        (undo_fold_symbol(symbol_entry.symbol, RADIX, FIDELITY, &mut self.folded_bits), state)
-    }
+        let decoded_sym = if (symbol_entry.symbol as RawSymbol) < self.folding_threshold {
+            symbol_entry.symbol as RawSymbol
+        } else {
+            unfold_symbol(symbol_entry.symbol, self.folding_threshold, self.folding_offset, RADIX, folded_bits)
+        };
 
-    pub fn from_raw_parts() {
-        // !!!  Creates a new instance by using data directly shaped as needed by an ad-hoc input reader !!!
-        // !!!  that reads encoder output and feeds it to the decoder as needed.                         !!!
-        todo!()
+        (decoded_sym, state)
     }
 }

@@ -70,6 +70,7 @@ impl Index<State> for EliasFanoFrame {
 
 // Petri's solution. Inserts in each slot the data associated to the corresponding symbol. This
 // solution is not space-efficient, but it's the fastest one.
+#[derive(Clone)]
 pub struct VecFrame(Vec<DecoderModelEntry>);
 
 impl VecFrame {
@@ -119,7 +120,7 @@ impl Index<State> for VecFrame {
 #[derive(Clone)]
 pub struct Rank9SelFrame {
 
-    /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
+    /// Contains, in each position, the data associated to the symbol in the same position within the Rank9Sel structure.
     symbols: Vec<DecoderModelEntry>,
 
     frame: Rank9Sel,

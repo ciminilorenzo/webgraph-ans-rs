@@ -33,31 +33,25 @@ fn probing_benchmark(c: &mut Criterion) {
     let bitvec_frame = Rank9SelFrame::new(&table, log_m);
 
     let mut group = c.benchmark_group("Probing");
-    group.sample_size(10);
+    group.measurement_time(std::time::Duration::from_secs(40));
 
-    group.bench_function("with elias", |b| {
-        b.iter(|| {
-            for &s in &slots_to_probe {
-                black_box(&elias_frame[s as State]);
-            }
-        })
-    });
-    group.bench_function("with Vec", |b| {
-        b.iter(|| {
-            for &s in &slots_to_probe {
-                black_box(&vec_frame[s as State]);
-            }
-        })
-    });
+    group.bench_with_input("with elias", &slots_to_probe, |b, slots_to_probe| b.iter(|| {
+        for &s in slots_to_probe {
+            black_box(&elias_frame[s as State]);
+        }})
+    );
 
-    group.bench_function("with Rank9", |b| {
-        b.iter(|| {
-            for &s in &slots_to_probe {
-                black_box(&bitvec_frame[s as State]);
-            }
-        })
-    });
+    group.bench_with_input("with vec", &slots_to_probe,|b, slots_to_probe| b.iter(|| {
+        for &s in slots_to_probe {
+            black_box(&vec_frame[s as State]);
+        } })
+    );
 
+    group.bench_with_input("with rank9", &slots_to_probe,|b, slots_to_probe| b.iter(|| {
+        for &s in slots_to_probe {
+            black_box(&bitvec_frame[s as State]);
+        }})
+    );
     group.finish();
 }
 

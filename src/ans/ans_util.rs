@@ -1,10 +1,12 @@
 use std::cmp::max;
 
-use bitvec::prelude::{BitVec, Msb0};
 use bitvec::view::BitView;
-use bitvec::field::BitField;
+use bitvec::order::Msb0;
+use bitvec::prelude::BitVec;
 
 use anyhow::{bail, Result};
+use bitvec::field::BitField;
+use bitvec::slice::Iter;
 
 use crate::{RawSymbol, Symbol};
 use crate::utils::{entropy, cross_entropy};
@@ -17,7 +19,7 @@ use crate::utils::{entropy, cross_entropy};
 /// # Panics
 /// - if the caller wants to stream bits out even though no BitVec reference is provided;
 /// - if the folded symbol is bigger than u16::MAX.
-pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut BitVec::<usize, Msb0>>, radix: u8, fidelity: u8) -> Symbol {
+pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut BitVec<usize, Msb0>>, radix: u8, fidelity: u8) -> Symbol {
     let mut offset = 0;
     let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
     let bit_to_cut = cuts as u8 * radix;
@@ -36,27 +38,26 @@ pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut Bi
     u16::try_from(symbol + offset).expect("Folded symbol is bigger than u16::MAX")
 }
 
-// radix è 8 nel loro repo -> buttano fuori/dentro tot byte alla volta
-pub fn undo_fold_symbol(symbol: Symbol, radix: u8, fidelity: u8, folded_bits: &mut BitVec<usize, Msb0>) -> RawSymbol {
-    let offset = ((1 << (fidelity - 1)) * ((1 << radix) - 1)) as RawSymbol;
-    let threshold = (1 << (fidelity + radix - 1)) as RawSymbol;
+pub fn unfold_symbol(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: u8, folded_bits: &mut Iter<usize, Msb0>) -> RawSymbol {
     let symbol = symbol as RawSymbol;
+    let folds_number = (symbol - folding_threshold) / folding_offset + 1;
+    let mut original_sym = symbol - (folding_offset * folds_number);
 
-    if symbol < threshold {
-        symbol // singleton bucket
-    } else {
-        let folds_numer = (symbol - threshold) / offset + 1;
-        let mut original_sym = symbol - (offset * folds_numer);
-        let bits = folded_bits
-            .drain(folded_bits.len() - (radix as usize * folds_numer as usize)..);
+    let bits = folded_bits
+        .as_bitslice()
+        .get(folded_bits.len() - folds_number as usize * radix as usize..)
+        .unwrap();
 
-        original_sym = (original_sym << (folds_numer * (radix as RawSymbol))) | bits.as_bitslice().load_be::<RawSymbol>();
-        original_sym
-    }
+    folded_bits.advance_back_by(radix as usize * folds_number as usize).expect("Not enough bits");
+
+    original_sym = (original_sym << (folds_number * (radix as RawSymbol))) | bits.load_be::<RawSymbol>();
+    original_sym
 }
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
 /// distribution of frequencies.
+/// The bigger this factor is, the more approximated the new distribution will be. It means smaller frame
+/// sizes and, consequently, less memory usage + faster encoding/decoding.
 const TETA: f64 = 1.001;
 
 pub fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, usize) {
@@ -156,7 +157,7 @@ mod tests {
     use crate::ans::ans_util::approx_freqs;
 
     #[test]
-    fn test() {
+    fn right_approximated_frequencies_are_calculated() {
         let freqs = vec![0, 3, 3, 2, 1, 1];
         let n = 5;
         let expected = vec![0,10,10,6,3,3];
