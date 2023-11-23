@@ -6,7 +6,10 @@ use sux::prelude::*;
 
 use crate::ans::EncoderModelEntry;
 use crate::{RawSymbol, State, Symbol};
-use crate::ans::ans_util::quasi_unfold;
+
+
+/// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
+const RESERVED_TO_SYMBOL: u8 = 48;
 
 
 #[readonly::make]
@@ -187,4 +190,40 @@ impl Index<State> for Rank9SelFrame {
         let symbol_index = self.frame.rank1((slot + 1) as usize).unwrap() as Symbol;
         &self.symbols[symbol_index as usize]
     }
+}
+
+
+/// Quasi-unfolds the given symbol.
+///
+/// Quasi unfolding means creating a u64 with the following features:
+///
+/// 1. the 16 MSB bits are used to represent the number of folds (of size radix) that have been
+/// performed during the symbol folding.
+///
+/// 2. the remaining 48 LSB bits contain: the fidelity bits in common between all the symbols folded
+/// within the same bucket plus all zeros.
+///
+/// ## Example
+/// Given radix and fidelity equal to 4 and 2, if 1111101000 is the original symbol from the input,
+/// then 0000000000000010 are the 16 MSB of the quasi-unfolded symbol since 2 folds have to be done
+/// in order to unfold the symbol while, the remaining 48 LSB are 1100000000 (with the remaining 40 MSB
+/// equal to 0) since all the symbols bucketed in the same bucket have the same 2 fidelity bits (11)
+/// and need to be unfolded in the same way (with 2 * 4 -radix- bits).
+pub fn quasi_unfold(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: u8) -> RawSymbol {
+    let mut symbol = symbol as u64;
+
+    let folds = u16::try_from((symbol - folding_threshold) / folding_offset + 1)
+        .expect("Can't handle more than (2^16 - 1) folds.");
+
+    let folds_bits = (folds as u64) << RESERVED_TO_SYMBOL;
+    symbol -= folding_offset * folds as RawSymbol;
+    symbol <<= (folds * radix as u16) as u64;
+
+    // we want to have the 16 MSB bits free
+    assert!(
+        u64::ilog2(symbol) <= RESERVED_TO_SYMBOL as u32,
+        "Can't handle a number bigger than 2^48 - 1"
+    );
+
+    symbol | folds_bits
 }

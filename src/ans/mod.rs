@@ -7,8 +7,6 @@ pub mod decoder;
 pub mod enc_model;
 pub mod dec_model;
 
-mod ans_util;
-
 
 #[readonly::make]
 #[derive(Debug, Clone, PartialEq)]

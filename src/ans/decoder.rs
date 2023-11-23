@@ -111,87 +111,68 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
         }
     }
 
-    /*
-
-    let slice = bits![0,0,1,1,0,0,1,1];
-    println!("original slice: {}", slice);
-
-    let mut last_unfolded_bit_pos = slice.len();
-
-    println!("{}", slice.get(last_unfolded_bit_pos-2..last_unfolded_bit_pos).unwrap());
-    last_unfolded_bit_pos -= 2;
-
-    println!("{}", slice.get(last_unfolded_bit_pos-2..last_unfolded_bit_pos).unwrap());
-    last_unfolded_bit_pos -= 2;
-     */
-
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&mut self) -> Vec<RawSymbol> {
         let mut decoded = Vec::with_capacity(self.sequence_length as usize);
         let norm_bits = mem::take(&mut self.normalized_bits);
         let mut norm_chunks = norm_bits.rchunks(LOG2_B as usize);
-        let folded_bits = self.folded_bits.as_bitslice();
+        let folded_bits_binding = mem::take(&mut self.folded_bits);
+        let folded_bits = folded_bits_binding.as_bitslice();
         let mut last_unfolded_pos = folded_bits.len();
-
         let threshold = self.sequence_length - (self.sequence_length % 4);
         let mut current_symbol_index = 0;
 
         while current_symbol_index < threshold {
-            for state_index in (0..self.states.len()).rev() {
-                let (sym, new_state) = self.decode_sym(self.states[state_index], &mut norm_chunks, folded_bits, &mut last_unfolded_pos);
-                decoded.push(sym);
-                self.states[state_index] = new_state;
-                current_symbol_index += 1;
-            }
+            decoded.push(self.decode_sym(3_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(2_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(1_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(0_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            current_symbol_index += 4;
         }
 
         while current_symbol_index < self.sequence_length {
-            let (sym, new_state) = self.decode_sym(self.states[0], &mut norm_chunks, folded_bits, &mut last_unfolded_pos);
-            decoded.push(sym);
-            self.states[0] = new_state;
+            decoded.push(self.decode_sym(0_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
             current_symbol_index += 1;
         }
+
         decoded
     }
 
-    fn decode_sym(
-        &self,
-        mut state: State,
-        normalized_bits_iter: &mut RChunks<usize, Lsb0>,
-        folded_bits: &BitSlice<usize, Msb0>,
-        last_unfolded_bit_pos: &mut usize
-    ) -> (RawSymbol, State)
-    {
-        let slot = state & self.frame_mask;
+    fn decode_sym(&mut self, state_index: usize, norm_chunks: &mut RChunks<usize, Lsb0>, folded_bits: &BitSlice<usize, Msb0>, last_unfolded_pos: &mut usize) -> RawSymbol {
+        let slot = self.states[state_index] & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
-
-        state = (state >> self.log2_frame_size) * symbol_entry.freq as State
-            + slot as State
-            - symbol_entry.cumul_freq as State;
-
-        (state < self.lower_bound).then(|| state = Self::expand_state(state, normalized_bits_iter));
 
         let decoded_sym = if (symbol_entry.symbol as RawSymbol) < self.folding_threshold {
             symbol_entry.symbol as RawSymbol
         } else {
-            let folds = (symbol_entry.mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
-            let quasi_unfolded = symbol_entry.mapped_num & SYMBOL_MASK;
-
-            let bits = folded_bits
-                .get(*last_unfolded_bit_pos - folds as usize * RADIX as usize..*last_unfolded_bit_pos)
-                .unwrap();
-
-            *last_unfolded_bit_pos -= folds as usize * RADIX as usize;
-
-            quasi_unfolded | bits.load_be::<RawSymbol>()
+            Self::unfold_symbol(symbol_entry.mapped_num, folded_bits, last_unfolded_pos)
         };
 
-        (decoded_sym, state)
+        self.states[state_index] = (self.states[state_index] >> self.log2_frame_size) * symbol_entry.freq as State
+            + slot as State
+            - symbol_entry.cumul_freq as State;
+
+        if self.states[state_index] < self.lower_bound {
+            self.states[state_index] = Self::shrink_state(self.states[state_index], norm_chunks);
+        }
+
+        decoded_sym
     }
 
-    #[inline]
-    fn expand_state(state: State, normalized_bits: &mut RChunks<usize, Lsb0>) -> State {
-        let bits = normalized_bits.next().unwrap();
+    fn unfold_symbol(mapped_num: u64, folded_bits: &BitSlice<usize, Msb0>, last_unfolded_pos: &mut usize) -> RawSymbol {
+        let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
+        let quasi_unfolded = mapped_num & SYMBOL_MASK;
+        let bits = folded_bits
+            .get(*last_unfolded_pos - folds as usize * RADIX as usize..*last_unfolded_pos)
+            .unwrap();
+
+        *last_unfolded_pos -= folds as usize * RADIX as usize;
+        quasi_unfolded | bits.load_be::<RawSymbol>()
+    }
+
+    #[must_use]
+    fn shrink_state(state: State, norm_chunks: &mut RChunks<usize, Lsb0>) -> State {
+        let bits = norm_chunks.next().unwrap();
         ((state << LOG2_B) | bits.load::<State>()) as State
     }
 }

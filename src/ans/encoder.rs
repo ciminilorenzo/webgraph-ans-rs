@@ -5,7 +5,6 @@ use bitvec::prelude::*;
 use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
 use crate::ans::{EncoderModelEntry};
-use crate::ans::ans_util::fold_symbol;
 
 // Used to extract the least significant 32 bits from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
@@ -99,7 +98,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
 
     fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut BitVec, folded_bits: &mut BitVec<usize, Msb0>) -> State {
         let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
-            fold_symbol(symbol, folded_bits, RADIX, FIDELITY)
+            Self::fold_symbol(symbol, folded_bits, RADIX, FIDELITY)
         };
 
         let sym_data = &self.model[symbol];
@@ -121,6 +120,28 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         out.extend(lsb.view_bits::<Lsb0>());
         state >>= LOG2_B;
         state
+    }
+
+    /// Performs the so called 'symbol folding'. This optimized implementation is different
+    /// from the one described in the paper since here the while loop is avoided in favour of a single
+    /// block of operations that performs the same task.
+    ///
+    /// # Panics
+    /// - if the caller wants to stream bits out even though no BitVec reference is provided;
+    /// - if the folded symbol is bigger than u16::MAX.
+    fn fold_symbol(mut symbol: RawSymbol, out: &mut BitVec<usize, Msb0>, radix: u8, fidelity: u8) -> Symbol {
+        let mut offset = 0;
+        let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
+        let bit_to_cut = cuts as u8 * radix;
+
+        out.extend_from_bitslice(symbol
+            .view_bits::<Msb0>()
+            .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
+        );
+
+        symbol >>= bit_to_cut;
+        offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+        (symbol + offset) as u16
     }
 
     pub fn serialize(&mut self) -> (u64, Vec<EncoderModelEntry>, [State; 4], u8, BitVec, BitVec<usize, Msb0>) {
