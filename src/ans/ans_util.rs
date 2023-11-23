@@ -1,15 +1,20 @@
 use std::cmp::max;
 
-use bitvec::view::BitView;
-use bitvec::order::Msb0;
-use bitvec::prelude::BitVec;
-
 use anyhow::{bail, Result};
-use bitvec::field::BitField;
-use bitvec::slice::Iter;
+
+use bitvec::prelude::*;
 
 use crate::{RawSymbol, Symbol};
 use crate::utils::{entropy, cross_entropy};
+
+/// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
+/// distribution of frequencies.
+/// The bigger this factor is, the more approximated the new distribution will be. It means smaller frame
+/// sizes and, consequently, less memory usage + faster encoding/decoding.
+const TETA: f64 = 1.001;
+
+/// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
+const RESERVED_TO_SYMBOL: u8 = 48;
 
 
 /// Performs the so called 'symbol folding'. This optimized implementation is different
@@ -19,46 +24,65 @@ use crate::utils::{entropy, cross_entropy};
 /// # Panics
 /// - if the caller wants to stream bits out even though no BitVec reference is provided;
 /// - if the folded symbol is bigger than u16::MAX.
-pub fn fold_symbol(mut symbol: RawSymbol, stream_bits: bool, out: Option<&mut BitVec<usize, Msb0>>, radix: u8, fidelity: u8) -> Symbol {
+pub fn fold_symbol(mut symbol: RawSymbol, out: &mut BitVec<usize, Msb0>, radix: u8, fidelity: u8) -> Symbol {
     let mut offset = 0;
     let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
     let bit_to_cut = cuts as u8 * radix;
 
-    stream_bits.then(|| {
-        out
-            .unwrap_or_else(|| panic!("Cannot stream bits out without a BitVec!"))
-            .extend_from_bitslice(symbol
-                .view_bits::<Msb0>()
-                .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
-            );
-    });
+    out.extend_from_bitslice(symbol
+        .view_bits::<Msb0>()
+        .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
+    );
 
     symbol >>= bit_to_cut;
     offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+    (symbol + offset) as u16
+}
+
+pub fn folding_without_streaming_out(mut symbol: RawSymbol, radix: u8, fidelity: u8) -> Symbol {
+    let mut offset = 0;
+    let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
+    let bit_to_cut = cuts as u8 * radix;
+    symbol >>= bit_to_cut;
+    offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+
     u16::try_from(symbol + offset).expect("Folded symbol is bigger than u16::MAX")
 }
 
-pub fn unfold_symbol(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: u8, folded_bits: &mut Iter<usize, Msb0>) -> RawSymbol {
-    let symbol = symbol as RawSymbol;
-    let folds_number = (symbol - folding_threshold) / folding_offset + 1;
-    let mut original_sym = symbol - (folding_offset * folds_number);
+/// Quasi-unfolds the given symbol.
+///
+/// Quasi unfolding means creating a u64 with the following features:
+///
+/// 1. the 16 MSB bits are used to represent the number of folds (of size radix) that have been
+/// performed during the symbol folding.
+///
+/// 2. the remaining 48 LSB bits contain: the fidelity bits in common between all the symbols folded
+/// within the same bucket plus all zeros.
+///
+/// ## Example
+/// Given radix and fidelity equal to 4 and 2, if 1111101000 is the original symbol from the input,
+/// then 0000000000000010 are the 16 MSB of the quasi-unfolded symbol since 2 folds have to be done
+/// in order to unfold the symbol while, the remaining 48 LSB are 1100000000 (with the remaining 40 MSB
+/// equal to 0) since all the symbols bucketed in the same bucket have the same 2 fidelity bits (11)
+/// and need to be unfolded in the same way (with 2 * 4 -radix- bits).
+pub fn quasi_unfold(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: u8) -> RawSymbol {
+    let mut symbol = symbol as u64;
 
-    let bits = folded_bits
-        .as_bitslice()
-        .get(folded_bits.len() - folds_number as usize * radix as usize..)
-        .unwrap();
+    let folds = u16::try_from((symbol - folding_threshold) / folding_offset + 1)
+        .expect("Can't handle more than (2^16 - 1) folds.");
 
-    folded_bits.advance_back_by(radix as usize * folds_number as usize).expect("Not enough bits");
+    let folds_bits = (folds as u64) << RESERVED_TO_SYMBOL;
+    symbol -= folding_offset * folds as RawSymbol;
+    symbol <<= (folds * radix as u16) as u64;
 
-    original_sym = (original_sym << (folds_number * (radix as RawSymbol))) | bits.load_be::<RawSymbol>();
-    original_sym
+    // we want to have the 16 MSB bits free
+    assert!(
+        u64::ilog2(symbol) <= RESERVED_TO_SYMBOL as u32,
+        "Can't handle a number bigger than 2^48 - 1"
+    );
+
+    symbol | folds_bits
 }
-
-/// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
-/// distribution of frequencies.
-/// The bigger this factor is, the more approximated the new distribution will be. It means smaller frame
-/// sizes and, consequently, less memory usage + faster encoding/decoding.
-const TETA: f64 = 1.001;
 
 pub fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, usize) {
     let mut total_freq = 0;

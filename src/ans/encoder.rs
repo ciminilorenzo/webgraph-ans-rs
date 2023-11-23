@@ -1,10 +1,11 @@
+use std::usize;
+
 use bitvec::prelude::*;
 
 use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
 use crate::ans::{EncoderModelEntry};
 use crate::ans::ans_util::fold_symbol;
-
 
 // Used to extract the least significant 32 bits from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
@@ -98,7 +99,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
 
     fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut BitVec, folded_bits: &mut BitVec<usize, Msb0>) -> State {
         let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
-            fold_symbol(symbol, true, Some(folded_bits), RADIX, FIDELITY)
+            fold_symbol(symbol, folded_bits, RADIX, FIDELITY)
         };
 
         let sym_data = &self.model[symbol];
@@ -114,6 +115,7 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
             + (state - (block * sym_data.freq as u64))
     }
 
+    #[inline]
     fn shrink_state(mut state: State, out: &mut BitVec) -> State {
         let lsb = (state & MASK) as u32;
         out.extend(lsb.view_bits::<Lsb0>());

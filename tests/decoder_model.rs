@@ -25,9 +25,12 @@ fn probe_works_for_all_types_of_frames(#[case] symbols: Vec<RawSymbol>,
     let encoder_model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
     let raw_frame = encoder_model.to_raw_parts();
 
-    let bitvec_frame = Rank9SelFrame::new(&raw_frame, encoder_model.log2_frame_size);
-    let vec_frame = VecFrame::new(&raw_frame, encoder_model.log2_frame_size);
-    let elias_frame = EliasFanoFrame::new(&raw_frame, encoder_model.log2_frame_size);
+    let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
+    let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+
+    let bitvec_frame = Rank9SelFrame::new(&raw_frame, encoder_model.log2_frame_size, folding_offset, folding_threshold, RADIX);
+    let vec_frame = VecFrame::new(&raw_frame, encoder_model.log2_frame_size, folding_offset, folding_threshold, RADIX);
+    let elias_frame = EliasFanoFrame::new(&raw_frame, encoder_model.log2_frame_size, folding_offset, folding_threshold, RADIX);
 
     for i in 0..slots.len() {
         let slot_to_probe = slots[i] as State;

@@ -7,7 +7,7 @@ use rand::SeedableRng;
 
 use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
 use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
-use folded_streaming_rans::State;
+use folded_streaming_rans::{RawSymbol, State};
 
 use crate::benchmarks::{get_symbols, FIDELITY, RADIX};
 
@@ -28,9 +28,12 @@ fn probing_benchmark(c: &mut Criterion) {
     let log_m = encoder_model.log2_frame_size;
     let slots_to_probe = get_slots_to_probe(log_m);
 
-    let vec_frame = VecFrame::new(&table, log_m);
-    let elias_frame = EliasFanoFrame::new(&table, log_m);
-    let bitvec_frame = Rank9SelFrame::new(&table, log_m);
+    let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
+    let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+
+    let vec_frame = VecFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
+    let elias_frame = EliasFanoFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
+    let bitvec_frame = Rank9SelFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
 
     let mut group = c.benchmark_group("Probing");
     group.measurement_time(std::time::Duration::from_secs(40));

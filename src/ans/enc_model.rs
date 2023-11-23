@@ -24,13 +24,13 @@ pub struct FoldedANSModel4Encoder {
 impl FoldedANSModel4Encoder {
 
     pub fn new(input: &[RawSymbol], radix: u8, fidelity: u8) -> Self {
-        let presumed_max_bucket = fold_symbol(MAX_RAW_SYMBOL, false, None, radix, fidelity);
+        let presumed_max_bucket = folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];
         let mut max_sym = 0;
         let mut n = 0;
 
         for sym in input {
-            let folded_sym = fold_symbol(*sym, false, None, radix, fidelity);
+            let folded_sym = folding_without_streaming_out(*sym, radix, fidelity);
             *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
             max_sym = std::cmp::max(max_sym, folded_sym);
             n += 1;

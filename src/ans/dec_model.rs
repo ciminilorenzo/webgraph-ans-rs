@@ -2,12 +2,12 @@ use std::ops::Index;
 
 use sucds::bit_vectors::{Rank, Rank9Sel};
 
-use sux::dict::{EliasFano, EliasFanoBuilder};
-use sux::rank_sel::QuantumIndex;
-use sux::traits::{ConvertTo, Pred};
+use sux::prelude::*;
 
 use crate::ans::EncoderModelEntry;
-use crate::{State, Symbol};
+use crate::{RawSymbol, State, Symbol};
+use crate::ans::ans_util::quasi_unfold;
+
 
 #[readonly::make]
 #[derive(Clone, Debug, Default)]
@@ -15,6 +15,7 @@ pub struct DecoderModelEntry {
     pub symbol: Symbol,
     pub freq: u32,
     pub cumul_freq: u32,
+    pub mapped_num: u64,
 }
 
 
@@ -29,7 +30,7 @@ pub struct EliasFanoFrame {
 
 impl EliasFanoFrame {
 
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
@@ -41,10 +42,18 @@ impl EliasFanoFrame {
             if sym_data.freq == 0 { continue; }
 
             frame_builder.push(sym_data.cumul_freq as usize).unwrap();
+
+            let mapped_num = if sym < folding_threshold as usize {
+                0_u64
+            } else {
+                quasi_unfold(sym as Symbol, folding_threshold, folding_offset, radix)
+            };
+
             symbols.push(DecoderModelEntry {
                 symbol: sym as Symbol,
                 freq: sym_data.freq,
-                cumul_freq: sym_data.cumul_freq
+                cumul_freq: sym_data.cumul_freq,
+                mapped_num,
             });
         }
         frame_builder.push(1 << log2_frame_size).unwrap();
@@ -76,7 +85,7 @@ pub struct VecFrame(Vec<DecoderModelEntry>);
 impl VecFrame {
 
     /// Creates a new VecFrame from the given table.
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
 
         let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
@@ -97,6 +106,12 @@ impl VecFrame {
                             entry.symbol = symbol as Symbol;
                             entry.freq = freq;
                             entry.cumul_freq = cumul_freq;
+
+                            let mapped_num = if symbol < folding_threshold as usize { 0_u64 } else {
+                                quasi_unfold(symbol as Symbol, folding_threshold, folding_offset, radix)
+                            };
+
+                            entry.mapped_num = mapped_num;
                         }
                     }
                     index += 1;
@@ -128,7 +143,7 @@ pub struct Rank9SelFrame {
 
 impl Rank9SelFrame {
 
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Too many symbols");
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
@@ -145,7 +160,17 @@ impl Rank9SelFrame {
                     *bit = true;
                 }
             }
-            symbols.push(DecoderModelEntry {symbol: sym as Symbol, freq: sym_data.freq, cumul_freq: sym_data.cumul_freq});
+
+            let mapped_num = if sym < folding_threshold as usize { 0_u64 } else {
+                quasi_unfold(sym as Symbol, folding_threshold, folding_offset, radix)
+            };
+
+            symbols.push(DecoderModelEntry {
+                symbol: sym as Symbol,
+                freq: sym_data.freq,
+                cumul_freq: sym_data.cumul_freq,
+                mapped_num,
+            });
         }
 
         Self {

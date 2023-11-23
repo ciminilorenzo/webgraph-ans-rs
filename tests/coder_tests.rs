@@ -1,6 +1,7 @@
 use rand::prelude::Distribution;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
+
 use rand_distr::Zipf;
 
 use folded_streaming_rans::ans::dec_model::VecFrame;
@@ -20,7 +21,6 @@ const RADIX: u8 = 4;
 const FIDELITY: u8 = 2;
 
 
-// !!! if shared, use it as a fixture !!!
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian
 ///
 /// distribution that can output values up to [`MAXIMUM_SYMBOL`].

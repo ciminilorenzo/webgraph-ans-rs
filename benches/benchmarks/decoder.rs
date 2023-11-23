@@ -2,9 +2,10 @@ use criterion::{Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
 
-use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
+use folded_streaming_rans::ans::dec_model::{Rank9SelFrame};
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
+use folded_streaming_rans::RawSymbol;
 
 use crate::benchmarks::get_symbols;
 use crate::benchmarks::{RADIX, FIDELITY};
@@ -23,7 +24,10 @@ fn decode_benchmark(c: &mut Criterion) {
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(500);
 
-    let frame = Rank9SelFrame::new(&prelude.1, prelude.3);
+    let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
+    let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+
+    let frame = Rank9SelFrame::new(&prelude.1, prelude.3, folding_offset, folding_threshold, RADIX);
 
     let decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, Rank9SelFrame>::with_frame(
         prelude.0,
