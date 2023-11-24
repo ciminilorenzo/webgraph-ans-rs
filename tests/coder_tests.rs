@@ -4,7 +4,7 @@ use rand::SeedableRng;
 
 use rand_distr::Zipf;
 
-use folded_streaming_rans::ans::dec_model::VecFrame;
+use folded_streaming_rans::ans::dec_model::{Rank9SelFrame};
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::RawSymbol;
@@ -46,7 +46,7 @@ fn test_decodes_correctly() {
 
     let data = coder.serialize();
 
-    let mut decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, VecFrame>::new(
+    let mut decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, Rank9SelFrame>::new(
         &data.1,
         data.3,
         data.2,

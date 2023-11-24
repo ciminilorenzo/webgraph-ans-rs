@@ -4,35 +4,21 @@ use std::ops::Index;
 use bitvec::prelude::*;
 use bitvec::slice::{RChunks};
 
-use crate::ans::dec_model::{DecoderModelEntry, VecFrame};
+use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
 use crate::{RawSymbol, State, K_LOG2, LOG2_B};
 use crate::ans::EncoderModelEntry;
 
-/// Mask that extract the 16 MSB from `mapped_num`. This number will be the number of folds to unfold
+/// Mask used to extract the 16 MSB from `mapped_num`. This number will be the number of folds to unfold
 /// the symbol with.
 const FOLDS_MASK: u64 = 0x_FFFF000000000000;
 
-/// Mask used the 48 LSB from `mapped_num`. This number will be the quasi-unfolded symbol.
+/// Mask used to extract the 48 LSB from `mapped_num`. This number will be the quasi-unfolded symbol.
 const SYMBOL_MASK: u64 = 0x_FFFFFFFFFFFF;
 
 /// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
 const RESERVED_TO_SYMBOL: u8 = 48;
 
 
-/// # Folded Streaming ANS-based Encoder
-/// A streaming ANS-based decoder which uses the technique called "symbol folding" (from Moffat and Petri's
-/// [paper](https://dl.acm.org/doi/10.1145/3397175)) in order to reduce the size of the alphabet.
-///
-/// ### STRUCT'S CONSTANTS
-/// Users of this struct can tune the parameters `RADIX` and `FIDELITY` in order to change how the
-/// symbols folding is performed.
-///
-/// #### RADIX
-/// For convenience, this value is intended to be the log_2 of the radix parameter as described in
-/// the paper.
-///
-/// #### FIDELITY
-/// to write
 #[derive(Clone)]
 pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
     where
@@ -64,18 +50,18 @@ pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
     folding_threshold: u64,
 }
 
-impl<const RADIX: u8, const FIDELITY: u8> FoldedStreamANSDecoder<RADIX, FIDELITY, VecFrame> {
+impl<const RADIX: u8, const FIDELITY: u8> FoldedStreamANSDecoder<RADIX, FIDELITY, Rank9SelFrame> {
 
     /// Creates a new FoldedStreamANSDecoder from the given parameters.
     ///
     /// # Note
-    /// By default, this constructor creates a new instance by using a [`VecFrame`] as a frame. This
-    /// means that the frame is not space-efficient, but it's the fastest one. Thus, if you want to create
-    /// the model with a more space-efficient frame, you should use the [this](Self::with_frame) constructor.
+    /// By default, this constructor creates a new instance by using a [`Rank9SelFrame`] as a frame.
+    /// If you want to create the model with a different frame, you should use the [this](Self::with_frame)
+    /// constructor.
     pub fn new (table: &[EncoderModelEntry], log2_frame_size: u8, states: [State; 4], normalized_bits: BitVec, folded_bits: BitVec<usize, Msb0>, sequence_length: u64) -> Self {
         let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
         let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
-        let model_with_vec = VecFrame::new(table, log2_frame_size, folding_offset, folding_threshold, RADIX);
+        let model_with_vec = Rank9SelFrame::new(table, log2_frame_size, folding_offset, folding_threshold, RADIX);
 
         Self {
             model: model_with_vec,
@@ -111,6 +97,9 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
         }
     }
 
+    // here i'm using ::take since using self.normalize_bits to construct the iterator would mean
+    // that the iterator would have a mutable reference to self. This would not allow me to call
+    // decode_sym later on (since it takes another mutable reference to self).
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&mut self) -> Vec<RawSymbol> {
         let mut decoded = Vec::with_capacity(self.sequence_length as usize);
@@ -159,6 +148,9 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
         decoded_sym
     }
 
+    /// Divides the given u64 into two parts: the 16 MSB and the 48 LSB. The 16 MSB will be the number of
+    /// folds of [`RADIX`] bits to retrieve from the folded bits to correctly unfold the symbol, while the
+    /// 48 LSB will be the quasi-unfolded symbol.
     fn unfold_symbol(mapped_num: u64, folded_bits: &BitSlice<usize, Msb0>, last_unfolded_pos: &mut usize) -> RawSymbol {
         let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
@@ -166,6 +158,9 @@ impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDEL
             .get(*last_unfolded_pos - folds as usize * RADIX as usize..*last_unfolded_pos)
             .unwrap();
 
+        // let's keep an index that keeps track of the position of the last last unfolded bit. This
+        // is needed since we don't know at priori how many bits we have to unfold (so we can't use
+        // a method like chunks).
         *last_unfolded_pos -= folds as usize * RADIX as usize;
         quasi_unfolded | bits.load_be::<RawSymbol>()
     }

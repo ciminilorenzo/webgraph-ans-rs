@@ -6,25 +6,10 @@ use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
 use crate::ans::{EncoderModelEntry};
 
-// Used to extract the least significant 32 bits from a 64-bit state.
+/// Used to extract the 32 LSB from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
 
 
-/// # Folded Streaming ANS-based Encoder
-/// A streaming ANS-based encoder which uses the folded symbols technique in order to reduce the size
-/// of the alphabet by using the technique called "symbol folding" (from Moffat and Petri's
-/// [paper](https://dl.acm.org/doi/10.1145/3397175)).
-///
-/// ### STRUCT'S CONSTANTS
-/// User of this struct can tune the parameters `RADIX` and `FIDELITY` in order to change how the
-/// symbols folding is performed.
-///
-/// #### RADIX
-/// For convenience, this value is intended to be the log_2 of the radix parameter as introduced in
-/// the [paper](https://dl.acm.org/doi/10.1145/3397175). In other word, radix is 2^RADIX.
-///
-/// #### FIDELITY
-/// to write
 #[readonly::make]
 #[derive(Clone)]
 pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
@@ -114,7 +99,6 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
             + (state - (block * sym_data.freq as u64))
     }
 
-    #[inline]
     fn shrink_state(mut state: State, out: &mut BitVec) -> State {
         let lsb = (state & MASK) as u32;
         out.extend(lsb.view_bits::<Lsb0>());
@@ -125,10 +109,6 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
     /// Performs the so called 'symbol folding'. This optimized implementation is different
     /// from the one described in the paper since here the while loop is avoided in favour of a single
     /// block of operations that performs the same task.
-    ///
-    /// # Panics
-    /// - if the caller wants to stream bits out even though no BitVec reference is provided;
-    /// - if the folded symbol is bigger than u16::MAX.
     fn fold_symbol(mut symbol: RawSymbol, out: &mut BitVec<usize, Msb0>, radix: u8, fidelity: u8) -> Symbol {
         let mut offset = 0;
         let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
