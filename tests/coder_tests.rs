@@ -4,7 +4,6 @@ use rand::SeedableRng;
 
 use rand_distr::Zipf;
 
-use folded_streaming_rans::ans::dec_model::{Rank9SelFrame};
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::RawSymbol;
@@ -35,25 +34,16 @@ fn get_symbols() -> Vec<RawSymbol> {
     symbols
 }
 
-
-// let's test that the decoder is able to retrieve the original sequence of symbols encoded by the
-// encoder
 #[test]
 fn test_decodes_correctly() {
     let symbols = get_symbols();
-    let mut coder = FoldedStreamANSCoder::<RADIX, FIDELITY>::new(symbols.to_vec());
+
+    let mut coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
     coder.encode_all();
 
-    let data = coder.serialize();
+    let prelude = coder.serialize();
 
-    let mut decoder = FoldedStreamANSDecoder::<RADIX, FIDELITY, Rank9SelFrame>::new(
-        &data.1,
-        data.3,
-        data.2,
-        data.4,
-        data.5,
-        data.0,
-    );
+    let decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
 
-    assert_eq!(decoder.decode_all(), symbols);
+    assert_eq!(symbols, decoder.decode_all());
 }

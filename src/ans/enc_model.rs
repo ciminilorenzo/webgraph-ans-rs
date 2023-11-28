@@ -19,7 +19,7 @@ const TETA: f64 = 1.001;
 
 
 #[readonly::make]
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FoldedANSModel4Encoder {
 
     /// Contains, for each index, the data associated to the symbol equal to that index.
@@ -41,7 +41,7 @@ impl FoldedANSModel4Encoder {
         for sym in input {
             let folded_sym = Self::folding_without_streaming_out(*sym, radix, fidelity);
             *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
-            max_sym = std::cmp::max(max_sym, folded_sym);
+            max_sym = max(max_sym, folded_sym);
             n += 1;
         }
 

@@ -1,69 +1,135 @@
-use std::usize;
-
+use std::mem;
 use bitvec::prelude::*;
 
 use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
-use crate::ans::{EncoderModelEntry};
+use crate::ans::{FASTER_RADIX, Prelude};
+use crate::ans::decoder::Unfold;
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
 
 
-#[readonly::make]
-#[derive(Clone)]
-pub struct FoldedStreamANSCoder<const RADIX: u8, const FIDELITY: u8> {
+pub trait Fold {
+    // TODO: is there a faster way to calculate this log?
+    /// How many blocks of `radix` bits have to be extracted from the symbol in order to fold it.
+    fn get_folds_number(symbol: RawSymbol, radix: u8, fidelity: u8) -> u8 {
+        (((u64::ilog2(symbol) + 1) as u64 - fidelity as u64) / radix as u64) as u8
+    }
 
-    pub model: FoldedANSModel4Encoder,
+    /// Performs the so called 'symbol folding' according to the technique described in this
+    /// [paper](https://dl.acm.org/doi/abs/10.1145/3397175).
+    fn fold_symbol(symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol;
+}
+
+impl Fold for Vec<u8> {
+
+    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
+        let cuts = Self::get_folds_number(symbol, radix, fidelity);
+        let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+        let bytes = symbol.to_be_bytes();
+
+        for folded_byte in bytes[bytes.len() - cuts as usize..bytes.len()].iter() {
+            out.push(*folded_byte);
+        }
+
+        symbol >>= cuts * radix;
+        (symbol + offset) as u16
+    }
+}
+
+impl Fold for BitVec<usize, Msb0> {
+
+    /// This is a general implementation that folds symbols given any reasonable radix and fidelity.
+    /// This generality makes this implementation slower since it doesn't allow relevant optimizations
+    /// used with radix equal to 8.
+    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
+        let cuts = Self::get_folds_number(symbol, radix, fidelity);
+        let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+        let bit_to_cut = cuts * radix;
+
+        out.extend_from_bitslice(symbol
+            .view_bits::<Msb0>()
+            .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
+        );
+
+        symbol >>= bit_to_cut;
+
+        (symbol + offset) as u16
+    }
+}
+
+
+#[derive(Clone)]
+pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX, F = Vec<u8>>
+    where
+        F: Fold + Default + Clone
+{
+    model: FoldedANSModel4Encoder,
 
     states: [u64; 4],
 
     /// The normalized bits during the encoding process.
-    normalized_bits: BitVec,
+    normalized_bits: Vec<u32>,
 
     /// The folded bits during the encoding process for those symbols which are bucketed.
-    folded_bits: BitVec<usize, Msb0>,
+    folded_bits: F,
 
     /// Original sequence of symbols.
-    input_sequence: Vec<RawSymbol>,
+    input_sequence: &'a Vec<RawSymbol>,
 
     /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
     folding_threshold: RawSymbol,
 }
 
-impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY> {
-
-    /// Creates an Encoder from a sequence of [`RawSymbol`]s;
-    ///
-    /// # Panics
-    /// If either the input sequence is empty or is not possibile to approximated the folded symbols'
-    /// distribution with a common denominator lower or equal than 2^28.
-    pub fn new(input: Vec<RawSymbol>) -> Self {
-        assert!(! input.is_empty(), "A non-empty sequence must be provided!");
-
-        let model = FoldedANSModel4Encoder::new(&input, RADIX, FIDELITY);
-
+impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+    where
+        F: Fold + Default + Clone + Unfold
+{
+    /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
+    /// given model. Please note that this constructor will return a decoder that uses a BitVec as
+    /// folded bits, which is way slower than the one that uses a Vec of bytes.
+    pub fn with_parameters(input: &'a Vec<RawSymbol>, folded_bits: F) -> Self {
         Self {
             states: [0; 4], // wasting 64 bits for each state
-            model,
-            normalized_bits: BitVec::new(),
-            folded_bits: BitVec::new(),
+            model: FoldedANSModel4Encoder::new(input, RADIX, FIDELITY),
+            normalized_bits: Vec::new(),
+            folded_bits,
             input_sequence: input,
             folding_threshold: 1 << (RADIX + FIDELITY - 1),
         }
     }
+}
 
+impl <'a, const FIDELITY: u8> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
+
+    /// Creates the standard FoldedStreamANSEncoder from the given parameters.
+    ///
+    /// The standard decoder uses fixed radix of 8. This means that, by using this
+    /// constructor, you're prevented from tuning any another parameter but fidelity.
+    /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
+    pub fn new(input: &'a Vec<RawSymbol>) -> Self {
+        Self::with_parameters(input, Vec::new())
+    }
+}
+
+/// Encoding functions
+impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+    where
+        F: Fold + Default + Clone + Unfold
+{
     /// Encodes the whole input sequence.
     ///
     /// # Note
     /// In order to give priority to the decoding process, this function will encode the sequence in
     /// reverse order.
     pub fn encode_all(&mut self) {
+        let mut states = [1_u64 << (self.model.log2_frame_size + K_LOG2); 4];
+        let mut folded_bits = mem::take(&mut self.folded_bits);
+        let mut normalized_bits = Vec::with_capacity(self.input_sequence.len());
+
         let symbols_iter = self.input_sequence.chunks_exact(4);
         let symbols_left = symbols_iter.remainder();
-        let mut normalized_bits = BitVec::new();
-        let mut folded_bits = BitVec::<usize, Msb0>::new();
-        let mut states = [1_u64 << (self.model.log2_frame_size + K_LOG2); 4];
 
         for symbol in symbols_left.iter().rev() {
             states[0] = self.encode_symbol(*symbol, states[0], &mut normalized_bits, &mut folded_bits);
@@ -81,9 +147,9 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
         self.folded_bits = folded_bits;
     }
 
-    fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut BitVec, folded_bits: &mut BitVec<usize, Msb0>) -> State {
+    fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut Vec<u32>, folded_bits: &mut F) -> State {
         let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
-            Self::fold_symbol(symbol, folded_bits, RADIX, FIDELITY)
+            F::fold_symbol(symbol, RADIX, FIDELITY, folded_bits)
         };
 
         let sym_data = &self.model[symbol];
@@ -99,39 +165,22 @@ impl <const RADIX: u8, const FIDELITY: u8> FoldedStreamANSCoder<RADIX, FIDELITY>
             + (state - (block * sym_data.freq as u64))
     }
 
-    fn shrink_state(mut state: State, out: &mut BitVec) -> State {
+    fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
         let lsb = (state & MASK) as u32;
-        out.extend(lsb.view_bits::<Lsb0>());
+        out.push(lsb);
         state >>= LOG2_B;
         state
     }
 
-    /// Performs the so called 'symbol folding'. This optimized implementation is different
-    /// from the one described in the paper since here the while loop is avoided in favour of a single
-    /// block of operations that performs the same task.
-    fn fold_symbol(mut symbol: RawSymbol, out: &mut BitVec<usize, Msb0>, radix: u8, fidelity: u8) -> Symbol {
-        let mut offset = 0;
-        let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
-        let bit_to_cut = cuts as u8 * radix;
-
-        out.extend_from_bitslice(symbol
-            .view_bits::<Msb0>()
-            .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
-        );
-
-        symbol >>= bit_to_cut;
-        offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-        (symbol + offset) as u16
-    }
-
-    pub fn serialize(&mut self) -> (u64, Vec<EncoderModelEntry>, [State; 4], u8, BitVec, BitVec<usize, Msb0>) {
-        (
-            self.input_sequence.len() as u64,
-            self.model.to_raw_parts(),
-            self.states,
-            self.model.log2_frame_size,
-            self.normalized_bits.clone(),
-            self.folded_bits.clone()
-        )
+    pub fn serialize(&mut self) -> Prelude<F> {
+        Prelude {
+            table: self.model.to_raw_parts(),
+            sequence_length: self.input_sequence.len() as u64,
+            normalized_bits: self.normalized_bits.clone(),
+            folded_bits: self.folded_bits.clone(),
+            log2_frame_size: self.model.log2_frame_size,
+            states: self.states,
+        }
     }
 }
+

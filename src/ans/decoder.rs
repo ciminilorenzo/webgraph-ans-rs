@@ -1,12 +1,13 @@
-use std::mem;
 use std::ops::Index;
+use std::slice::Iter;
 
 use bitvec::prelude::*;
-use bitvec::slice::{RChunks};
+use byteorder::{BigEndian, ReadBytesExt};
 
 use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
-use crate::{RawSymbol, State, K_LOG2, LOG2_B};
-use crate::ans::EncoderModelEntry;
+use crate::{RawSymbol, State, LOG2_B, K_LOG2};
+use crate::ans::{FASTER_RADIX, Prelude};
+
 
 /// Mask used to extract the 16 MSB from `mapped_num`. This number will be the number of folds to unfold
 /// the symbol with.
@@ -19,18 +20,80 @@ const SYMBOL_MASK: u64 = 0x_FFFFFFFFFFFF;
 const RESERVED_TO_SYMBOL: u8 = 48;
 
 
+pub trait Unfold {
+
+    /// Unfolds a symbol from the given `mapped_num` and returns it.
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol;
+}
+
+impl Unfold for BitVec<usize, Msb0> {
+
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol {
+        let folds = ((mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL) as usize;
+        let quasi_unfolded = mapped_num & SYMBOL_MASK;
+        let bits = self
+            .as_bitslice()
+            .get(*last_unfolded - folds * radix as usize..*last_unfolded)
+            .unwrap();
+
+        *last_unfolded -= folds * radix as usize;
+        quasi_unfolded | bits.load_be::<RawSymbol>()
+    }
+}
+
+impl Unfold for Vec<u8> {
+
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, _radix: u8) -> RawSymbol {
+        let quasi_unfolded = mapped_num & SYMBOL_MASK;
+        let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
+        let mut bytes = self
+            .get(*last_unfolded - folds as usize..*last_unfolded)
+            .unwrap();
+
+        *last_unfolded -= folds as usize;
+
+        quasi_unfolded | bytes.read_uint::<BigEndian>(folds as usize).unwrap()
+    }
+}
+
+#[allow(clippy::len_without_is_empty)]
+pub trait Length {
+    fn len(&self) -> usize;
+}
+
+impl Length for BitVec<usize, Msb0> {
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
+impl Length for Vec<u8> {
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.len()
+    }
+}
+
+
+/// A Streaming-rANS decoder that uses symbol folding.
+///
+/// Be sure that the encoder and the decoder use the same parameters.
 #[derive(Clone)]
-pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
+pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
     where
-        T: Index<State, Output = DecoderModelEntry>
+        M: Index<State, Output = DecoderModelEntry>,
+        F: Unfold + Length
 {
-    model: T,
+    model: M,
 
     /// The normalized bits during the encoding process.
-    normalized_bits: BitVec,
+    normalized_bits: Vec<u32>,
 
     /// The folded bits during the encoding process.
-    folded_bits: BitVec<usize, Msb0>,
+    folded_bits: F,
 
     /// The lower bound of the interval.
     lower_bound: State,
@@ -50,124 +113,111 @@ pub struct FoldedStreamANSDecoder<const RADIX: u8, const FIDELITY: u8, T>
     folding_threshold: u64,
 }
 
-impl<const RADIX: u8, const FIDELITY: u8> FoldedStreamANSDecoder<RADIX, FIDELITY, Rank9SelFrame> {
-
-    /// Creates a new FoldedStreamANSDecoder from the given parameters.
-    ///
-    /// # Note
-    /// By default, this constructor creates a new instance by using a [`Rank9SelFrame`] as a frame.
-    /// If you want to create the model with a different frame, you should use the [this](Self::with_frame)
-    /// constructor.
-    pub fn new (table: &[EncoderModelEntry], log2_frame_size: u8, states: [State; 4], normalized_bits: BitVec, folded_bits: BitVec<usize, Msb0>, sequence_length: u64) -> Self {
-        let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
-        let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
-        let model_with_vec = Rank9SelFrame::new(table, log2_frame_size, folding_offset, folding_threshold, RADIX);
+impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
+    where
+        M: Index<State, Output = DecoderModelEntry>,
+        F: Unfold + Length
+{
+    /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
+    /// given model. Please note that this constructor will return a decoder that uses a BitVec as
+    /// folded bits, which is way slower than the one that uses a Vec of bytes.
+    pub fn with_parameters(mut prelude: Prelude<F>, model: M) -> Self {
+        prelude.normalized_bits.reverse();
 
         Self {
-            model: model_with_vec,
-            normalized_bits,
-            folded_bits,
-            folding_threshold,
-            lower_bound: 1 << (log2_frame_size + K_LOG2),
-            states,
-            frame_mask: (1 << log2_frame_size) - 1,
-            log2_frame_size,
-            sequence_length,
+            model,
+            normalized_bits: prelude.normalized_bits,
+            folded_bits: prelude.folded_bits,
+            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as RawSymbol,
+            lower_bound: 1 << (prelude.log2_frame_size + K_LOG2),
+            states: prelude.states,
+            frame_mask: (1 << prelude.log2_frame_size) - 1,
+            log2_frame_size: prelude.log2_frame_size,
+            sequence_length: prelude.sequence_length,
         }
     }
 }
 
-impl<const RADIX: u8, const FIDELITY: u8, T> FoldedStreamANSDecoder<RADIX, FIDELITY, T>
+impl <const FIDELITY: u8> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
+
+    /// Creates the standard FoldedStreamANSDecoder from the given parameters.
+    ///
+    /// The standard decoder uses fixed radix of 8 and a [`Rank9SelFrame`] as a frame. This means that,
+    /// by using this constructor, you're prevented from tuning any another parameter but fidelity.
+    /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
+    pub fn new(prelude: Prelude<Vec<u8>>) -> Self {
+        let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1)) as RawSymbol;
+        let folding_threshold = (1 << (FIDELITY + FASTER_RADIX - 1)) as RawSymbol;
+
+        let frame = Rank9SelFrame::new(
+            &prelude.table,
+            prelude.log2_frame_size,
+            folding_offset,
+            folding_threshold,
+            FASTER_RADIX
+        );
+
+        Self::with_parameters(
+            prelude,
+            frame,
+        )
+    }
+}
+
+/// Decoding functions.
+impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
-        T: Index<State, Output = DecoderModelEntry>
+        M: Index<State, Output = DecoderModelEntry>,
+        F: Unfold + Length
 {
 
-    /// Creates a new FoldedStreamANSDecoder from the given parameters.
-    pub fn with_frame(sequence_length: u64, states: [State; 4], model: T, log2_frame_size: u8, normalized_bits: BitVec, folded_bits: BitVec::<usize, Msb0>) -> Self {
-        Self {
-            model,
-            normalized_bits,
-            folded_bits,
-            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as RawSymbol,
-            lower_bound: 1 << (log2_frame_size + K_LOG2),
-            states,
-            frame_mask: (1 << log2_frame_size) - 1,
-            log2_frame_size,
-            sequence_length,
-        }
-    }
-
-    // here i'm using ::take since using self.normalize_bits to construct the iterator would mean
-    // that the iterator would have a mutable reference to self. This would not allow me to call
-    // decode_sym later on (since it takes another mutable reference to self).
     /// Decodes the whole sequence given as input.
-    pub fn decode_all(&mut self) -> Vec<RawSymbol> {
+    pub fn decode_all(&self) -> Vec<RawSymbol> {
         let mut decoded = Vec::with_capacity(self.sequence_length as usize);
-        let norm_bits = mem::take(&mut self.normalized_bits);
-        let mut norm_chunks = norm_bits.rchunks(LOG2_B as usize);
-        let folded_bits_binding = mem::take(&mut self.folded_bits);
-        let folded_bits = folded_bits_binding.as_bitslice();
-        let mut last_unfolded_pos = folded_bits.len();
+        let mut norm_bits = self.normalized_bits.iter();
+        let mut last_unfolded_pos = self.folded_bits.len();
         let threshold = self.sequence_length - (self.sequence_length % 4);
+        let mut states = self.states;
+
         let mut current_symbol_index = 0;
 
         while current_symbol_index < threshold {
-            decoded.push(self.decode_sym(3_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(2_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(1_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(0_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[3], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[2], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[1], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
             current_symbol_index += 4;
         }
 
         while current_symbol_index < self.sequence_length {
-            decoded.push(self.decode_sym(0_usize, &mut norm_chunks, folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
             current_symbol_index += 1;
         }
-
         decoded
     }
 
-    fn decode_sym(&mut self, state_index: usize, norm_chunks: &mut RChunks<usize, Lsb0>, folded_bits: &BitSlice<usize, Msb0>, last_unfolded_pos: &mut usize) -> RawSymbol {
-        let slot = self.states[state_index] & self.frame_mask;
+    fn decode_sym(&self, state: &mut State, norm_bits_iter: &mut Iter<u32>, folded_bits: &F, last_unfolded_pos: &mut usize) -> RawSymbol {
+        let slot = *state & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
         let decoded_sym = if (symbol_entry.symbol as RawSymbol) < self.folding_threshold {
             symbol_entry.symbol as RawSymbol
         } else {
-            Self::unfold_symbol(symbol_entry.mapped_num, folded_bits, last_unfolded_pos)
+            folded_bits.unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
         };
 
-        self.states[state_index] = (self.states[state_index] >> self.log2_frame_size) * symbol_entry.freq as State
+        *state = (*state >> self.log2_frame_size) * symbol_entry.freq as State
             + slot as State
             - symbol_entry.cumul_freq as State;
 
-        if self.states[state_index] < self.lower_bound {
-            self.states[state_index] = Self::shrink_state(self.states[state_index], norm_chunks);
+        if *state < self.lower_bound {
+            *state = Self::expand_state(*state, norm_bits_iter);
         }
-
         decoded_sym
     }
 
-    /// Divides the given u64 into two parts: the 16 MSB and the 48 LSB. The 16 MSB will be the number of
-    /// folds of [`RADIX`] bits to retrieve from the folded bits to correctly unfold the symbol, while the
-    /// 48 LSB will be the quasi-unfolded symbol.
-    fn unfold_symbol(mapped_num: u64, folded_bits: &BitSlice<usize, Msb0>, last_unfolded_pos: &mut usize) -> RawSymbol {
-        let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
-        let quasi_unfolded = mapped_num & SYMBOL_MASK;
-        let bits = folded_bits
-            .get(*last_unfolded_pos - folds as usize * RADIX as usize..*last_unfolded_pos)
-            .unwrap();
-
-        // let's keep an index that keeps track of the position of the last last unfolded bit. This
-        // is needed since we don't know at priori how many bits we have to unfold (so we can't use
-        // a method like chunks).
-        *last_unfolded_pos -= folds as usize * RADIX as usize;
-        quasi_unfolded | bits.load_be::<RawSymbol>()
-    }
-
-    #[must_use]
-    fn shrink_state(state: State, norm_chunks: &mut RChunks<usize, Lsb0>) -> State {
-        let bits = norm_chunks.next().unwrap();
-        ((state << LOG2_B) | bits.load::<State>()) as State
+    fn expand_state(state: State, norm_bits: &mut Iter<u32>) -> State {
+        let bits = norm_bits.next().unwrap();
+        (state << LOG2_B) | *bits as State
     }
 }

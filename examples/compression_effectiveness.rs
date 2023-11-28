@@ -1,13 +1,9 @@
-use itertools::Itertools;
-
 use rand::distributions::Distribution;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 use rand_distr::Zipf;
 
-use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
-use folded_streaming_rans::{RawSymbol, State};
-use folded_streaming_rans::utils::{self_entropy};
+use folded_streaming_rans::{RawSymbol};
 
 
 /// Size of the list of symbols used during the examples.
@@ -30,116 +26,6 @@ fn generate_zipfian_distribution() -> Vec<RawSymbol> {
 }
 
 fn main() {
-    let symbols = generate_zipfian_distribution();
-
-    let freqs_distr = symbols
-        .iter()
-        .counts()
-        .iter()
-        .map(|(_, sym_freq)| *sym_freq)
-        .collect::<Vec<usize>>();
-
-    // where M is frame size
-    let original_m = SYMBOL_LIST_LENGTH;
-    let original_entropy = self_entropy(&freqs_distr, original_m as f64);
-
-    println!("original distribution BPI: {}", original_entropy / original_m as f64);
-
-    // test compression effectiveness with different radix = 4 and fidelity 2
-    let mut encoder = FoldedStreamANSCoder::<4,2>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 2 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 3
-    let mut encoder = FoldedStreamANSCoder::<4,3>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 3 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 4
-    let mut encoder = FoldedStreamANSCoder::<4,4>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 4 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 5
-    let mut encoder = FoldedStreamANSCoder::<4,5>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 5 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 6
-    let mut encoder = FoldedStreamANSCoder::<4,6>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 6 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 7
-    let mut encoder = FoldedStreamANSCoder::<4,7>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 7 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
-
-    // test compression effectiveness with different radix = 4 and fidelity 8
-    let mut encoder = FoldedStreamANSCoder::<4,8>::new(symbols.clone());
-    encoder.encode_all();
-    let result = encoder.serialize();
-    let first_bits = result.4.len();
-    let second_bits = result.5.len();
-    let total = State::BITS as usize + first_bits + second_bits;
-
-    println!("\
-        Encoded with radix = 4 and fidelity = 8 \
-        Number of symbols: {} \
-        BPI: {}", encoder.model.table.len(), total as f64 / SYMBOL_LIST_LENGTH as f64
-    );
+    /*
+     */
 }

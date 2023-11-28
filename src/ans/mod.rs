@@ -1,15 +1,15 @@
-use bitvec::vec::BitVec;
-
 use crate::{Freq, State};
+use crate::ans::decoder::Unfold;
 
 pub mod encoder;
 pub mod decoder;
 pub mod enc_model;
 pub mod dec_model;
 
+pub const FASTER_RADIX: u8 = 8;
 
 #[readonly::make]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct EncoderModelEntry {
     pub freq: Freq,
     pub upperbound: u64,
@@ -26,9 +26,22 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     }
 }
 
-#[readonly::make]
-pub struct EncodingResult {
-    pub state: State,
-    pub normalized_bits: BitVec,
-    pub folded_bits: BitVec,
+
+pub struct Prelude <F: Unfold> {
+
+    /// Contains, for each index, the data associated to the symbol equal to that index.
+    pub table: Vec<EncoderModelEntry>,
+
+    /// The length of the sequence to decode.
+    pub sequence_length: u64,
+
+    /// The normalized bits during the encoding process.
+    pub normalized_bits: Vec<u32>,
+
+    /// The folded bits during the encoding process.
+    pub folded_bits: F,
+
+    pub log2_frame_size: u8,
+
+    pub states: [State; 4],
 }

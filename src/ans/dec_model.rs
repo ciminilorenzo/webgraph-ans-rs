@@ -22,6 +22,7 @@ pub struct DecoderModelEntry {
 }
 
 
+// TODO: all the models should be buildable by using the prelude
 pub struct EliasFanoFrame {
 
     /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
@@ -80,8 +81,6 @@ impl Index<State> for EliasFanoFrame {
 }
 
 
-// Petri's solution. Inserts in each slot the data associated to the corresponding symbol. This
-// solution is not space-efficient, but it's the fastest one.
 #[derive(Clone)]
 pub struct VecFrame(Vec<DecoderModelEntry>);
 
