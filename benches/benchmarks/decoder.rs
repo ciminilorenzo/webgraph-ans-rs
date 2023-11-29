@@ -69,5 +69,5 @@ fn decode(c: &mut Criterion) {
 criterion_group! {
     name = decoder_benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(150, Output::Flamegraph(None)));
-    targets = decode_with_fastest_decoder, decode
+    targets = decode_with_fastest_decoder //, decode
 }

@@ -2,7 +2,6 @@ use std::ops::Index;
 use std::slice::Iter;
 
 use bitvec::prelude::*;
-use byteorder::{BigEndian, ReadBytesExt};
 
 use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
 use crate::{RawSymbol, State, LOG2_B, K_LOG2};
@@ -46,13 +45,12 @@ impl Unfold for Vec<u8> {
     fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, _radix: u8) -> RawSymbol {
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
-        let mut bytes = self
-            .get(*last_unfolded - folds as usize..*last_unfolded)
-            .unwrap();
+        let mut bytes = [0_u8; 8];
 
+        bytes[8 - folds as usize..].copy_from_slice(&self[*last_unfolded - folds as usize..*last_unfolded]);
         *last_unfolded -= folds as usize;
 
-        quasi_unfolded | bytes.read_uint::<BigEndian>(folds as usize).unwrap()
+        quasi_unfolded | u64::from_be_bytes(bytes) as RawSymbol
     }
 }
 

@@ -59,7 +59,7 @@ fn probing_benchmark(c: &mut Criterion) {
 }
 
 criterion_group! {
-    name = decoder_benches;
+    name = model_for_decoder_benches;
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
     targets = probing_benchmark
 }
