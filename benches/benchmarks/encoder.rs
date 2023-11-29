@@ -15,7 +15,7 @@ fn fast_encoding_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("encoder");
     group.measurement_time(std::time::Duration::from_secs(30));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
-    group.sample_size(100);
+    group.sample_size(50);
 
     let coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
 
@@ -31,7 +31,7 @@ fn encoding_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("encoder");
     group.measurement_time(std::time::Duration::from_secs(30));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
-    group.sample_size(100);
+    group.sample_size(50);
 
     let coder = FoldedStreamANSCoder::<
         FIDELITY,

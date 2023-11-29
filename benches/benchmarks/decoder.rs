@@ -3,7 +3,7 @@ use criterion::{Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
 use bitvec::prelude::BitVec;
-use folded_streaming_rans::ans::dec_model::Rank9SelFrame;
+use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
 
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
@@ -52,12 +52,12 @@ fn decode(c: &mut Criterion) {
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << 4) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + 4 - 1)) as RawSymbol;
 
-    let model = Rank9SelFrame::new(&prelude.table, prelude.log2_frame_size, folding_offset, folding_threshold, 4);
+    let model = VecFrame::new(&prelude.table, prelude.log2_frame_size, folding_offset, folding_threshold, 4);
 
     let decoder = FoldedStreamANSDecoder::<
         FIDELITY,
         4,
-        Rank9SelFrame,
+        VecFrame,
         BitVec<usize, Msb0>
     >::with_parameters(prelude, model);
 

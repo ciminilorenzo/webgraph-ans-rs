@@ -11,7 +11,6 @@ const MASK: u64 = 0xFFFFFFFF;
 
 
 pub trait Fold {
-    // TODO: is there a faster way to calculate this log?
     /// How many blocks of `radix` bits have to be extracted from the symbol in order to fold it.
     fn get_folds_number(symbol: RawSymbol, radix: u8, fidelity: u8) -> u8 {
         (((u64::ilog2(symbol) + 1) as u64 - fidelity as u64) / radix as u64) as u8

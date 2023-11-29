@@ -36,7 +36,7 @@ fn probing_benchmark(c: &mut Criterion) {
     let bitvec_frame = Rank9SelFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
 
     let mut group = c.benchmark_group("Probing");
-    group.measurement_time(std::time::Duration::from_secs(40));
+    group.measurement_time(std::time::Duration::from_secs(15));
 
     group.bench_with_input("with elias", &slots_to_probe, |b, slots_to_probe| b.iter(|| {
         for &s in slots_to_probe {

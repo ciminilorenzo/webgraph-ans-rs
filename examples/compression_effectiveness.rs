@@ -4,10 +4,14 @@ use rand::SeedableRng;
 use rand_distr::Zipf;
 
 use folded_streaming_rans::{RawSymbol};
+use folded_streaming_rans::ans::dec_model::VecFrame;
+use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
+use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
+use folded_streaming_rans::ans::FASTER_RADIX;
 
 
 /// Size of the list of symbols used during the examples.
-const SYMBOL_LIST_LENGTH: usize = 100_000_000;
+const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 
 /// Maximum value that the zpfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 1_000_000_000;
@@ -26,6 +30,30 @@ fn generate_zipfian_distribution() -> Vec<RawSymbol> {
 }
 
 fn main() {
-    /*
-     */
+    let symbols = generate_zipfian_distribution();
+
+    let mut encoder = FoldedStreamANSCoder::<1>::new(&symbols);
+    encoder.encode_all();
+
+    let prelude = encoder.serialize();
+
+    let folding_offset = ((1 << (1 - 1)) * ((1 << FASTER_RADIX) - 1)) as RawSymbol;
+    let folding_threshold = (1 << (1 + FASTER_RADIX - 1)) as RawSymbol;
+
+    let model = VecFrame::new(
+        &prelude.table,
+        prelude.log2_frame_size,
+        folding_offset,
+        folding_threshold,
+        FASTER_RADIX
+    );
+
+    let decoder = FoldedStreamANSDecoder::<
+    1,
+    FASTER_RADIX,
+    VecFrame>::with_parameters(prelude, model);
+
+    let result = decoder.decode_all();
+
+    assert_eq!(symbols, result);
 }
