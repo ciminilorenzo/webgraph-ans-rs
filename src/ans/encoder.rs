@@ -1,64 +1,16 @@
-use bitvec::prelude::*;
-
 use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
 use crate::ans::{FASTER_RADIX, Prelude};
-use crate::ans::decoder::FoldedData;
+use crate::ans::traits::Foldable;
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
 
 
-pub trait Fold {
-    /// How many blocks of `radix` bits have to be extracted from the symbol in order to fold it.
-    fn get_folds_number(symbol: RawSymbol, radix: u8, fidelity: u8) -> u8 {
-        (((u64::ilog2(symbol) + 1) as u64 - fidelity as u64) / radix as u64) as u8
-    }
-
-    /// Performs the so called 'symbol folding' according to the technique described in this
-    /// [paper](https://dl.acm.org/doi/abs/10.1145/3397175).
-    fn fold_symbol(symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol;
-}
-
-impl Fold for Vec<u8> {
-
-    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
-        let cuts = Self::get_folds_number(symbol, radix, fidelity);
-        let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-
-        out.extend_from_slice(symbol.to_be_bytes()[8 - cuts as usize..].as_ref());
-
-        symbol >>= cuts * radix;
-        (symbol + offset) as u16
-    }
-}
-
-impl Fold for BitVec<usize, Msb0> {
-
-    /// This is a general implementation that folds symbols given any reasonable radix and fidelity.
-    /// This generality makes this implementation slower since it doesn't allow relevant optimizations
-    /// used with radix equal to 8.
-    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
-        let cuts = Self::get_folds_number(symbol, radix, fidelity);
-        let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-        let bit_to_cut = cuts * radix;
-
-        out.extend_from_bitslice(symbol
-            .view_bits::<Msb0>()
-            .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
-        );
-
-        symbol >>= bit_to_cut;
-
-        (symbol + offset) as u16
-    }
-}
-
-
 #[derive(Clone)]
 pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX, F = Vec<u8>>
     where
-        F: Fold + Default + Clone
+        F:  Foldable + Default + Clone
 {
     model: FoldedANSModel4Encoder,
 
@@ -79,7 +31,7 @@ pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER
 
 impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
-        F: Fold + Default + Clone + FoldedData
+        F: Foldable + Default + Clone
 {
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -111,7 +63,7 @@ impl <'a, const FIDELITY: u8> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, V
 /// Encoding functions
 impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
-        F: Fold + Default + Clone + FoldedData
+        F: Foldable + Default + Clone
 {
     /// Encodes the whole input sequence.
     ///

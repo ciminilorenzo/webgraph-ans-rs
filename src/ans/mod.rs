@@ -1,10 +1,11 @@
 use crate::{Freq, State};
-use crate::ans::decoder::FoldedData;
+use crate::ans::traits::Foldable;
 
 pub mod encoder;
 pub mod decoder;
 pub mod enc_model;
 pub mod dec_model;
+mod traits;
 
 pub const FASTER_RADIX: u8 = 8;
 
@@ -27,7 +28,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
 }
 
 
-pub struct Prelude <F: FoldedData> {
+pub struct Prelude <F: Foldable> {
 
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,

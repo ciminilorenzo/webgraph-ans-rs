@@ -11,7 +11,7 @@ use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 /// Size of the list of symbols used during the examples.
 const SYMBOL_LIST_LENGTH: usize = 50_000_000;
 
-/// Maximum value that the zpfian distribution can output.
+/// Maximum value that the zipfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 1_000_000_000;
 
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian

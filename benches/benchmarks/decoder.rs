@@ -1,10 +1,10 @@
-use bitvec::order::Msb0;
 use criterion::{Criterion, criterion_group};
 
 use pprof::criterion::{Output, PProfProfiler};
-use bitvec::prelude::BitVec;
-use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
 
+use bitvec::prelude::*;
+
+use folded_streaming_rans::ans::dec_model::VecFrame;
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::RawSymbol;

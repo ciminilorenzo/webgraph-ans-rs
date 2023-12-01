@@ -1,71 +1,18 @@
 use std::ops::Index;
 use std::slice::Iter;
 
-use bitvec::prelude::*;
 
 use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
 use crate::{RawSymbol, State, LOG2_B, K_LOG2};
 use crate::ans::{FASTER_RADIX, Prelude};
-
-
-/// Mask used to extract the 48 LSB from `mapped_num`. This number will be the quasi-unfolded symbol.
-const SYMBOL_MASK: u64 = 0x_FFFFFFFFFFFF;
-
-/// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
-const RESERVED_TO_SYMBOL: u8 = 48;
-
-#[allow(clippy::len_without_is_empty)]
-pub trait FoldedData {
-
-    fn len(&self) -> usize;
-
-    /// Unfolds a symbol from the given `mapped_num` and returns it.
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol;
-}
-
-impl FoldedData for BitVec<usize, Msb0> {
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol {
-        let folds = (mapped_num >> RESERVED_TO_SYMBOL) as usize;
-        let quasi_unfolded = mapped_num & SYMBOL_MASK;
-        let bits = self
-            .as_bitslice()
-            .get(*last_unfolded - folds * radix as usize..*last_unfolded)
-            .unwrap();
-
-        *last_unfolded -= folds * radix as usize;
-        quasi_unfolded | bits.load_be::<RawSymbol>()
-    }
-}
-
-impl FoldedData for Vec<u8> {
-
-    fn len(&self) -> usize {
-        self.len()
-    }
-
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, _radix: u8) -> RawSymbol {
-        let quasi_unfolded = mapped_num & SYMBOL_MASK;
-        let folds = mapped_num >> RESERVED_TO_SYMBOL;
-        let mut bytes = [0_u8; 8];
-
-        bytes[8 - folds as usize..].copy_from_slice(&self[*last_unfolded - folds as usize..*last_unfolded]);
-        *last_unfolded -= folds as usize;
-
-        quasi_unfolded | u64::from_be_bytes(bytes)
-    }
-}
+use crate::ans::traits::Foldable;
 
 
 #[derive(Clone)]
 pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: FoldedData
+        F: Foldable
 {
     model: M,
 
@@ -96,7 +43,7 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_R
 impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: FoldedData
+        F: Foldable
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -148,7 +95,7 @@ impl <const FIDELITY: u8> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9S
 impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: FoldedData
+        F: Foldable
 {
 
     /// Decodes the whole sequence given as input.
@@ -162,28 +109,28 @@ impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY
         let mut current_symbol_index = 0;
 
         while current_symbol_index < threshold {
-            decoded.push(self.decode_sym(&mut states[3], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[2], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[1], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[3], &mut norm_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[2], &mut norm_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[1], &mut norm_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos));
             current_symbol_index += 4;
         }
 
         while current_symbol_index < self.sequence_length {
-            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &self.folded_bits, &mut last_unfolded_pos));
+            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos));
             current_symbol_index += 1;
         }
         decoded
     }
 
-    fn decode_sym(&self, state: &mut State, norm_bits_iter: &mut Iter<u32>, folded_bits: &F, last_unfolded_pos: &mut usize) -> RawSymbol {
+    fn decode_sym(&self, state: &mut State, norm_bits_iter: &mut Iter<u32>, last_unfolded_pos: &mut usize) -> RawSymbol {
         let slot = *state & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
         let decoded_sym = if (symbol_entry.symbol as RawSymbol) < self.folding_threshold {
             symbol_entry.symbol as RawSymbol
         } else {
-            folded_bits.unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
+            self.folded_bits.unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
         };
 
         *state = (*state >> self.log2_frame_size) * symbol_entry.freq as State

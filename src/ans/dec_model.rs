@@ -22,7 +22,6 @@ pub struct DecoderModelEntry {
 }
 
 
-// TODO: all the models should be buildable by using the prelude
 pub struct EliasFanoFrame {
 
     /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
