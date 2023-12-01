@@ -1,10 +1,9 @@
-use std::mem;
 use bitvec::prelude::*;
 
 use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
 use crate::ans::{FASTER_RADIX, Prelude};
-use crate::ans::decoder::Unfold;
+use crate::ans::decoder::FoldedData;
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const MASK: u64 = 0xFFFFFFFF;
@@ -26,11 +25,8 @@ impl Fold for Vec<u8> {
     fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
         let cuts = Self::get_folds_number(symbol, radix, fidelity);
         let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-        let bytes = symbol.to_be_bytes();
 
-        for folded_byte in bytes[bytes.len() - cuts as usize..bytes.len()].iter() {
-            out.push(*folded_byte);
-        }
+        out.extend_from_slice(symbol.to_be_bytes()[8 - cuts as usize..].as_ref());
 
         symbol >>= cuts * radix;
         (symbol + offset) as u16
@@ -83,7 +79,7 @@ pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER
 
 impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
-        F: Fold + Default + Clone + Unfold
+        F: Fold + Default + Clone + FoldedData
 {
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -115,7 +111,7 @@ impl <'a, const FIDELITY: u8> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, V
 /// Encoding functions
 impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
-        F: Fold + Default + Clone + Unfold
+        F: Fold + Default + Clone + FoldedData
 {
     /// Encodes the whole input sequence.
     ///
@@ -124,7 +120,7 @@ impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDEL
     /// reverse order.
     pub fn encode_all(&mut self) {
         let mut states = [1_u64 << (self.model.log2_frame_size + K_LOG2); 4];
-        let mut folded_bits = mem::take(&mut self.folded_bits);
+        let mut folded_bits = F::default();
         let mut normalized_bits = Vec::with_capacity(self.input_sequence.len());
 
         let symbols_iter = self.input_sequence.chunks_exact(4);

@@ -8,27 +8,29 @@ use crate::{RawSymbol, State, LOG2_B, K_LOG2};
 use crate::ans::{FASTER_RADIX, Prelude};
 
 
-/// Mask used to extract the 16 MSB from `mapped_num`. This number will be the number of folds to unfold
-/// the symbol with.
-const FOLDS_MASK: u64 = 0x_FFFF000000000000;
-
 /// Mask used to extract the 48 LSB from `mapped_num`. This number will be the quasi-unfolded symbol.
 const SYMBOL_MASK: u64 = 0x_FFFFFFFFFFFF;
 
 /// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
 const RESERVED_TO_SYMBOL: u8 = 48;
 
+#[allow(clippy::len_without_is_empty)]
+pub trait FoldedData {
 
-pub trait Unfold {
+    fn len(&self) -> usize;
 
     /// Unfolds a symbol from the given `mapped_num` and returns it.
     fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol;
 }
 
-impl Unfold for BitVec<usize, Msb0> {
+impl FoldedData for BitVec<usize, Msb0> {
+
+    fn len(&self) -> usize {
+        self.len()
+    }
 
     fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, radix: u8) -> RawSymbol {
-        let folds = ((mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL) as usize;
+        let folds = (mapped_num >> RESERVED_TO_SYMBOL) as usize;
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let bits = self
             .as_bitslice()
@@ -40,50 +42,30 @@ impl Unfold for BitVec<usize, Msb0> {
     }
 }
 
-impl Unfold for Vec<u8> {
+impl FoldedData for Vec<u8> {
+
+    fn len(&self) -> usize {
+        self.len()
+    }
 
     fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, _radix: u8) -> RawSymbol {
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
-        let folds = (mapped_num & FOLDS_MASK) >> RESERVED_TO_SYMBOL;
+        let folds = mapped_num >> RESERVED_TO_SYMBOL;
         let mut bytes = [0_u8; 8];
 
         bytes[8 - folds as usize..].copy_from_slice(&self[*last_unfolded - folds as usize..*last_unfolded]);
         *last_unfolded -= folds as usize;
 
-        quasi_unfolded | u64::from_be_bytes(bytes) as RawSymbol
-    }
-}
-
-#[allow(clippy::len_without_is_empty)]
-pub trait Length {
-    fn len(&self) -> usize;
-}
-
-impl Length for BitVec<usize, Msb0> {
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
-    }
-}
-
-impl Length for Vec<u8> {
-
-    #[inline]
-    fn len(&self) -> usize {
-        self.len()
+        quasi_unfolded | u64::from_be_bytes(bytes)
     }
 }
 
 
-/// A Streaming-rANS decoder that uses symbol folding.
-///
-/// Be sure that the encoder and the decoder use the same parameters.
 #[derive(Clone)]
 pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: Unfold + Length
+        F: FoldedData
 {
     model: M,
 
@@ -114,7 +96,7 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_R
 impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: Unfold + Length
+        F: FoldedData
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -166,7 +148,7 @@ impl <const FIDELITY: u8> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9S
 impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
-        F: Unfold + Length
+        F: FoldedData
 {
 
     /// Decodes the whole sequence given as input.
@@ -211,6 +193,7 @@ impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY
         if *state < self.lower_bound {
             *state = Self::expand_state(*state, norm_bits_iter);
         }
+
         decoded_sym
     }
 

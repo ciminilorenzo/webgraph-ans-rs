@@ -1,5 +1,5 @@
 use crate::{Freq, State};
-use crate::ans::decoder::Unfold;
+use crate::ans::decoder::FoldedData;
 
 pub mod encoder;
 pub mod decoder;
@@ -27,7 +27,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
 }
 
 
-pub struct Prelude <F: Unfold> {
+pub struct Prelude <F: FoldedData> {
 
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,

@@ -4,10 +4,8 @@ use rand::SeedableRng;
 use rand_distr::Zipf;
 
 use folded_streaming_rans::{RawSymbol};
-use folded_streaming_rans::ans::dec_model::VecFrame;
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
-use folded_streaming_rans::ans::FASTER_RADIX;
 
 
 /// Size of the list of symbols used during the examples.

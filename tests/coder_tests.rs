@@ -15,8 +15,6 @@ const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 /// Maximum value that the zpfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 10_000_000_000;
 
-const RADIX: u8 = 4;
-
 const FIDELITY: u8 = 2;
 
 
