@@ -13,7 +13,7 @@ anyhow = "1.0.75"
 sux = { git =  "https://github.com/vigna/sux-rs", branch = "main" }
 itertools = "0.12.0"
 bitvec = "1.0.1"
-sucds = "0.8.1"
+sucds = { version = "0.8.1", features = ["intrinsics"] }
 
 [dev-dependencies]
 criterion = "0.5.1"
