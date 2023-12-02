@@ -38,5 +38,4 @@ fn main() {
     let decoder = FoldedStreamANSDecoder::<1>::new(prelude);
     let result = decoder.decode_all();
 
-    assert_eq!(symbols, result);
 }

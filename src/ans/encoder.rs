@@ -4,7 +4,7 @@ use crate::ans::{FASTER_RADIX, Prelude};
 use crate::ans::traits::Foldable;
 
 /// Used to extract the 32 LSB from a 64-bit state.
-const MASK: u64 = 0xFFFFFFFF;
+const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 
 #[derive(Clone)]
@@ -96,7 +96,7 @@ impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDEL
 
     fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut Vec<u32>, folded_bits: &mut F) -> State {
         let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
-            F::fold_symbol(symbol, RADIX, FIDELITY, folded_bits)
+            folded_bits.fold_symbol(symbol, RADIX, FIDELITY)
         };
 
         let sym_data = &self.model[symbol];
@@ -113,7 +113,7 @@ impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDEL
     }
 
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
-        let lsb = (state & MASK) as u32;
+        let lsb = (state & NORMALIZATION_MASK) as u32;
         out.push(lsb);
         state >>= LOG2_B;
         state

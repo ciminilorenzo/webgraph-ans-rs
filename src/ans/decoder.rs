@@ -1,7 +1,6 @@
 use std::ops::Index;
 use std::slice::Iter;
 
-
 use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
 use crate::{RawSymbol, State, LOG2_B, K_LOG2};
 use crate::ans::{FASTER_RADIX, Prelude};

@@ -18,7 +18,7 @@ pub trait Foldable {
     }
 
     /// Performs the so called 'symbol folding'.
-    fn fold_symbol(symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol;
+    fn fold_symbol(&mut self, symbol: RawSymbol, radix: u8, fidelity: u8) -> Symbol;
 
     fn len(&self) -> usize;
 
@@ -28,11 +28,11 @@ pub trait Foldable {
 
 impl Foldable for Vec<u8> {
 
-    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
+    fn fold_symbol(&mut self, mut symbol: RawSymbol, radix: u8, fidelity: u8) -> Symbol {
         let folds = Self::get_folds_number(symbol, radix, fidelity);
         let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * folds as RawSymbol;
 
-        out.extend_from_slice(symbol.to_be_bytes()[8 - folds as usize..].as_ref());
+        self.extend_from_slice(symbol.to_be_bytes()[8 - folds as usize..].as_ref());
 
         symbol >>= folds * radix;
         (symbol + offset) as u16
@@ -45,26 +45,38 @@ impl Foldable for Vec<u8> {
     fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize, _radix: u8) -> RawSymbol {
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let folds = mapped_num >> RESERVED_TO_SYMBOL;
-        let mut bytes = [0_u8; 8];
 
-        bytes[8 - folds as usize..].copy_from_slice(&self[*last_unfolded - folds as usize..*last_unfolded]);
-        *last_unfolded -= folds as usize;
+        let mut unfolded_two: u64 = 0;
 
-        quasi_unfolded | u64::from_be_bytes(bytes)
+        for index in 0..folds {
+            *last_unfolded -= 1;
+            unfolded_two |= (self[*last_unfolded] as u64) << (index) * 8;
+        }
+
+        quasi_unfolded | unfolded_two
     }
 }
+
+/*
+let quasi_unfolded = mapped_num & SYMBOL_MASK;
+        let folds = mapped_num >> RESERVED_TO_SYMBOL;
+
+
+
+        quasi_unfolded | unfolded
+ */
 
 impl Foldable for BitVec<usize, Msb0> {
 
     /// This is a general implementation that folds symbols given any reasonable radix and fidelity.
     /// This generality makes this implementation slower since it doesn't allow relevant optimizations
     /// used with radix equal to 8.
-    fn fold_symbol(mut symbol: RawSymbol, radix: u8, fidelity: u8, out: &mut Self) -> Symbol {
+    fn fold_symbol(&mut self, mut symbol: RawSymbol, radix: u8, fidelity: u8) -> Symbol {
         let cuts = Self::get_folds_number(symbol, radix, fidelity);
         let offset = (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
         let bit_to_cut = cuts * radix;
 
-        out.extend_from_bitslice(symbol
+        self.extend_from_bitslice(symbol
             .view_bits::<Msb0>()
             .split_at(RawSymbol::BITS as usize - bit_to_cut as usize).1
         );
