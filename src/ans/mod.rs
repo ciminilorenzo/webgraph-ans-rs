@@ -1,4 +1,4 @@
-use fastdivide::DividerU64;
+use strength_reduce::StrengthReducedU64;
 use crate::{Freq, State};
 use crate::ans::traits::Foldable;
 
@@ -11,20 +11,20 @@ mod traits;
 pub const FASTER_RADIX: usize = 8;
 
 #[readonly::make]
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct EncoderModelEntry {
     pub freq: Freq,
     pub upperbound: u64,
     pub cumul_freq: Freq,
-    pub reciprocal: DividerU64,
+    pub reciprocal: StrengthReducedU64,
 }
 
 impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     fn from(tuple: (Freq, u64, Freq)) -> Self {
         let reciprocal = if tuple.0 > 0 {
-            DividerU64::divide_by(tuple.0 as u64)
+            StrengthReducedU64::new(tuple.0 as u64)
         } else {
-            DividerU64::divide_by(1)
+            StrengthReducedU64::new(1)
         };
 
         Self {

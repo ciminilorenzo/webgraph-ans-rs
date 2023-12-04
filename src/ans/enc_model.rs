@@ -2,7 +2,7 @@ use std::cmp::max;
 use std::ops::Index;
 
 use anyhow::{bail, Result};
-use fastdivide::DividerU64;
+use strength_reduce::StrengthReducedU64;
 
 use crate::{LOG2_B, K_LOG2, Symbol, RawSymbol};
 use crate::ans::{EncoderModelEntry};
@@ -57,9 +57,9 @@ impl FoldedANSModel4Encoder {
 
         for freq in approx_freqs.iter() {
             let reciprocal = if *freq > 0 {
-                DividerU64::divide_by(*freq as u64)
+                StrengthReducedU64::new(*freq as u64)
             } else {
-                DividerU64::divide_by(1)
+                StrengthReducedU64::new(1)
             };
 
             table.push(EncoderModelEntry {

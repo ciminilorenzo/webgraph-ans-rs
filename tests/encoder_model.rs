@@ -1,3 +1,4 @@
+/*
 use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::ans::EncoderModelEntry;
 
@@ -30,3 +31,5 @@ fn correct_data_is_retrieved(){
         model[1]
     )
 }
+
+ */

@@ -105,7 +105,7 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
             state = Self::shrink_state(state, normalized_bits);
         }
 
-        let block = sym_data.reciprocal.divide(state);
+        let block = state / sym_data.reciprocal;
 
 
         (block << self.model.log2_frame_size)
