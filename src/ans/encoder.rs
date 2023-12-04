@@ -8,7 +8,7 @@ const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 
 #[derive(Clone)]
-pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX, F = Vec<u8>>
+pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, F = Vec<u8>>
     where
         F:  Foldable + Default + Clone
 {
@@ -29,7 +29,7 @@ pub struct FoldedStreamANSCoder<'a, const FIDELITY: u8, const RADIX: u8 = FASTER
     folding_threshold: RawSymbol,
 }
 
-impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
         F: Foldable + Default + Clone
 {
@@ -48,7 +48,7 @@ impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDEL
     }
 }
 
-impl <'a, const FIDELITY: u8> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
+impl <'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
 
     /// Creates the standard FoldedStreamANSEncoder from the given parameters.
     ///
@@ -61,7 +61,7 @@ impl <'a, const FIDELITY: u8> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, V
 }
 
 /// Encoding functions
-impl <'a, const FIDELITY: u8, const RADIX: u8, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
     where
         F: Foldable + Default + Clone
 {

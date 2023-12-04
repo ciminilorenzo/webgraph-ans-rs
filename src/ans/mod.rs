@@ -7,7 +7,7 @@ pub mod enc_model;
 pub mod dec_model;
 mod traits;
 
-pub const FASTER_RADIX: u8 = 8;
+pub const FASTER_RADIX: usize = 8;
 
 #[readonly::make]
 #[derive(Clone, PartialEq, Debug)]

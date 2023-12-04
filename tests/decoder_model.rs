@@ -5,8 +5,8 @@ use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::{RawSymbol, State, Symbol};
 
 
-const RADIX: u8 = 4;
-const FIDELITY: u8 = 2;
+const RADIX: usize = 4;
+const FIDELITY: usize = 2;
 
 
 #[rstest]

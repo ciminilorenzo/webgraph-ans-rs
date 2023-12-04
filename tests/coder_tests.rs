@@ -12,10 +12,10 @@ use folded_streaming_rans::RawSymbol;
 /// Size of the list of symbols used to test.
 const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 
-/// Maximum value that the zpfian distribution can output.
+/// Maximum value that the zipfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 10_000_000_000;
 
-const FIDELITY: u8 = 2;
+const FIDELITY: usize = 2;
 
 
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian
@@ -37,6 +37,7 @@ fn test_decodes_correctly() {
     let symbols = get_symbols();
 
     let mut coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
+
     coder.encode_all();
 
     let prelude = coder.serialize();

@@ -8,7 +8,7 @@ use crate::ans::traits::Foldable;
 
 
 #[derive(Clone)]
-pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
+pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
     where
         M: Index<State, Output = DecoderModelEntry>,
         F: Foldable
@@ -39,7 +39,7 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: u8, const RADIX: u8 = FASTER_R
     folding_threshold: u64,
 }
 
-impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
+impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
         F: Foldable
@@ -64,7 +64,7 @@ impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY
     }
 }
 
-impl <const FIDELITY: u8> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
+impl <const FIDELITY: usize> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
 
     /// Creates the standard FoldedStreamANSDecoder from the given parameters.
     ///
@@ -91,7 +91,7 @@ impl <const FIDELITY: u8> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9S
 }
 
 /// Decoding functions.
-impl <const FIDELITY: u8, const RADIX: u8, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
+impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
     where
         M: Index<State, Output = DecoderModelEntry>,
         F: Foldable

@@ -33,7 +33,7 @@ pub struct EliasFanoFrame {
 
 impl EliasFanoFrame {
 
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
@@ -86,7 +86,7 @@ pub struct VecFrame(Vec<DecoderModelEntry>);
 impl VecFrame {
 
     /// Creates a new VecFrame from the given table.
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
 
         let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
@@ -144,7 +144,7 @@ pub struct Rank9SelFrame {
 
 impl Rank9SelFrame {
 
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: u8) -> Self {
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Too many symbols");
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
@@ -207,7 +207,7 @@ impl Index<State> for Rank9SelFrame {
 /// in order to unfold the symbol while, the remaining 48 LSB are 1100000000 (with the remaining 40 MSB
 /// equal to 0) since all the symbols bucketed in the same bucket have the same 2 fidelity bits (11)
 /// and need to be unfolded in the same way (with 2 * 4 -radix- bits).
-pub fn quasi_unfold(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: u8) -> RawSymbol {
+pub fn quasi_unfold(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: usize) -> RawSymbol {
     let mut symbol = symbol as u64;
 
     let folds = u16::try_from((symbol - folding_threshold) / folding_offset + 1)

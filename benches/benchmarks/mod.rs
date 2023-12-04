@@ -12,12 +12,12 @@ pub mod model_for_decoder;
 /// Size of the list of symbols used to bench.
 const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 
-/// Maximum value that the zpfian distribution can output.
+/// Maximum value that the zipfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 1 << 20;
 
-pub const RADIX: u8 = 4;
+pub const RADIX: usize = 4;
 
-pub const FIDELITY: u8 = 1;
+pub const FIDELITY: usize = 1;
 
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian
 /// distribution that can output values up to [`MAXIMUM_SYMBOL`].

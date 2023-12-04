@@ -4,12 +4,11 @@ use std::ops::Index;
 use anyhow::{bail, Result};
 
 use crate::{LOG2_B, K_LOG2, Symbol, RawSymbol};
-use crate::ans::EncoderModelEntry;
+use crate::ans::{EncoderModelEntry};
 use crate::utils::{cross_entropy, entropy};
 
-// TODO: to change
 /// The maximum symbol we expect to see in the input.
-const MAX_RAW_SYMBOL: RawSymbol = 100_000_000_000;
+const MAX_RAW_SYMBOL: RawSymbol = (1 << 48) - 1;
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
 /// distribution of frequencies.
@@ -32,14 +31,20 @@ pub struct FoldedANSModel4Encoder {
 
 impl FoldedANSModel4Encoder {
 
-    pub fn new(input: &[RawSymbol], radix: u8, fidelity: u8) -> Self {
+    pub fn new(input: &[RawSymbol], radix: usize, fidelity: usize) -> Self {
         let presumed_max_bucket = Self::folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];
         let mut max_sym = 0;
         let mut n = 0;
+        let folding_threshold = (1 << (fidelity + radix - 1)) as RawSymbol;
 
         for sym in input {
-            let folded_sym = Self::folding_without_streaming_out(*sym, radix, fidelity);
+            let folded_sym = if *sym < folding_threshold {
+                *sym as Symbol
+            } else {
+                Self::folding_without_streaming_out(*sym, radix, fidelity)
+            };
+
             *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
             max_sym = max(max_sym, folded_sym);
             n += 1;
@@ -64,10 +69,10 @@ impl FoldedANSModel4Encoder {
         }
     }
 
-    fn folding_without_streaming_out(mut symbol: RawSymbol, radix: u8, fidelity: u8) -> Symbol {
+    fn folding_without_streaming_out(mut symbol: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
         let mut offset = 0;
-        let cuts = ((f64::log2(symbol as f64).floor() + 1_f64) - fidelity as f64) / radix as f64;
-        let bit_to_cut = cuts as u8 * radix;
+        let cuts = (((u64::ilog2(symbol) as usize) + 1) - fidelity) / radix;
+        let bit_to_cut = cuts * radix;
         symbol >>= bit_to_cut;
         offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
 
