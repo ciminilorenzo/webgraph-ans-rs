@@ -1,3 +1,4 @@
+use fastdivide::DividerU64;
 use crate::{Freq, State};
 use crate::ans::traits::Foldable;
 
@@ -15,14 +16,22 @@ pub struct EncoderModelEntry {
     pub freq: Freq,
     pub upperbound: u64,
     pub cumul_freq: Freq,
+    pub reciprocal: DividerU64,
 }
 
 impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     fn from(tuple: (Freq, u64, Freq)) -> Self {
+        let reciprocal = if tuple.0 > 0 {
+            DividerU64::divide_by(tuple.0 as u64)
+        } else {
+            DividerU64::divide_by(1)
+        };
+
         Self {
             freq: tuple.0,
             upperbound: tuple.1,
             cumul_freq: tuple.2,
+            reciprocal,
         }
     }
 }

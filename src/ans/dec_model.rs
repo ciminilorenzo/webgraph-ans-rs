@@ -100,7 +100,7 @@ impl VecFrame {
                     index += 1;
                     continue;
                 },
-                EncoderModelEntry{ freq, upperbound: _ , cumul_freq} => {
+                EncoderModelEntry{ freq, upperbound: _ , cumul_freq, reciprocal: _} => {
                     for i in last_slot.. last_slot + freq {
                         unsafe {
                             let entry = vec.get_unchecked_mut(i as usize);
