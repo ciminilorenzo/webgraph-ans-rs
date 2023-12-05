@@ -8,6 +8,11 @@ use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 
 
+// This is an example of how the faster decoder can be used. The fastest decoder uses a fixed radix
+// of 8 and a Vec<u8> as folded bits. The fastest decoder is even the one that uses a Rank9SelFrame
+// as frame.
+
+
 /// Size of the list of symbols used during the examples.
 const SYMBOL_LIST_LENGTH: usize = 50_000_000;
 
@@ -31,11 +36,12 @@ fn main() {
     let symbols = generate_zipfian_distribution();
 
     let mut encoder = FoldedStreamANSCoder::<1>::new(&symbols);
-    encoder.encode_all();
 
+    encoder.encode_all();
     let prelude = encoder.serialize();
 
     let decoder = FoldedStreamANSDecoder::<1>::new(prelude);
     let result = decoder.decode_all();
 
+    assert_eq!(symbols, result);
 }

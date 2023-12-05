@@ -1,3 +1,4 @@
+use std::any::{type_name};
 use std::ops::Index;
 use std::slice::Iter;
 
@@ -36,7 +37,7 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FA
     sequence_length: u64,
 
     /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
-    folding_threshold: u64,
+    folding_threshold: u16,
 }
 
 impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
@@ -48,13 +49,15 @@ impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FI
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
     /// folded bits, which is way slower than the one that uses a Vec of bytes.
     pub fn with_parameters(mut prelude: Prelude<F>, model: M) -> Self {
+        if RADIX != 8 { assert_eq!(type_name::<F>(), "bitvec::vec::BitVec<usize, bitvec::order::Msb0>") }
+
         prelude.normalized_bits.reverse();
 
         Self {
             model,
             normalized_bits: prelude.normalized_bits,
             folded_bits: prelude.folded_bits,
-            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as RawSymbol,
+            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as u16,
             lower_bound: 1 << (prelude.log2_frame_size + K_LOG2),
             states: prelude.states,
             frame_mask: (1 << prelude.log2_frame_size) - 1,
@@ -126,7 +129,7 @@ impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FI
         let slot = *state & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
-        let decoded_sym = if (symbol_entry.symbol as RawSymbol) < self.folding_threshold {
+        let decoded_sym = if symbol_entry.symbol < self.folding_threshold {
             symbol_entry.symbol as RawSymbol
         } else {
             self.folded_bits.unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
