@@ -12,9 +12,9 @@ use folded_streaming_rans::ans::FASTER_RADIX;
 use crate::benchmarks::get_symbols;
 use crate::benchmarks::FIDELITY;
 
-const FOLDING_OFFSET: u64 = { (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1) };
+const FOLDING_OFFSET: u64 = (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1);
 
-const FOLDING_THRESHOLD: u64 = { 1 << (FIDELITY + FASTER_RADIX - 1) };
+const FOLDING_THRESHOLD: u64 = 1 << (FIDELITY + FASTER_RADIX - 1);
 
 //                BENCH THE DIFFERENT WAYS OF IMPLEMENTING THE SYMBOL PRIMITIVE
 // ---------------------- ---------------------- ---------------------- ---------------------- --- //

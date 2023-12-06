@@ -30,7 +30,7 @@ impl<const RADIX: usize> EliasFanoFrame<RADIX> {
         log2_frame_size: usize,
         folding_offset: RawSymbol,
         folding_threshold: RawSymbol,
-        radix: usize,
+        _radix: usize,
     ) -> Self {
         assert!(
             table.len() < 1 << Symbol::BITS,
@@ -94,7 +94,7 @@ impl<const RADIX: usize> VecFrame<RADIX> {
         log2_frame_size: usize,
         folding_offset: RawSymbol,
         folding_threshold: RawSymbol,
-        radix: usize,
+        _radix: usize,
     ) -> Self {
         assert!(
             table.len() < 1 << Symbol::BITS,
@@ -169,7 +169,7 @@ impl<const RADIX: usize> Rank9SelFrame<RADIX> {
         log2_frame_size: usize,
         folding_offset: RawSymbol,
         folding_threshold: RawSymbol,
-        radix: usize,
+        _radix: usize,
     ) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Too many symbols");
 

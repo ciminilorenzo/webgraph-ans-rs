@@ -14,7 +14,6 @@ use crate::benchmarks::{get_symbols, FIDELITY, RADIX};
 /// Creates a random permutation of the slots composing the frame.
 fn get_slots_to_probe(log2_frame_size: usize) -> Vec<usize> {
     let mut slots = (0..(1 << log2_frame_size) - 1)
-        .into_iter()
         .collect::<Vec<usize>>();
 
     slots.shuffle(&mut SmallRng::seed_from_u64(0));

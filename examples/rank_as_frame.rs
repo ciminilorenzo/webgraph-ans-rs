@@ -1,5 +1,5 @@
 use criterion::black_box;
-use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
+use folded_streaming_rans::ans::dec_model::{Rank9SelFrame};
 use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::{RawSymbol, State};
 use rand::prelude::{Distribution, SliceRandom, SmallRng};
@@ -18,7 +18,6 @@ const FIDELITY: usize = 1;
 
 fn get_slots_to_probe(log2_frame_size: usize) -> Vec<usize> {
     let mut slots = (0..(1 << log2_frame_size) - 1)
-        .into_iter()
         .collect::<Vec<usize>>();
 
     slots.shuffle(&mut SmallRng::seed_from_u64(0));
