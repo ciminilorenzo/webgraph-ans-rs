@@ -15,7 +15,7 @@ pub struct FoldedStreamANSDecoder<
     F = Vec<u8>,
 > where
     M: Index<State, Output = DecoderModelEntry>,
-    F: Foldable,
+    F: Foldable<RADIX>,
 {
     model: M,
 
@@ -46,12 +46,12 @@ pub struct FoldedStreamANSDecoder<
 impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
 where
     M: Index<State, Output = DecoderModelEntry>,
-    F: Foldable,
+    F: Foldable<RADIX>,
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
     /// folded bits, which is way slower than the one that uses a Vec of bytes.
-    pub fn with_parameters(mut prelude: Prelude<F>, model: M) -> Self {
+    pub fn with_parameters(mut prelude: Prelude<RADIX, F>, model: M) -> Self {
         if RADIX != 8 {
             assert_eq!(
                 type_name::<F>(),
@@ -81,7 +81,7 @@ impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9
     /// The standard decoder uses fixed radix of 8 and a [`Rank9SelFrame`] as a frame. This means that,
     /// by using this constructor, you're prevented from tuning any another parameter but fidelity.
     /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
-    pub fn new(prelude: Prelude<Vec<u8>>) -> Self {
+    pub fn new(prelude: Prelude<8, Vec<u8>>) -> Self {
         let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1)) as RawSymbol;
         let folding_threshold = (1 << (FIDELITY + FASTER_RADIX - 1)) as RawSymbol;
 
@@ -101,7 +101,7 @@ impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9
 impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
 where
     M: Index<State, Output = DecoderModelEntry>,
-    F: Foldable,
+    F: Foldable<RADIX>,
 {
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {
@@ -141,7 +141,7 @@ where
             symbol_entry.symbol as RawSymbol
         } else {
             self.folded_bits
-                .unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
+                .unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos)
         };
 
         *state = (*state >> self.log2_frame_size) * symbol_entry.freq as State + slot as State

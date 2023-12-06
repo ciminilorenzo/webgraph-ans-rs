@@ -36,7 +36,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     }
 }
 
-pub struct Prelude<F: Foldable> {
+pub struct Prelude<const RADIX: usize, F: Foldable<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,
 

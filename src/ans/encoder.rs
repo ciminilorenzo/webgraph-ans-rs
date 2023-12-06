@@ -1,16 +1,19 @@
-use crate::{K_LOG2, LOG2_B, RawSymbol, State, Symbol};
 use crate::ans::enc_model::FoldedANSModel4Encoder;
-use crate::ans::{FASTER_RADIX, Prelude};
 use crate::ans::traits::Foldable;
+use crate::ans::{Prelude, FASTER_RADIX};
+use crate::{RawSymbol, State, Symbol, K_LOG2, LOG2_B};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
-
 #[derive(Clone)]
-pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, F = Vec<u8>>
-    where
-        F:  Foldable + Default + Clone
+pub struct FoldedStreamANSCoder<
+    'a,
+    const FIDELITY: usize,
+    const RADIX: usize = FASTER_RADIX,
+    F = Vec<u8>,
+> where
+    F: Foldable<RADIX> + Default + Clone,
 {
     model: FoldedANSModel4Encoder,
 
@@ -29,9 +32,9 @@ pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = 
     folding_threshold: RawSymbol,
 }
 
-impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-    where
-        F: Foldable + Default + Clone
+impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+where
+    F: Foldable<RADIX> + Default + Clone,
 {
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -48,8 +51,7 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
     }
 }
 
-impl <'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
-
+impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
     /// Creates the standard FoldedStreamANSEncoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8. This means that, by using this
@@ -61,9 +63,9 @@ impl <'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX
 }
 
 /// Encoding functions
-impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-    where
-        F: Foldable + Default + Clone
+impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
+where
+    F: Foldable<RADIX> + Default + Clone,
 {
     /// Encodes the whole input sequence.
     ///
@@ -79,14 +81,19 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
         let symbols_left = symbols_iter.remainder();
 
         for symbol in symbols_left.iter().rev() {
-            states[0] = self.encode_symbol(*symbol, states[0], &mut normalized_bits, &mut folded_bits);
+            states[0] =
+                self.encode_symbol(*symbol, states[0], &mut normalized_bits, &mut folded_bits);
         }
 
         symbols_iter.rev().for_each(|chunk| {
-            states[0] = self.encode_symbol(chunk[3], states[0], &mut normalized_bits, &mut folded_bits);
-            states[1] = self.encode_symbol(chunk[2], states[1], &mut normalized_bits, &mut folded_bits);
-            states[2] = self.encode_symbol(chunk[1], states[2], &mut normalized_bits, &mut folded_bits);
-            states[3] = self.encode_symbol(chunk[0], states[3], &mut normalized_bits, &mut folded_bits);
+            states[0] =
+                self.encode_symbol(chunk[3], states[0], &mut normalized_bits, &mut folded_bits);
+            states[1] =
+                self.encode_symbol(chunk[2], states[1], &mut normalized_bits, &mut folded_bits);
+            states[2] =
+                self.encode_symbol(chunk[1], states[2], &mut normalized_bits, &mut folded_bits);
+            states[3] =
+                self.encode_symbol(chunk[0], states[3], &mut normalized_bits, &mut folded_bits);
         });
 
         self.states = states;
@@ -94,9 +101,17 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
         self.folded_bits = folded_bits;
     }
 
-    fn encode_symbol(&self, symbol: RawSymbol, mut state: State, normalized_bits: &mut Vec<u32>, folded_bits: &mut F) -> State {
-        let symbol = if symbol < self.folding_threshold { symbol as Symbol } else {
-            folded_bits.fold_symbol(symbol, RADIX, FIDELITY)
+    fn encode_symbol(
+        &self,
+        symbol: RawSymbol,
+        mut state: State,
+        normalized_bits: &mut Vec<u32>,
+        folded_bits: &mut F,
+    ) -> State {
+        let symbol = if symbol < self.folding_threshold {
+            symbol as Symbol
+        } else {
+            folded_bits.fold_symbol(symbol, FIDELITY)
         };
 
         let sym_data = &self.model[symbol];
@@ -106,7 +121,6 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
         }
 
         let block = state / sym_data.reciprocal;
-
 
         (block << self.model.log2_frame_size)
             + sym_data.cumul_freq as u64
@@ -120,7 +134,7 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
         state
     }
 
-    pub fn serialize(&mut self) -> Prelude<F> {
+    pub fn serialize(&mut self) -> Prelude<RADIX, F> {
         Prelude {
             table: self.model.to_raw_parts(),
             sequence_length: self.input_sequence.len() as u64,
@@ -131,4 +145,3 @@ impl <'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a,
         }
     }
 }
-
