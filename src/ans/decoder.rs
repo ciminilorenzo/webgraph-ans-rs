@@ -109,11 +109,11 @@ where
 {
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {
-        let mut decoded = Vec::with_capacity(self.sequence_length as usize);
-        decoded.extend(
-            (0..self.sequence_length as usize)
-                .map(|_| unsafe { MaybeUninit::<u64>::uninit().assume_init() }),
-        );
+        let mut decoded = vec![
+            unsafe { MaybeUninit::<u64>::uninit().assume_init() };
+            self.sequence_length as usize
+        ];
+
         let mut norm_bits = self.normalized_bits.iter();
         let mut last_unfolded_pos = self.folded_bits.len();
         let threshold = self.sequence_length - (self.sequence_length % 4);
