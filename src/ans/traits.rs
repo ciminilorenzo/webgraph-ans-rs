@@ -62,9 +62,8 @@ impl<const RADIX: usize> Foldable<RADIX> for BitVec<usize, Msb0> {
     /// used with radix equal to 8.
     fn fold_symbol(&mut self, mut symbol: RawSymbol, fidelity: usize) -> Symbol {
         let cuts = <Self as Foldable<RADIX>>::get_folds_number(symbol, fidelity);
-        let offset = (((1 << <Self as Foldable<RADIX>>::RADIX) - 1) * (1 << (fidelity - 1)))
-            * cuts as RawSymbol;
-        let bit_to_cut = cuts * <Self as Foldable<RADIX>>::RADIX;
+        let offset = (((1 << RADIX) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
+        let bit_to_cut = cuts * RADIX;
 
         self.extend_from_bitslice(
             symbol
@@ -87,10 +86,10 @@ impl<const RADIX: usize> Foldable<RADIX> for BitVec<usize, Msb0> {
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let bits = self
             .as_bitslice()
-            .get(*last_unfolded - folds * <Self as Foldable<RADIX>>::RADIX..*last_unfolded)
+            .get(*last_unfolded - folds * RADIX..*last_unfolded)
             .unwrap();
 
-        *last_unfolded -= folds * <Self as Foldable<RADIX>>::RADIX;
+        *last_unfolded -= folds * RADIX;
         quasi_unfolded | bits.load_be::<RawSymbol>()
     }
 }
