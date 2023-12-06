@@ -1,15 +1,15 @@
 use std::cmp::max;
 use std::ops::Index;
 
-use anyhow::{bail, Result};
-use strength_reduce::StrengthReducedU64;
-
+use crate::ans::traits::RESERVED_TO_SYMBOL;
 use crate::ans::EncoderModelEntry;
 use crate::utils::{cross_entropy, entropy};
 use crate::{RawSymbol, Symbol, K_LOG2, LOG2_B};
+use anyhow::{bail, Result};
+use strength_reduce::StrengthReducedU64;
 
 /// The maximum symbol we expect to see in the input.
-const MAX_RAW_SYMBOL: RawSymbol = (1 << 48) - 1;
+const MAX_RAW_SYMBOL: RawSymbol = (1 << RESERVED_TO_SYMBOL) - 1;
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
 /// distribution of frequencies.

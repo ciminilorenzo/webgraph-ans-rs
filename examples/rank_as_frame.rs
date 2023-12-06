@@ -46,7 +46,8 @@ fn main() {
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
-    let rank_frame = Rank9SelFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
+    let rank_frame =
+        Rank9SelFrame::<RADIX>::new(&table, log_m, folding_offset, folding_threshold, RADIX);
 
     for slot in &slots_to_probe {
         black_box(&rank_frame[*slot as State]);

@@ -11,7 +11,7 @@ use crate::{RawSymbol, State, K_LOG2, LOG2_B};
 pub struct FoldedStreamANSDecoder<
     const FIDELITY: usize,
     const RADIX: usize = FASTER_RADIX,
-    M = Rank9SelFrame,
+    M = Rank9SelFrame<RADIX>,
     F = Vec<u8>,
 > where
     M: Index<State, Output = DecoderModelEntry>,
@@ -75,7 +75,9 @@ where
     }
 }
 
-impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
+impl<const FIDELITY: usize>
+    FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9SelFrame<FASTER_RADIX>, Vec<u8>>
+{
     /// Creates the standard FoldedStreamANSDecoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8 and a [`Rank9SelFrame`] as a frame. This means that,

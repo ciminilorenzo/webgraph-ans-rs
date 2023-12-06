@@ -58,10 +58,12 @@ fn create_with_right_parameters() {
         FASTER_RADIX,
     );
 
-    let decoder =
-        FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>>::with_parameters(
-            prelude, frame,
-        );
+    let decoder = FoldedStreamANSDecoder::<
+        FIDELITY,
+        FASTER_RADIX,
+        Rank9SelFrame<FASTER_RADIX>,
+        Vec<u8>,
+    >::with_parameters(prelude, frame);
     decoder.decode_all();
 }
 

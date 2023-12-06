@@ -1,4 +1,4 @@
-use criterion::{Criterion, criterion_group};
+use criterion::{criterion_group, Criterion};
 
 use pprof::criterion::{Output, PProfProfiler};
 
@@ -9,17 +9,12 @@ use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::ans::FASTER_RADIX;
 
-use crate::benchmarks::{get_symbols};
-use crate::benchmarks::{FIDELITY};
+use crate::benchmarks::get_symbols;
+use crate::benchmarks::FIDELITY;
 
-const FOLDING_OFFSET: u64 = {
-    (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1)
-};
+const FOLDING_OFFSET: u64 = { (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1) };
 
-const FOLDING_THRESHOLD: u64 = {
-    1 << (FIDELITY + FASTER_RADIX - 1)
-};
-
+const FOLDING_THRESHOLD: u64 = { 1 << (FIDELITY + FASTER_RADIX - 1) };
 
 //                BENCH THE DIFFERENT WAYS OF IMPLEMENTING THE SYMBOL PRIMITIVE
 // ---------------------- ---------------------- ---------------------- ---------------------- --- //
@@ -47,7 +42,6 @@ fn decode_with_rank_frame(c: &mut Criterion) {
     group.bench_function("with rank9sel as frame", |b| {
         b.iter(|| decoder.decode_all());
     });
-
 }
 
 fn decode_with_table_as_frame(c: &mut Criterion) {
@@ -61,14 +55,22 @@ fn decode_with_table_as_frame(c: &mut Criterion) {
     coder.encode_all();
 
     let prelude = coder.serialize();
-    let table = VecFrame::new(&prelude.table, prelude.log2_frame_size, FOLDING_OFFSET, FOLDING_THRESHOLD, FASTER_RADIX);
-    let decoder = FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, VecFrame>::with_parameters(prelude, table);
+    let table = VecFrame::new(
+        &prelude.table,
+        prelude.log2_frame_size,
+        FOLDING_OFFSET,
+        FOLDING_THRESHOLD,
+        FASTER_RADIX,
+    );
+    let decoder =
+        FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, VecFrame<FASTER_RADIX>>::with_parameters(
+            prelude, table,
+        );
 
     group.bench_function("with a table as a frame", |b| {
         b.iter(|| decoder.decode_all());
     });
 }
-
 
 //                BENCH THE DIFFERENT STRUCTURES USED TO HANDLE THE FOLDED BITS
 // ---------------------- ---------------------- ---------------------- ---------------------- --- //
@@ -109,14 +111,25 @@ fn decode_with_bitvec(c: &mut Criterion) {
     let mut coder = FoldedStreamANSCoder::<
         FIDELITY,
         FASTER_RADIX,
-        BitVec<usize, Msb0> // we need to use a bitvec even in the encoder
+        BitVec<usize, Msb0>, // we need to use a bitvec even in the encoder
     >::with_parameters(&symbols, BitVec::<usize, Msb0>::new());
 
     coder.encode_all();
 
     let prelude = coder.serialize();
-    let model = Rank9SelFrame::new(&prelude.table, prelude.log2_frame_size, FOLDING_OFFSET, FOLDING_THRESHOLD, FASTER_RADIX);
-    let decoder = FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, Rank9SelFrame, BitVec<usize, Msb0>>::with_parameters(prelude, model);
+    let model = Rank9SelFrame::new(
+        &prelude.table,
+        prelude.log2_frame_size,
+        FOLDING_OFFSET,
+        FOLDING_THRESHOLD,
+        FASTER_RADIX,
+    );
+    let decoder = FoldedStreamANSDecoder::<
+        FIDELITY,
+        FASTER_RADIX,
+        Rank9SelFrame<FASTER_RADIX>,
+        BitVec<usize, Msb0>,
+    >::with_parameters(prelude, model);
 
     group.bench_function("with BitVec", |b| {
         b.iter(|| decoder.decode_all());

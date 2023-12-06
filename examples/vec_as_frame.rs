@@ -46,7 +46,7 @@ fn main() {
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
-    let vec_frame = VecFrame::new(&table, log_m, folding_offset, folding_threshold, RADIX);
+    let vec_frame = VecFrame::<RADIX>::new(&table, log_m, folding_offset, folding_threshold, RADIX);
 
     for slot in &slots_to_probe {
         black_box(&vec_frame[*slot as State]);

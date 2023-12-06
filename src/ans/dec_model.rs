@@ -2,13 +2,10 @@ use std::ops::Index;
 
 use sucds::bit_vectors::{Rank, Rank9Sel};
 
-use sux::prelude::*;
-
+use crate::ans::traits::RESERVED_TO_SYMBOL;
 use crate::ans::EncoderModelEntry;
 use crate::{RawSymbol, State, Symbol};
-
-/// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
-const RESERVED_TO_SYMBOL: u8 = 48;
+use sux::prelude::*;
 
 #[readonly::make]
 #[derive(Clone, Debug, Default)]
@@ -19,7 +16,7 @@ pub struct DecoderModelEntry {
     pub mapped_num: u64,
 }
 
-pub struct EliasFanoFrame {
+pub struct EliasFanoFrame<const RADIX: usize> {
     /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
     symbols: Vec<DecoderModelEntry>,
 
@@ -27,7 +24,7 @@ pub struct EliasFanoFrame {
     frame: EliasFano,
 }
 
-impl EliasFanoFrame {
+impl<const RADIX: usize> EliasFanoFrame<RADIX> {
     pub fn new(
         table: &[EncoderModelEntry],
         log2_frame_size: usize,
@@ -56,7 +53,7 @@ impl EliasFanoFrame {
             let mapped_num = if sym < folding_threshold as usize {
                 0_u64
             } else {
-                quasi_unfold(sym as Symbol, folding_threshold, folding_offset, radix)
+                quasi_unfold::<RADIX>(sym as Symbol, folding_threshold, folding_offset)
             };
 
             symbols.push(DecoderModelEntry {
@@ -77,7 +74,7 @@ impl EliasFanoFrame {
     }
 }
 
-impl Index<State> for EliasFanoFrame {
+impl<const RADIX: usize> Index<State> for EliasFanoFrame<RADIX> {
     type Output = DecoderModelEntry;
 
     fn index(&self, slot: State) -> &Self::Output {
@@ -88,9 +85,9 @@ impl Index<State> for EliasFanoFrame {
 }
 
 #[derive(Clone)]
-pub struct VecFrame(Vec<DecoderModelEntry>);
+pub struct VecFrame<const RADIX: usize>(Vec<DecoderModelEntry>);
 
-impl VecFrame {
+impl<const RADIX: usize> VecFrame<RADIX> {
     /// Creates a new VecFrame from the given table.
     pub fn new(
         table: &[EncoderModelEntry],
@@ -131,11 +128,10 @@ impl VecFrame {
                             let mapped_num = if symbol < folding_threshold as usize {
                                 0_u64
                             } else {
-                                quasi_unfold(
+                                quasi_unfold::<RADIX>(
                                     symbol as Symbol,
                                     folding_threshold,
                                     folding_offset,
-                                    radix,
                                 )
                             };
 
@@ -151,7 +147,7 @@ impl VecFrame {
     }
 }
 
-impl Index<State> for VecFrame {
+impl<const RADIX: usize> Index<State> for VecFrame<RADIX> {
     type Output = DecoderModelEntry;
 
     fn index(&self, slot: State) -> &Self::Output {
@@ -160,14 +156,14 @@ impl Index<State> for VecFrame {
 }
 
 #[derive(Clone)]
-pub struct Rank9SelFrame {
+pub struct Rank9SelFrame<const RADIX: usize> {
     /// Contains, in each position, the data associated to the symbol in the same position within the Rank9Sel structure.
     symbols: Vec<DecoderModelEntry>,
 
     frame: Rank9Sel,
 }
 
-impl Rank9SelFrame {
+impl<const RADIX: usize> Rank9SelFrame<RADIX> {
     pub fn new(
         table: &[EncoderModelEntry],
         log2_frame_size: usize,
@@ -197,7 +193,7 @@ impl Rank9SelFrame {
             let mapped_num = if sym < folding_threshold as usize {
                 0_u64
             } else {
-                quasi_unfold(sym as Symbol, folding_threshold, folding_offset, radix)
+                quasi_unfold::<RADIX>(sym as Symbol, folding_threshold, folding_offset)
             };
 
             symbols.push(DecoderModelEntry {
@@ -215,7 +211,7 @@ impl Rank9SelFrame {
     }
 }
 
-impl Index<State> for Rank9SelFrame {
+impl<const RADIX: usize> Index<State> for Rank9SelFrame<RADIX> {
     type Output = DecoderModelEntry;
 
     fn index(&self, slot: State) -> &Self::Output {
@@ -240,11 +236,10 @@ impl Index<State> for Rank9SelFrame {
 /// in order to unfold the symbol while, the remaining 48 LSB are 1100000000 (with the remaining 40 MSB
 /// equal to 0) since all the symbols bucketed in the same bucket have the same 2 fidelity bits (11)
 /// and need to be unfolded in the same way (with 2 * 4 -radix- bits).
-pub fn quasi_unfold(
+pub fn quasi_unfold<const RADIX: usize>(
     symbol: Symbol,
     folding_threshold: RawSymbol,
     folding_offset: RawSymbol,
-    radix: usize,
 ) -> RawSymbol {
     let mut symbol = symbol as u64;
 
@@ -253,7 +248,7 @@ pub fn quasi_unfold(
 
     let folds_bits = (folds as u64) << RESERVED_TO_SYMBOL;
     symbol -= folding_offset * folds as RawSymbol;
-    symbol <<= (folds * radix as u16) as u64;
+    symbol <<= (folds * RADIX as u16) as u64;
 
     // we want to have the 16 MSB bits free
     assert!(

@@ -3,10 +3,10 @@ use bitvec::prelude::*;
 use crate::{RawSymbol, Symbol};
 
 /// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
-const RESERVED_TO_SYMBOL: usize = 48;
+pub const RESERVED_TO_SYMBOL: usize = 48;
 
 /// Mask used to extract the 48 LSB from `mapped_num`. This number will be the quasi-unfolded symbol.
-const SYMBOL_MASK: u64 = (1 << RESERVED_TO_SYMBOL) - 1;
+pub const SYMBOL_MASK: u64 = (1 << RESERVED_TO_SYMBOL) - 1;
 
 #[allow(clippy::len_without_is_empty)]
 pub trait Foldable<const RADIX: usize> {
