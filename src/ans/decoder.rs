@@ -1,4 +1,5 @@
 use std::any::type_name;
+use std::mem::MaybeUninit;
 use std::ops::Index;
 use std::slice::Iter;
 
@@ -100,6 +101,7 @@ impl<const FIDELITY: usize>
 }
 
 /// Decoding functions.
+#[allow(invalid_value)]
 impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
 where
     M: Index<State, Output = DecoderModelEntry>,
@@ -108,23 +110,32 @@ where
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {
         let mut decoded = Vec::with_capacity(self.sequence_length as usize);
+        decoded.extend(
+            (0..self.sequence_length as usize)
+                .map(|_| unsafe { MaybeUninit::<u64>::uninit().assume_init() }),
+        );
         let mut norm_bits = self.normalized_bits.iter();
         let mut last_unfolded_pos = self.folded_bits.len();
         let threshold = self.sequence_length - (self.sequence_length % 4);
         let mut states = self.states;
 
-        let mut current_symbol_index = 0;
+        let mut current_symbol_index: usize = 0;
 
-        while current_symbol_index < threshold {
-            decoded.push(self.decode_sym(&mut states[3], &mut norm_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[2], &mut norm_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[1], &mut norm_bits, &mut last_unfolded_pos));
-            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos));
+        while current_symbol_index < threshold as usize {
+            decoded[current_symbol_index] =
+                self.decode_sym(&mut states[3], &mut norm_bits, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 1] =
+                self.decode_sym(&mut states[2], &mut norm_bits, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 2] =
+                self.decode_sym(&mut states[1], &mut norm_bits, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 3] =
+                self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos);
             current_symbol_index += 4;
         }
 
-        while current_symbol_index < self.sequence_length {
-            decoded.push(self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos));
+        while current_symbol_index < self.sequence_length as usize {
+            decoded[current_symbol_index] =
+                self.decode_sym(&mut states[0], &mut norm_bits, &mut last_unfolded_pos);
             current_symbol_index += 1;
         }
         decoded
