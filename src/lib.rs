@@ -1,15 +1,15 @@
 pub mod ans;
 pub mod utils;
 
-pub const K: u8 = 16;
-pub const K_LOG2: u8 = 4;
+pub const K: usize = 16;
+pub const K_LOG2: usize = 4;
 
 /// How big M (the frame) can be. This constrained is imposed by the fact that B and K are fixed and
 /// State is a u64.
-pub const MAXIMUM_LOG2_M: u8 = 28;
+pub const MAXIMUM_LOG2_M: usize = 28;
 
 /// How many bits are extracted/added from/to the state during the encoding/decoding process.
-pub const LOG2_B: u8 = 32;
+pub const LOG2_B: usize = 32;
 
 /// The type representing the folded symbols.
 ///

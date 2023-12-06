@@ -12,7 +12,7 @@ use folded_streaming_rans::{RawSymbol, State};
 use crate::benchmarks::{get_symbols, FIDELITY, RADIX};
 
 /// Creates a random permutation of the slots composing the frame.
-fn get_slots_to_probe(log2_frame_size: u8) -> Vec<usize> {
+fn get_slots_to_probe(log2_frame_size: usize) -> Vec<usize> {
     let mut slots = (0..(1 << log2_frame_size) - 1)
         .into_iter()
         .collect::<Vec<usize>>();
@@ -38,23 +38,29 @@ fn probing_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("Probing");
     group.measurement_time(std::time::Duration::from_secs(15));
 
-    group.bench_with_input("with elias", &slots_to_probe, |b, slots_to_probe| b.iter(|| {
-        for &s in slots_to_probe {
-            black_box(&elias_frame[s as State]);
-        }})
-    );
+    group.bench_with_input("with elias", &slots_to_probe, |b, slots_to_probe| {
+        b.iter(|| {
+            for &s in slots_to_probe {
+                black_box(&elias_frame[s as State]);
+            }
+        })
+    });
 
-    group.bench_with_input("with vec", &slots_to_probe,|b, slots_to_probe| b.iter(|| {
-        for &s in slots_to_probe {
-            black_box(&vec_frame[s as State]);
-        } })
-    );
+    group.bench_with_input("with vec", &slots_to_probe, |b, slots_to_probe| {
+        b.iter(|| {
+            for &s in slots_to_probe {
+                black_box(&vec_frame[s as State]);
+            }
+        })
+    });
 
-    group.bench_with_input("with rank9", &slots_to_probe,|b, slots_to_probe| b.iter(|| {
-        for &s in slots_to_probe {
-            black_box(&bitvec_frame[s as State]);
-        }})
-    );
+    group.bench_with_input("with rank9", &slots_to_probe, |b, slots_to_probe| {
+        b.iter(|| {
+            for &s in slots_to_probe {
+                black_box(&bitvec_frame[s as State]);
+            }
+        })
+    });
     group.finish();
 }
 

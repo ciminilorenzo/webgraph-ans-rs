@@ -1,18 +1,21 @@
-use std::any::{type_name};
+use std::any::type_name;
 use std::ops::Index;
 use std::slice::Iter;
 
 use crate::ans::dec_model::{DecoderModelEntry, Rank9SelFrame};
-use crate::{RawSymbol, State, LOG2_B, K_LOG2};
-use crate::ans::{FASTER_RADIX, Prelude};
 use crate::ans::traits::Foldable;
-
+use crate::ans::{Prelude, FASTER_RADIX};
+use crate::{RawSymbol, State, K_LOG2, LOG2_B};
 
 #[derive(Clone)]
-pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FASTER_RADIX,  M = Rank9SelFrame, F = Vec<u8>>
-    where
-        M: Index<State, Output = DecoderModelEntry>,
-        F: Foldable
+pub struct FoldedStreamANSDecoder<
+    const FIDELITY: usize,
+    const RADIX: usize = FASTER_RADIX,
+    M = Rank9SelFrame,
+    F = Vec<u8>,
+> where
+    M: Index<State, Output = DecoderModelEntry>,
+    F: Foldable,
 {
     model: M,
 
@@ -31,7 +34,7 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FA
     frame_mask: u64,
 
     /// Logarithm (base 2) of the frame size.
-    log2_frame_size: u8,
+    log2_frame_size: usize,
 
     /// The length of the sequence to decode.
     sequence_length: u64,
@@ -40,16 +43,21 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FA
     folding_threshold: u16,
 }
 
-impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
-    where
-        M: Index<State, Output = DecoderModelEntry>,
-        F: Foldable
+impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
+where
+    M: Index<State, Output = DecoderModelEntry>,
+    F: Foldable,
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
     /// folded bits, which is way slower than the one that uses a Vec of bytes.
     pub fn with_parameters(mut prelude: Prelude<F>, model: M) -> Self {
-        if RADIX != 8 { assert_eq!(type_name::<F>(), "bitvec::vec::BitVec<usize, bitvec::order::Msb0>") }
+        if RADIX != 8 {
+            assert_eq!(
+                type_name::<F>(),
+                "bitvec::vec::BitVec<usize, bitvec::order::Msb0>"
+            )
+        }
 
         prelude.normalized_bits.reverse();
 
@@ -67,8 +75,7 @@ impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FI
     }
 }
 
-impl <const FIDELITY: usize> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
-
+impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9SelFrame, Vec<u8>> {
     /// Creates the standard FoldedStreamANSDecoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8 and a [`Rank9SelFrame`] as a frame. This means that,
@@ -83,23 +90,19 @@ impl <const FIDELITY: usize> FoldedStreamANSDecoder <FIDELITY, FASTER_RADIX, Ran
             prelude.log2_frame_size,
             folding_offset,
             folding_threshold,
-            FASTER_RADIX
+            FASTER_RADIX,
         );
 
-        Self::with_parameters(
-            prelude,
-            frame,
-        )
+        Self::with_parameters(prelude, frame)
     }
 }
 
 /// Decoding functions.
-impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
-    where
-        M: Index<State, Output = DecoderModelEntry>,
-        F: Foldable
+impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
+where
+    M: Index<State, Output = DecoderModelEntry>,
+    F: Foldable,
 {
-
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {
         let mut decoded = Vec::with_capacity(self.sequence_length as usize);
@@ -125,18 +128,23 @@ impl <const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FI
         decoded
     }
 
-    fn decode_sym(&self, state: &mut State, norm_bits_iter: &mut Iter<u32>, last_unfolded_pos: &mut usize) -> RawSymbol {
+    fn decode_sym(
+        &self,
+        state: &mut State,
+        norm_bits_iter: &mut Iter<u32>,
+        last_unfolded_pos: &mut usize,
+    ) -> RawSymbol {
         let slot = *state & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
         let decoded_sym = if symbol_entry.symbol < self.folding_threshold {
             symbol_entry.symbol as RawSymbol
         } else {
-            self.folded_bits.unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
+            self.folded_bits
+                .unfold_symbol(symbol_entry.mapped_num, last_unfolded_pos, RADIX)
         };
 
-        *state = (*state >> self.log2_frame_size) * symbol_entry.freq as State
-            + slot as State
+        *state = (*state >> self.log2_frame_size) * symbol_entry.freq as State + slot as State
             - symbol_entry.cumul_freq as State;
 
         if *state < self.lower_bound {

@@ -1,11 +1,11 @@
-use strength_reduce::StrengthReducedU64;
-use crate::{Freq, State};
 use crate::ans::traits::Foldable;
+use crate::{Freq, State};
+use strength_reduce::StrengthReducedU64;
 
-pub mod encoder;
+pub mod dec_model;
 pub mod decoder;
 pub mod enc_model;
-pub mod dec_model;
+pub mod encoder;
 mod traits;
 
 pub const FASTER_RADIX: usize = 8;
@@ -36,9 +36,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     }
 }
 
-
-pub struct Prelude <F: Foldable> {
-
+pub struct Prelude<F: Foldable> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,
 
@@ -51,7 +49,7 @@ pub struct Prelude <F: Foldable> {
     /// The folded bits during the encoding process.
     pub folded_bits: F,
 
-    pub log2_frame_size: u8,
+    pub log2_frame_size: usize,
 
     pub states: [State; 4],
 }

@@ -7,10 +7,8 @@ use sux::prelude::*;
 use crate::ans::EncoderModelEntry;
 use crate::{RawSymbol, State, Symbol};
 
-
 /// How many bits are reserved to represent the quasi-unfolded symbol in `mapped_num`
 const RESERVED_TO_SYMBOL: u8 = 48;
-
 
 #[readonly::make]
 #[derive(Clone, Debug, Default)]
@@ -21,28 +19,37 @@ pub struct DecoderModelEntry {
     pub mapped_num: u64,
 }
 
-
 pub struct EliasFanoFrame {
-
     /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
     symbols: Vec<DecoderModelEntry>,
 
     /// The mapped frame as an Elias-Fano structure.
-    frame: EliasFano
+    frame: EliasFano,
 }
 
 impl EliasFanoFrame {
-
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
-        assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
+    pub fn new(
+        table: &[EncoderModelEntry],
+        log2_frame_size: usize,
+        folding_offset: RawSymbol,
+        folding_threshold: RawSymbol,
+        radix: usize,
+    ) -> Self {
+        assert!(
+            table.len() < 1 << Symbol::BITS,
+            "Can't have more than u16::MAX symbols"
+        );
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
 
         let mut symbols = Vec::with_capacity(nonzero_symbols);
-        let mut frame_builder = EliasFanoBuilder::new(nonzero_symbols + 1, (1 << log2_frame_size) + 1);
+        let mut frame_builder =
+            EliasFanoBuilder::new(nonzero_symbols + 1, (1 << log2_frame_size) + 1);
 
         for (sym, sym_data) in table.iter().enumerate() {
-            if sym_data.freq == 0 { continue; }
+            if sym_data.freq == 0 {
+                continue;
+            }
 
             frame_builder.push(sym_data.cumul_freq as usize).unwrap();
 
@@ -74,20 +81,28 @@ impl Index<State> for EliasFanoFrame {
     type Output = DecoderModelEntry;
 
     fn index(&self, slot: State) -> &Self::Output {
-        let symbol_index = unsafe { self.frame.pred_unchecked::<false>(&(slot as usize)).0 as Symbol };
+        let symbol_index =
+            unsafe { self.frame.pred_unchecked::<false>(&(slot as usize)).0 as Symbol };
         &self.symbols[symbol_index as usize]
     }
 }
-
 
 #[derive(Clone)]
 pub struct VecFrame(Vec<DecoderModelEntry>);
 
 impl VecFrame {
-
     /// Creates a new VecFrame from the given table.
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
-        assert!(table.len() < 1 << Symbol::BITS, "Can't have more than u16::MAX symbols");
+    pub fn new(
+        table: &[EncoderModelEntry],
+        log2_frame_size: usize,
+        folding_offset: RawSymbol,
+        folding_threshold: RawSymbol,
+        radix: usize,
+    ) -> Self {
+        assert!(
+            table.len() < 1 << Symbol::BITS,
+            "Can't have more than u16::MAX symbols"
+        );
 
         let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
         let mut last_slot = 0;
@@ -95,21 +110,33 @@ impl VecFrame {
 
         for symbol in 0..table.len() {
             match table[index] {
-                EncoderModelEntry {freq: 0, ..} => {
+                EncoderModelEntry { freq: 0, .. } => {
                     // let's skip symbols with frequency 0
                     index += 1;
                     continue;
-                },
-                EncoderModelEntry{ freq, upperbound: _ , cumul_freq, reciprocal: _} => {
-                    for i in last_slot.. last_slot + freq {
+                }
+                EncoderModelEntry {
+                    freq,
+                    upperbound: _,
+                    cumul_freq,
+                    reciprocal: _,
+                } => {
+                    for i in last_slot..last_slot + freq {
                         unsafe {
                             let entry = vec.get_unchecked_mut(i as usize);
                             entry.symbol = symbol as Symbol;
                             entry.freq = freq;
                             entry.cumul_freq = cumul_freq;
 
-                            let mapped_num = if symbol < folding_threshold as usize { 0_u64 } else {
-                                quasi_unfold(symbol as Symbol, folding_threshold, folding_offset, radix)
+                            let mapped_num = if symbol < folding_threshold as usize {
+                                0_u64
+                            } else {
+                                quasi_unfold(
+                                    symbol as Symbol,
+                                    folding_threshold,
+                                    folding_offset,
+                                    radix,
+                                )
                             };
 
                             entry.mapped_num = mapped_num;
@@ -132,10 +159,8 @@ impl Index<State> for VecFrame {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Rank9SelFrame {
-
     /// Contains, in each position, the data associated to the symbol in the same position within the Rank9Sel structure.
     symbols: Vec<DecoderModelEntry>,
 
@@ -143,8 +168,13 @@ pub struct Rank9SelFrame {
 }
 
 impl Rank9SelFrame {
-
-    pub fn new(table: &[EncoderModelEntry], log2_frame_size: u8, folding_offset: RawSymbol, folding_threshold: RawSymbol, radix: usize) -> Self {
+    pub fn new(
+        table: &[EncoderModelEntry],
+        log2_frame_size: usize,
+        folding_offset: RawSymbol,
+        folding_threshold: RawSymbol,
+        radix: usize,
+    ) -> Self {
         assert!(table.len() < 1 << Symbol::BITS, "Too many symbols");
 
         let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
@@ -152,7 +182,9 @@ impl Rank9SelFrame {
         let mut vec = vec![false; 1 << log2_frame_size];
 
         for (sym, sym_data) in table.iter().enumerate() {
-            if sym_data.freq == 0 { continue; }
+            if sym_data.freq == 0 {
+                continue;
+            }
 
             match sym_data.cumul_freq {
                 0 => (),
@@ -162,7 +194,9 @@ impl Rank9SelFrame {
                 }
             }
 
-            let mapped_num = if sym < folding_threshold as usize { 0_u64 } else {
+            let mapped_num = if sym < folding_threshold as usize {
+                0_u64
+            } else {
                 quasi_unfold(sym as Symbol, folding_threshold, folding_offset, radix)
             };
 
@@ -190,7 +224,6 @@ impl Index<State> for Rank9SelFrame {
     }
 }
 
-
 /// Quasi-unfolds the given symbol.
 ///
 /// Quasi unfolding means creating a u64 with the following features:
@@ -207,7 +240,12 @@ impl Index<State> for Rank9SelFrame {
 /// in order to unfold the symbol while, the remaining 48 LSB are 1100000000 (with the remaining 40 MSB
 /// equal to 0) since all the symbols bucketed in the same bucket have the same 2 fidelity bits (11)
 /// and need to be unfolded in the same way (with 2 * 4 -radix- bits).
-pub fn quasi_unfold(symbol: Symbol, folding_threshold: RawSymbol, folding_offset: RawSymbol, radix: usize) -> RawSymbol {
+pub fn quasi_unfold(
+    symbol: Symbol,
+    folding_threshold: RawSymbol,
+    folding_offset: RawSymbol,
+    radix: usize,
+) -> RawSymbol {
     let mut symbol = symbol as u64;
 
     let folds = u16::try_from((symbol - folding_threshold) / folding_offset + 1)

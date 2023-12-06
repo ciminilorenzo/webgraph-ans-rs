@@ -4,9 +4,9 @@ use std::ops::Index;
 use anyhow::{bail, Result};
 use strength_reduce::StrengthReducedU64;
 
-use crate::{LOG2_B, K_LOG2, Symbol, RawSymbol};
-use crate::ans::{EncoderModelEntry};
+use crate::ans::EncoderModelEntry;
 use crate::utils::{cross_entropy, entropy};
+use crate::{RawSymbol, Symbol, K_LOG2, LOG2_B};
 
 /// The maximum symbol we expect to see in the input.
 const MAX_RAW_SYMBOL: RawSymbol = (1 << 48) - 1;
@@ -17,23 +17,21 @@ const MAX_RAW_SYMBOL: RawSymbol = (1 << 48) - 1;
 /// sizes and, consequently, less memory usage + faster encoding/decoding.
 const TETA: f64 = 1.001;
 
-
 #[readonly::make]
 #[derive(Clone)]
 pub struct FoldedANSModel4Encoder {
-
     /// Contains, for each index, the data associated to the symbol equal to that index.
     #[readonly]
     pub table: Vec<EncoderModelEntry>,
 
     #[readonly]
-    pub log2_frame_size: u8,
+    pub log2_frame_size: usize,
 }
 
 impl FoldedANSModel4Encoder {
-
     pub fn new(input: &[RawSymbol], radix: usize, fidelity: usize) -> Self {
-        let presumed_max_bucket = Self::folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
+        let presumed_max_bucket =
+            Self::folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];
         let mut max_sym = 0;
         let mut n = 0;
@@ -66,18 +64,22 @@ impl FoldedANSModel4Encoder {
                 freq: *freq as u32,
                 upperbound: ((1 << (K_LOG2 + LOG2_B)) * *freq) as u64,
                 cumul_freq: last_covered_freq,
-                reciprocal
+                reciprocal,
             });
             last_covered_freq += *freq as u32;
         }
 
         Self {
-            log2_frame_size: m.ilog2() as u8,
+            log2_frame_size: m.ilog2() as _,
             table,
         }
     }
 
-    fn folding_without_streaming_out(mut symbol: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
+    fn folding_without_streaming_out(
+        mut symbol: RawSymbol,
+        radix: usize,
+        fidelity: usize,
+    ) -> Symbol {
         let mut offset = 0;
         let cuts = (((u64::ilog2(symbol) as usize) + 1) - fidelity) / radix;
         let bit_to_cut = cuts * radix;
@@ -92,40 +94,49 @@ impl FoldedANSModel4Encoder {
         let mut indexed_freqs: Vec<(usize, usize)> = Vec::with_capacity(freqs.len());
 
         for (index, freq) in freqs.iter().enumerate() {
-            if *freq == 0 { continue; }
+            if *freq == 0 {
+                continue;
+            }
 
             total_freq += freq;
             indexed_freqs.push((*freq, index));
         }
 
         indexed_freqs.shrink_to_fit();
-        let mut frame_size = if n.is_power_of_two() { n } else { n.next_power_of_two() };
+        let mut frame_size = if n.is_power_of_two() {
+            n
+        } else {
+            n.next_power_of_two()
+        };
         let mut approx_freqs: Vec<usize>;
 
         let entropy = entropy(
-            &indexed_freqs.iter().map(|(freq,_)| *freq).collect::<Vec<usize>>(),
-            total_freq as f64
+            &indexed_freqs
+                .iter()
+                .map(|(freq, _)| *freq)
+                .collect::<Vec<usize>>(),
+            total_freq as f64,
         );
 
         let sorted_indices = {
             let mut sorted_indexed_freqs = indexed_freqs.clone();
             sorted_indexed_freqs.sort_unstable_by(|a, b| a.0.cmp(&b.0));
-            sorted_indexed_freqs.iter().map(|(_, index)| *index).collect::<Vec<usize>>()
+            sorted_indexed_freqs
+                .iter()
+                .map(|(_, index)| *index)
+                .collect::<Vec<usize>>()
         };
 
         loop {
             assert!(frame_size <= (1 << 28), "frame_size must be at most 2^28");
 
-            let scaling_result = Self::try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
+            let scaling_result =
+                Self::try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
 
             match scaling_result {
                 Ok(new_freqs) => {
-                    let cross_entropy = cross_entropy(
-                        freqs,
-                        total_freq as f64,
-                        &new_freqs,
-                        frame_size as f64,
-                    );
+                    let cross_entropy =
+                        cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
 
                     // we are done if the cross entropy of the new distr is lower than the entropy of
                     // the original distribution times a multiplicative factor TETA.
@@ -136,14 +147,15 @@ impl FoldedANSModel4Encoder {
                         // else try with a bigger frame size
                         frame_size *= 2;
                     }
-                },
-                Err(_) => { frame_size *= 2; }
+                }
+                Err(_) => {
+                    frame_size *= 2;
+                }
             }
         }
         approx_freqs.drain(max_sym as usize + 1..);
         (approx_freqs, frame_size)
     }
-
 
     /// Tries to scale frequencies in `freqs` by using the new common denominator `new_frame`. This algorithm
     /// gives priority to low frequency symbols in order to be sure that the extra space the new frame size
@@ -153,27 +165,32 @@ impl FoldedANSModel4Encoder {
     /// The approximated frequencies if is possibile to approximate with the given `new_frame` else, if too
     /// many symbols have frequency lower than 1 - meaning that M is not big enough to handle the whole
     /// set of symbols - an error is returned.
-    pub fn try_scale_freqs(freqs: &[usize], sorted_indices: &[usize], n: usize, mut total_freq: usize, mut new_frame: isize) -> Result<Vec<usize>> {
+    pub fn try_scale_freqs(
+        freqs: &[usize],
+        sorted_indices: &[usize],
+        n: usize,
+        mut total_freq: usize,
+        mut new_frame: isize,
+    ) -> Result<Vec<usize>> {
         let mut approx_freqs = freqs.to_vec();
         let ratio = new_frame as f64 / total_freq as f64;
 
-        let get_approx_freq = |scale: f64, sym_freq: f64| {
-            max(
-                1,
-                (0.5 + scale * sym_freq).floor() as usize
-            )
-        };
+        let get_approx_freq =
+            |scale: f64, sym_freq: f64| max(1, (0.5 + scale * sym_freq).floor() as usize);
 
         for (index, sym_index) in sorted_indices.iter().enumerate() {
             let sym_freq = freqs[*sym_index];
             let second_ratio = new_frame as f64 / total_freq as f64;
-            let scale = (n - index) as f64 * ratio / n as f64 + index as f64 * second_ratio / n as f64;
+            let scale =
+                (n - index) as f64 * ratio / n as f64 + index as f64 * second_ratio / n as f64;
 
             approx_freqs[*sym_index] = get_approx_freq(scale, sym_freq as f64);
             new_frame -= approx_freqs[*sym_index] as isize;
             total_freq -= sym_freq;
 
-            if new_frame < 0 { bail!("Cannot approximate frequencies with this new frame size!"); }
+            if new_frame < 0 {
+                bail!("Cannot approximate frequencies with this new frame size!");
+            }
         }
         Ok(approx_freqs)
     }

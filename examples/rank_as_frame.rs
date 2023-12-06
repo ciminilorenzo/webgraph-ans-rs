@@ -1,10 +1,10 @@
 use criterion::black_box;
-use rand::prelude::{Distribution, SliceRandom, SmallRng};
-use rand::SeedableRng;
-use rand_distr::Zipf;
 use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
 use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::{RawSymbol, State};
+use rand::prelude::{Distribution, SliceRandom, SmallRng};
+use rand::SeedableRng;
+use rand_distr::Zipf;
 
 /// Size of the list of symbols used during the examples.
 const SYMBOL_LIST_LENGTH: usize = 50_000_000;
@@ -16,7 +16,7 @@ const RADIX: usize = 8;
 
 const FIDELITY: usize = 1;
 
-fn get_slots_to_probe(log2_frame_size: u8) -> Vec<usize> {
+fn get_slots_to_probe(log2_frame_size: usize) -> Vec<usize> {
     let mut slots = (0..(1 << log2_frame_size) - 1)
         .into_iter()
         .collect::<Vec<usize>>();
@@ -35,7 +35,6 @@ fn get_symbols() -> Vec<RawSymbol> {
     }
     symbols
 }
-
 
 fn main() {
     let symbols = get_symbols();
