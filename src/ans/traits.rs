@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use bitvec::prelude::*;
 
 use crate::{RawSymbol, Symbol};
@@ -22,7 +23,7 @@ pub trait Foldable<const RADIX: usize> {
     fn len(&self) -> usize;
 
     /// Unfolds a symbol from the given `mapped_num` and returns it.
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize) -> RawSymbol;
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &RefCell<usize>) -> RawSymbol;
 }
 
 impl Foldable<8> for Vec<u8> {
@@ -41,15 +42,15 @@ impl Foldable<8> for Vec<u8> {
         self.len()
     }
 
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize) -> RawSymbol {
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &RefCell<usize>) -> RawSymbol {
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let folds = mapped_num >> RESERVED_TO_SYMBOL;
 
         let mut unfolded_two: u64 = 0;
 
         for index in 0..folds {
-            *last_unfolded -= 1;
-            unfolded_two |= (self[*last_unfolded] as u64) << ((index) * 8);
+            *last_unfolded.borrow_mut() -= 1;
+            unfolded_two |= (self[*last_unfolded.borrow()] as u64) << ((index) * 8);
         }
 
         quasi_unfolded | unfolded_two
@@ -57,6 +58,7 @@ impl Foldable<8> for Vec<u8> {
 }
 
 impl<const RADIX: usize> Foldable<RADIX> for BitVec<usize, Msb0> {
+
     /// This is a general implementation that folds symbols given any reasonable radix and fidelity.
     /// This generality makes this implementation slower since it doesn't allow relevant optimizations
     /// used with radix equal to 8.
@@ -81,15 +83,15 @@ impl<const RADIX: usize> Foldable<RADIX> for BitVec<usize, Msb0> {
         self.len()
     }
 
-    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &mut usize) -> RawSymbol {
+    fn unfold_symbol(&self, mapped_num: u64, last_unfolded: &RefCell<usize>) -> RawSymbol {
         let folds = (mapped_num >> RESERVED_TO_SYMBOL) as usize;
         let quasi_unfolded = mapped_num & SYMBOL_MASK;
         let bits = self
             .as_bitslice()
-            .get(*last_unfolded - folds * RADIX..*last_unfolded)
+            .get(*last_unfolded.borrow() - folds * RADIX..*last_unfolded.borrow())
             .unwrap();
 
-        *last_unfolded -= folds * RADIX;
+        *last_unfolded.borrow_mut() -= folds * RADIX;
         quasi_unfolded | bits.load_be::<RawSymbol>()
     }
 }

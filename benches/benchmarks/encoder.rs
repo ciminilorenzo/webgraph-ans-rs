@@ -7,7 +7,7 @@ use pprof::criterion::{Output, PProfProfiler};
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 
 use crate::benchmarks::get_symbols;
-use crate::benchmarks::{RADIX, FIDELITY};
+use crate::benchmarks::{FIDELITY};
 
 
 fn fast_encoding_bench(c: &mut Criterion) {
@@ -35,7 +35,7 @@ fn encoding_bench(c: &mut Criterion) {
 
     let coder = FoldedStreamANSCoder::<
         FIDELITY,
-        RADIX,
+        8, // equal to the one used above
         BitVec<usize, Msb0>
     >::with_parameters(&symbols, BitVec::<usize, Msb0>::new());
 

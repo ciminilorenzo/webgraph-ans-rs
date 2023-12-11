@@ -16,8 +16,6 @@ bitvec = "1.0.1"
 sucds = { version = "0.8.1", features = ["intrinsics"] }
 strength_reduce = "0.2.4"
 
-
-
 [dev-dependencies]
 criterion = "0.5.1"
 pprof = { version = "0.13.0", features = ["flamegraph", "criterion", "frame-pointer"] }

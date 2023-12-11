@@ -27,9 +27,8 @@ const FOLDING_THRESHOLD: u64 = 1 << (FIDELITY + FASTER_RADIX - 1);
 
 fn decode_with_rank_frame(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("symbol benchmark");
+    let mut group = c.benchmark_group("probing within decoder");
     group.measurement_time(std::time::Duration::from_secs(25));
-    group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(300);
 
     let mut coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
@@ -46,9 +45,8 @@ fn decode_with_rank_frame(c: &mut Criterion) {
 
 fn decode_with_table_as_frame(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("symbol benchmark");
+    let mut group = c.benchmark_group("probing within decoder");
     group.measurement_time(std::time::Duration::from_secs(25));
-    group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(300);
 
     let mut coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
@@ -82,7 +80,7 @@ fn decode_with_table_as_frame(c: &mut Criterion) {
 // try to decode by using a Vec<u8> to handle the folded bits.
 fn decode_with_byte_vector(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("folded bits benchmark");
+    let mut group = c.benchmark_group("decoder benchmark");
     group.measurement_time(std::time::Duration::from_secs(25));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(300);
@@ -103,7 +101,7 @@ fn decode_with_byte_vector(c: &mut Criterion) {
 // try to decode by using a BitVec instead of a Vec<u8> to handle the folded bits.
 fn decode_with_bitvec(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("folded bits benchmark");
+    let mut group = c.benchmark_group("decoder benchmark");
     group.measurement_time(std::time::Duration::from_secs(25));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(300);
