@@ -90,8 +90,21 @@ fn decode_with_byte_vector(c: &mut Criterion) {
 
     let prelude = coder.serialize();
 
+    let frame = VecFrame::new(
+        &prelude.table,
+        prelude.log2_frame_size,
+        FOLDING_OFFSET,
+        FOLDING_THRESHOLD,
+        FASTER_RADIX,
+    );
+
     // by default it uses radix = 8 and a vec of bytes to handle folded bits
-    let decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let decoder = FoldedStreamANSDecoder::<
+        FIDELITY,
+        FASTER_RADIX,
+        VecFrame<8>,
+        Vec<u8>
+    >::with_parameters(prelude, frame);
 
     group.bench_function("with vec of bytes", |b| {
         b.iter(|| decoder.decode_all());

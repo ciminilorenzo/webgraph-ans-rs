@@ -77,6 +77,7 @@ impl<const RADIX: usize> EliasFanoFrame<RADIX> {
 impl<const RADIX: usize> Index<State> for EliasFanoFrame<RADIX> {
     type Output = DecoderModelEntry;
 
+    #[inline(always)]
     fn index(&self, slot: State) -> &Self::Output {
         let symbol_index =
             unsafe { self.frame.pred_unchecked::<false>(&(slot as usize)).0 as Symbol };
@@ -84,74 +85,79 @@ impl<const RADIX: usize> Index<State> for EliasFanoFrame<RADIX> {
     }
 }
 
+/*
+pub struct EliasFanoFrame<const RADIX: usize> {
+    /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
+    symbols: Vec<DecoderModelEntry>,
+
+    /// The mapped frame as an Elias-Fano structure.
+    frame: EliasFano,
+}
+*/
+
+
 #[derive(Clone)]
-pub struct VecFrame<const RADIX: usize>(Vec<DecoderModelEntry>);
+pub struct VecFrame<const RADIX: usize> {
+
+    /// Contains, in each position, the data associated to the symbol with the same value.
+    symbols: Vec<DecoderModelEntry>,
+
+    /// Contains, in each position (slots from 0 up to M-1), the identifier of the associated symbol.
+    frame: Vec<Symbol>,
+}
 
 impl<const RADIX: usize> VecFrame<RADIX> {
     /// Creates a new VecFrame from the given table.
-    pub fn new(
-        table: &[EncoderModelEntry],
-        log2_frame_size: usize,
-        folding_offset: RawSymbol,
-        folding_threshold: RawSymbol,
-        _radix: usize,
-    ) -> Self {
-        assert!(
-            table.len() < 1 << Symbol::BITS,
-            "Can't have more than u16::MAX symbols"
-        );
+    pub fn new(table: &[EncoderModelEntry], log2_frame_size: usize, folding_offset: RawSymbol, folding_threshold: RawSymbol, _radix: usize, ) -> Self {
+        let mut vec = vec![0; 1 << log2_frame_size];
+        let mut symbols = vec![DecoderModelEntry::default(); table.len()];
+        let mut last_slot = 0; // the last slot of the frame we have actually filled with data
 
-        let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
-        let mut last_slot = 0;
-        let mut index = 0;
-
-        for symbol in 0..table.len() {
-            match table[index] {
-                EncoderModelEntry { freq: 0, .. } => {
-                    // let's skip symbols with frequency 0
-                    index += 1;
-                    continue;
-                }
-                EncoderModelEntry {
-                    freq,
-                    upperbound: _,
-                    cumul_freq,
-                    reciprocal: _,
-                } => {
-                    for i in last_slot..last_slot + freq {
-                        unsafe {
-                            let entry = vec.get_unchecked_mut(i as usize);
-                            entry.symbol = symbol as Symbol;
-                            entry.freq = freq;
-                            entry.cumul_freq = cumul_freq;
-
-                            let mapped_num = if symbol < folding_threshold as usize {
-                                0_u64
-                            } else {
-                                quasi_unfold::<RADIX>(
-                                    symbol as Symbol,
-                                    folding_threshold,
-                                    folding_offset,
-                                )
-                            };
-
-                            entry.mapped_num = mapped_num;
-                        }
-                    }
-                    index += 1;
-                    last_slot += freq;
-                }
+        let mut fill_slots = |symbol: Symbol, freq: u32, last_slot: u32| {
+            for slot in last_slot..last_slot + freq {
+                // fill the slot with the symbol id
+                *vec.get_mut(slot as usize).unwrap() = symbol as Symbol;
             }
+        };
+
+        for (symbol, symbol_entry) in table.iter().enumerate() {
+            if symbol_entry.freq == 0 {
+                continue; // let's skip symbols with frequency 0
+            }
+
+            fill_slots(symbol as Symbol, symbol_entry.freq, last_slot);
+            last_slot += symbol_entry.freq;
+
+            let mapped_num = if symbol < folding_threshold as usize {
+                0_u64 // this symbol it's not folded
+            } else {
+                quasi_unfold::<RADIX>(symbol as Symbol, folding_threshold, folding_offset)
+            };
+
+            *symbols.get_mut(symbol).unwrap() = DecoderModelEntry {
+                symbol: symbol as Symbol,
+                freq: symbol_entry.freq,
+                cumul_freq: symbol_entry.cumul_freq,
+                mapped_num,
+            };
         }
-        VecFrame(vec)
+
+        symbols.shrink_to_fit();
+
+        Self {
+            symbols,
+            frame: vec,
+        }
     }
 }
 
 impl<const RADIX: usize> Index<State> for VecFrame<RADIX> {
     type Output = DecoderModelEntry;
 
+    #[inline(always)]
     fn index(&self, slot: State) -> &Self::Output {
-        &self.0[slot as usize]
+        let symbol_id = self.frame[slot as usize];
+        &self.symbols[symbol_id as usize]
     }
 }
 
@@ -214,6 +220,7 @@ impl<const RADIX: usize> Rank9SelFrame<RADIX> {
 impl<const RADIX: usize> Index<State> for Rank9SelFrame<RADIX> {
     type Output = DecoderModelEntry;
 
+    #[inline(always)]
     fn index(&self, slot: State) -> &Self::Output {
         let symbol_index = self.frame.rank1((slot + 1) as usize).unwrap() as Symbol;
         &self.symbols[symbol_index as usize]

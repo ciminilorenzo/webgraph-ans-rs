@@ -70,13 +70,9 @@ fn create_with_right_parameters() {
 #[test]
 fn test_decodes_correctly() {
     let symbols = get_symbols();
-
     let mut coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
-
     coder.encode_all();
-
     let prelude = coder.serialize();
-
     let decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
 
     assert_eq!(symbols, decoder.decode_all());

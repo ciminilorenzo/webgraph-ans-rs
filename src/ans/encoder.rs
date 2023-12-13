@@ -1,5 +1,5 @@
 use crate::ans::enc_model::FoldedANSModel4Encoder;
-use crate::ans::traits::Foldable;
+use crate::ans::traits::Fold;
 use crate::ans::{Prelude, FASTER_RADIX};
 use crate::{RawSymbol, State, Symbol, K_LOG2, LOG2_B};
 
@@ -7,13 +7,9 @@ use crate::{RawSymbol, State, Symbol, K_LOG2, LOG2_B};
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 #[derive(Clone)]
-pub struct FoldedStreamANSCoder<
-    'a,
-    const FIDELITY: usize,
-    const RADIX: usize = FASTER_RADIX,
-    F = Vec<u8>,
-> where
-    F: Foldable<RADIX> + Default + Clone,
+pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, F = Vec<u8>>
+    where
+        F: Fold<RADIX> + Default + Clone,
 {
     model: FoldedANSModel4Encoder,
 
@@ -33,8 +29,8 @@ pub struct FoldedStreamANSCoder<
 }
 
 impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-where
-    F: Foldable<RADIX> + Default + Clone,
+    where
+        F: Fold<RADIX> + Default + Clone,
 {
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -65,7 +61,7 @@ impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX,
 /// Encoding functions
 impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
 where
-    F: Foldable<RADIX> + Default + Clone,
+    F: Fold<RADIX> + Default + Clone,
 {
     /// Encodes the whole input sequence.
     ///
@@ -75,49 +71,39 @@ where
     pub fn encode_all(&mut self) {
         let mut states = [1_u64 << (self.model.log2_frame_size + K_LOG2); 4];
         let mut folded_bits = F::default();
-        let mut normalized_bits = Vec::with_capacity(self.input_sequence.len());
+        let mut norm = Vec::with_capacity(self.input_sequence.len());
 
         let symbols_iter = self.input_sequence.chunks_exact(4);
         let symbols_left = symbols_iter.remainder();
 
         for symbol in symbols_left.iter().rev() {
             states[0] =
-                self.encode_symbol(*symbol, states[0], &mut normalized_bits, &mut folded_bits);
+                self.encode_symbol(*symbol, states[0], &mut norm, &mut folded_bits);
         }
 
         symbols_iter.rev().for_each(|chunk| {
-            states[0] =
-                self.encode_symbol(chunk[3], states[0], &mut normalized_bits, &mut folded_bits);
-            states[1] =
-                self.encode_symbol(chunk[2], states[1], &mut normalized_bits, &mut folded_bits);
-            states[2] =
-                self.encode_symbol(chunk[1], states[2], &mut normalized_bits, &mut folded_bits);
-            states[3] =
-                self.encode_symbol(chunk[0], states[3], &mut normalized_bits, &mut folded_bits);
+            states[0] = self.encode_symbol(chunk[3], states[0], &mut norm, &mut folded_bits);
+            states[1] = self.encode_symbol(chunk[2], states[1], &mut norm, &mut folded_bits);
+            states[2] = self.encode_symbol(chunk[1], states[2], &mut norm, &mut folded_bits);
+            states[3] = self.encode_symbol(chunk[0], states[3], &mut norm, &mut folded_bits);
         });
 
         self.states = states;
-        self.normalized_bits = normalized_bits;
+        self.normalized_bits = norm;
         self.folded_bits = folded_bits;
     }
 
-    fn encode_symbol(
-        &self,
-        symbol: RawSymbol,
-        mut state: State,
-        normalized_bits: &mut Vec<u32>,
-        folded_bits: &mut F,
-    ) -> State {
-        let symbol = if symbol < self.folding_threshold {
-            symbol as Symbol
+    fn encode_symbol(&self, sym: RawSymbol, mut state: State, norm: &mut Vec<u32>, folded_bits: &mut F) -> State {
+        let symbol = if sym < self.folding_threshold {
+            sym as Symbol
         } else {
-            folded_bits.fold_symbol(symbol, FIDELITY)
+            folded_bits.fold_symbol(sym, FIDELITY)
         };
 
         let sym_data = &self.model[symbol];
 
         if state >= sym_data.upperbound {
-            state = Self::shrink_state(state, normalized_bits);
+            state = Self::shrink_state(state, norm);
         }
 
         let block = state / sym_data.reciprocal;

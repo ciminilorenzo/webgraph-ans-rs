@@ -1,4 +1,4 @@
-use crate::ans::traits::Foldable;
+use crate::ans::traits::Fold;
 use crate::{Freq, State};
 use strength_reduce::StrengthReducedU64;
 
@@ -36,7 +36,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     }
 }
 
-pub struct Prelude<const RADIX: usize, F: Foldable<RADIX>> {
+pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,
 
