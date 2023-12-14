@@ -98,6 +98,8 @@ fn decode_with_byte_vector(c: &mut Criterion) {
         FASTER_RADIX,
     );
 
+    println!("frame size: {}", 1 << prelude.log2_frame_size);
+
     let decoder = FoldedStreamANSDecoder::<
         FIDELITY,
         FASTER_RADIX,
