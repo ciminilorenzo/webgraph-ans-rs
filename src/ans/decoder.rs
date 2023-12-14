@@ -31,9 +31,6 @@ pub struct FoldedStreamANSDecoder<const FIDELITY: usize, const RADIX: usize = FA
 
     /// The length of the sequence to decode.
     sequence_length: u64,
-
-    /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
-    folding_threshold: u16,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, M, F>
@@ -51,7 +48,6 @@ where
             model,
             normalized_bits: prelude.normalized_bits,
             folded_bits: prelude.folded_bits,
-            folding_threshold: (1 << (FIDELITY + RADIX - 1)) as u16,
             lower_bound: 1 << (prelude.log2_frame_size + K_LOG2),
             states: prelude.states,
             frame_mask: (1 << prelude.log2_frame_size) - 1,
@@ -77,7 +73,6 @@ impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, Rank9
             prelude.log2_frame_size,
             folding_offset,
             folding_threshold,
-            FASTER_RADIX,
         );
 
         Self::with_parameters(prelude, frame)
@@ -121,12 +116,6 @@ where
         let slot = *state & self.frame_mask;
         let symbol_entry: &DecoderModelEntry = &self.model[slot as State];
 
-        let decoded_sym = if symbol_entry.symbol < self.folding_threshold {
-            symbol_entry.symbol as RawSymbol
-        } else {
-            self.folded_bits.unfold_symbol(symbol_entry.mapped_num, unfolded_last_out)
-        };
-
         *state = (*state >> self.log2_frame_size)
             * (symbol_entry.freq as State) + slot as State
             - (symbol_entry.cumul_freq as State);
@@ -135,6 +124,7 @@ where
             let bits = norm.next().unwrap();
             *state = (*state << LOG2_B) | *bits as State;
         }
-        decoded_sym
+
+        self.folded_bits.unfold_symbol(symbol_entry.mapped_num, unfolded_last_out)
     }
 }

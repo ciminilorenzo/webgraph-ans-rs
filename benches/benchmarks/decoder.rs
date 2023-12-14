@@ -58,7 +58,6 @@ fn decode_with_table_as_frame(c: &mut Criterion) {
         prelude.log2_frame_size,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
-        FASTER_RADIX,
     );
     let decoder =
         FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, VecFrame<FASTER_RADIX>>::with_parameters(
@@ -95,10 +94,7 @@ fn decode_with_byte_vector(c: &mut Criterion) {
         prelude.log2_frame_size,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
-        FASTER_RADIX,
     );
-
-    println!("frame size: {}", 1 << prelude.log2_frame_size);
 
     let decoder = FoldedStreamANSDecoder::<
         FIDELITY,
@@ -135,7 +131,6 @@ fn decode_with_bitvec(c: &mut Criterion) {
         prelude.log2_frame_size,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
-        FASTER_RADIX,
     );
 
     let decoder = FoldedStreamANSDecoder::<

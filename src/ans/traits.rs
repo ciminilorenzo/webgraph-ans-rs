@@ -91,6 +91,10 @@ impl<const RADIX: usize> Fold<RADIX> for BitVec<usize, Msb0> {
     }
 
     fn read_folds(&self, folds: usize, last_read: &mut usize) -> u64 {
+        if folds == 0 {
+            return 0_u64;
+        }
+
         let bits = self
             .as_bitslice()
             .get(*last_read - folds * RADIX..*last_read)

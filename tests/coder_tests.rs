@@ -2,7 +2,7 @@ use rand::prelude::Distribution;
 use rand::rngs::SmallRng;
 use rand::SeedableRng;
 
-use folded_streaming_rans::ans::dec_model::Rank9SelFrame;
+use folded_streaming_rans::ans::dec_model::{Rank9SelFrame, VecFrame};
 use rand_distr::Zipf;
 
 use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
@@ -74,7 +74,15 @@ fn test_decodes_correctly() {
     coder.encode_all();
 
     let prelude = coder.serialize();
-    let decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+
+    let frame = VecFrame::new(
+        &prelude.table,
+        prelude.log2_frame_size,
+        get_folding_offset(FASTER_RADIX, FIDELITY),
+        get_folding_threshold(FASTER_RADIX, FIDELITY),
+        FASTER_RADIX);
+
+    let decoder = FoldedStreamANSDecoder::<FIDELITY, FASTER_RADIX, VecFrame<8>, Vec<u8>>::with_parameters(prelude, frame);
 
     assert_eq!(symbols, decoder.decode_all());
 }
