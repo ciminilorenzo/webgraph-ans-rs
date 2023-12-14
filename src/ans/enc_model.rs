@@ -30,11 +30,9 @@ pub struct FoldedANSModel4Encoder {
 
 impl FoldedANSModel4Encoder {
     pub fn new(input: &[RawSymbol], radix: usize, fidelity: usize) -> Self {
-        let presumed_max_bucket =
-            Self::folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
+        let presumed_max_bucket = Self::folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];
         let mut max_sym = 0;
-        let mut n = 0;
         let folding_threshold = (1 << (fidelity + radix - 1)) as RawSymbol;
 
         for sym in input {
@@ -46,10 +44,11 @@ impl FoldedANSModel4Encoder {
 
             *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
             max_sym = max(max_sym, folded_sym);
-            n += 1;
         }
 
-        let (approx_freqs, m) = Self::approx_freqs(&frequencies, n, max_sym);
+        let symbols_len = frequencies.iter().filter(|freq| **freq > 0).count();
+
+        let (approx_freqs, m) = Self::approx_freqs(&frequencies, symbols_len, max_sym);
         let mut table: Vec<EncoderModelEntry> = Vec::with_capacity(max_sym as usize + 1);
         let mut last_covered_freq = 0;
 
@@ -130,8 +129,7 @@ impl FoldedANSModel4Encoder {
         loop {
             assert!(frame_size <= (1 << 28), "frame_size must be at most 2^28");
 
-            let scaling_result =
-                Self::try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
+            let scaling_result = Self::try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
 
             match scaling_result {
                 Ok(new_freqs) => {
@@ -175,8 +173,14 @@ impl FoldedANSModel4Encoder {
         let mut approx_freqs = freqs.to_vec();
         let ratio = new_frame as f64 / total_freq as f64;
 
-        let get_approx_freq =
-            |scale: f64, sym_freq: f64| max(1, (0.5 + scale * sym_freq).floor() as usize);
+        let get_approx_freq = |scale: f64, sym_freq: f64| -> usize {
+                let new_freq = max(1, (0.5 + scale * sym_freq).floor() as usize);
+
+                if new_freq > ((1 << 16) - 1) {
+                    panic!("Cannot have frequencies bigger than 2^16 - 1. Freq is {}", new_freq);
+                }
+                new_freq
+            };
 
         for (index, sym_index) in sorted_indices.iter().enumerate() {
             let sym_freq = freqs[*sym_index];
@@ -203,6 +207,7 @@ impl FoldedANSModel4Encoder {
 impl Index<Symbol> for FoldedANSModel4Encoder {
     type Output = EncoderModelEntry;
 
+    #[inline(always)]
     fn index(&self, symbol: Symbol) -> &Self::Output {
         &self.table[symbol as usize]
     }

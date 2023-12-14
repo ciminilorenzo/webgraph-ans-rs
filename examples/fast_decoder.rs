@@ -46,6 +46,8 @@ fn main() {
     encoder.encode_all();
     let prelude = encoder.serialize();
 
+    println!("frame size: {}", 1 << prelude.log2_frame_size);
+
     let frame = VecFrame::new(&prelude.table, prelude.log2_frame_size, FOLDING_OFFSET, FOLDING_THRESHOLD, 0);
 
     let decoder = FoldedStreamANSDecoder::<1, FASTER_RADIX, VecFrame<8>, Vec<u8>>::with_parameters(prelude, frame);

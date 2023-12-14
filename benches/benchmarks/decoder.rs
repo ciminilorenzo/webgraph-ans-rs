@@ -98,7 +98,6 @@ fn decode_with_byte_vector(c: &mut Criterion) {
         FASTER_RADIX,
     );
 
-    // by default it uses radix = 8 and a vec of bytes to handle folded bits
     let decoder = FoldedStreamANSDecoder::<
         FIDELITY,
         FASTER_RADIX,
@@ -128,6 +127,7 @@ fn decode_with_bitvec(c: &mut Criterion) {
     coder.encode_all();
 
     let prelude = coder.serialize();
+
     let model = Rank9SelFrame::new(
         &prelude.table,
         prelude.log2_frame_size,
@@ -135,6 +135,7 @@ fn decode_with_bitvec(c: &mut Criterion) {
         FOLDING_THRESHOLD,
         FASTER_RADIX,
     );
+
     let decoder = FoldedStreamANSDecoder::<
         FIDELITY,
         FASTER_RADIX,

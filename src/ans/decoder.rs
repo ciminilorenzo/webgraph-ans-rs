@@ -128,8 +128,8 @@ where
         };
 
         *state = (*state >> self.log2_frame_size)
-            * symbol_entry.freq as State + slot as State
-            - symbol_entry.cumul_freq as State;
+            * (symbol_entry.freq as State) + slot as State
+            - (symbol_entry.cumul_freq as State);
 
         if *state < self.lower_bound {
             let bits = norm.next().unwrap();

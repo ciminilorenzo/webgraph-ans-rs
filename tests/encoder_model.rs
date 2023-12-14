@@ -31,5 +31,4 @@ fn correct_data_is_retrieved(){
         model[1]
     )
 }
-
- */
+*/

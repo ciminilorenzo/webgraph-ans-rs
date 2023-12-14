@@ -11,8 +11,8 @@ use sux::prelude::*;
 #[derive(Clone, Debug, Default)]
 pub struct DecoderModelEntry {
     pub symbol: Symbol,
-    pub freq: u32,
-    pub cumul_freq: u32,
+    pub freq: u16,
+    pub cumul_freq: u16,
     pub mapped_num: u64,
 }
 
@@ -58,8 +58,8 @@ impl<const RADIX: usize> EliasFanoFrame<RADIX> {
 
             symbols.push(DecoderModelEntry {
                 symbol: sym as Symbol,
-                freq: sym_data.freq,
-                cumul_freq: sym_data.cumul_freq,
+                freq: sym_data.freq as u16,
+                cumul_freq: sym_data.cumul_freq as u16,
                 mapped_num,
             });
         }
@@ -84,16 +84,6 @@ impl<const RADIX: usize> Index<State> for EliasFanoFrame<RADIX> {
         &self.symbols[symbol_index as usize]
     }
 }
-
-/*
-pub struct EliasFanoFrame<const RADIX: usize> {
-    /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
-    symbols: Vec<DecoderModelEntry>,
-
-    /// The mapped frame as an Elias-Fano structure.
-    frame: EliasFano,
-}
-*/
 
 
 #[derive(Clone)]
@@ -136,8 +126,8 @@ impl<const RADIX: usize> VecFrame<RADIX> {
 
             *symbols.get_mut(symbol).unwrap() = DecoderModelEntry {
                 symbol: symbol as Symbol,
-                freq: symbol_entry.freq,
-                cumul_freq: symbol_entry.cumul_freq,
+                freq: symbol_entry.freq as u16,
+                cumul_freq: symbol_entry.cumul_freq as u16,
                 mapped_num,
             };
         }
@@ -204,8 +194,8 @@ impl<const RADIX: usize> Rank9SelFrame<RADIX> {
 
             symbols.push(DecoderModelEntry {
                 symbol: sym as Symbol,
-                freq: sym_data.freq,
-                cumul_freq: sym_data.cumul_freq,
+                freq: sym_data.freq as u16,
+                cumul_freq: sym_data.cumul_freq as u16,
                 mapped_num,
             });
         }
