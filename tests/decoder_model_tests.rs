@@ -1,3 +1,5 @@
+mod common;
+
 use rstest::*;
 
 use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
@@ -27,33 +29,30 @@ fn probe_works_for_all_types_of_frames(
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
-    let bitvec_frame = Rank9SelFrame::<RADIX>::new(
+    let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(
         &raw_frame,
         encoder_model.log2_frame_size,
         folding_offset,
         folding_threshold,
-        RADIX,
     );
-    let vec_frame = VecFrame::<RADIX>::new(
+    let vec_frame = VecFrame::<RADIX, u64>::new(
         &raw_frame,
         encoder_model.log2_frame_size,
         folding_offset,
         folding_threshold,
-        RADIX,
     );
-    let elias_frame = EliasFanoFrame::<RADIX>::new(
+    let elias_frame = EliasFanoFrame::<RADIX, u64>::new(
         &raw_frame,
         encoder_model.log2_frame_size,
         folding_offset,
         folding_threshold,
-        RADIX,
     );
 
     for i in 0..slots.len() {
         let slot_to_probe = slots[i] as State;
 
-        assert_eq!(expected_symbols[i], bitvec_frame[slot_to_probe].mapped_num);
-        assert_eq!(expected_symbols[i], elias_frame[slot_to_probe].mapped_num);
-        assert_eq!(expected_symbols[i], vec_frame[slot_to_probe].mapped_num);
+        assert_eq!(expected_symbols[i], bitvec_frame[slot_to_probe].quasi_folded);
+        assert_eq!(expected_symbols[i], elias_frame[slot_to_probe].quasi_folded);
+        assert_eq!(expected_symbols[i], vec_frame[slot_to_probe].quasi_folded);
     }
 }

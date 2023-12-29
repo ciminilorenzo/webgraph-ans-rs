@@ -11,6 +11,8 @@ pub const MAXIMUM_LOG2_M: usize = 28;
 /// How many bits are extracted/added from/to the state during the encoding/decoding process.
 pub const LOG2_B: usize = 32;
 
+pub const MAX_RAW_SYMBOL: u64 = (1 << 48) - 1;
+
 /// The type representing the folded symbols.
 ///
 /// # Note
@@ -28,5 +30,6 @@ pub type RawSymbol = u64;
 /// The type representing the state of the encoder/decoder.
 pub type State = u64;
 
-/// Both `freq` and `cumul_freq` are u32 since M can be at most 2^28.
-pub type Freq = u32;
+/// The type representing the frequencies of the symbols. This type is bounded to be u16 since we deliberately accept to
+/// have frequencies that can reach at most that value.
+pub type Freq = u16;

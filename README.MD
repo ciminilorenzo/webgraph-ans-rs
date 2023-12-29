@@ -1,3 +1,40 @@
+# Benches
+In benches/ you can find some criterion benchmarks than can be run simply running:
+```shell
+cargo bench # if you want to run the whole set of benches.
+```
+otherwise, you can run a specific bench by running:
+```shell
+cargo bench -- <bench_name>
+```
+where `<bench_name>` is the name of the bench you want to run. For example:
+```shell
+cargo bench -- "with 64bit"
+```
+Like in this example, when the bench is included within a benchmark group (we need to do this in order to make some advanced
+configuration), the name of the running benchmark is of the form:
+```text
+<group_name> <bench_name>
+```
+In fact, by running the previous
+command, we will get:
+```text
+Decoding with different width for quasi folded/with 64bit
+                        time:   [11.356 ms 11.380 ms 11.405 ms]
+                        thrpt:  [87.679 Melem/s 87.876 Melem/s 88.058 Melem/s]
+```
+since the benchmark function "with 64bit" is included in the group "Decoding with different width for quasi folded".
+
+# Examples
+In examples/ you can find some examples of the usage of the different compressors. Every source file contains
+details about its content. Moreover, the **correspondent binary can be used to profile the example itself**.
+
+- **decoder**: the standard decoder, that is the one that uses 64-bits quasi-folded field for every DecoderModelEntry and the other standard parameters;
+- **decoder_32bit**: the decoder that uses all standard parameters but the width of the quasi-folded field, that is 32 bits in this case. 
+- **rank9decoder**: a decoder that uses a Rank9Sel bit vector in order to implement the symbol(y) primitive;
+- **bitvec_decoder**: a decoder that uses a BitVec in order to handle the folded bits.
+
+
 # Folded Streaming Range ANS Coder
 This library implements a folded streaming range asymmetric numeral system coder. This coder uses a 64-bit state 
 and 32 bit renormalization step with some other constrains discussed below.

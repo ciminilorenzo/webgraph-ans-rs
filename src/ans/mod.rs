@@ -1,4 +1,4 @@
-use crate::ans::traits::Fold;
+use crate::ans::traits::{Fold, Quasi};
 use crate::{Freq, State};
 use strength_reduce::StrengthReducedU64;
 
@@ -8,6 +8,7 @@ pub mod enc_model;
 pub mod encoder;
 mod traits;
 
+/// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
 
 #[readonly::make]
@@ -17,6 +18,15 @@ pub struct EncoderModelEntry {
     pub upperbound: u64,
     pub cumul_freq: Freq,
     pub reciprocal: StrengthReducedU64,
+}
+
+impl PartialEq for EncoderModelEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.freq == other.freq &&
+            self.upperbound == other.upperbound &&
+            self.cumul_freq == other.cumul_freq &&
+            self.reciprocal.get() == other.reciprocal.get()
+    }
 }
 
 impl From<(Freq, u64, Freq)> for EncoderModelEntry {
@@ -34,6 +44,17 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
             reciprocal,
         }
     }
+}
+
+
+#[readonly::make]
+#[derive(Clone, Debug, Default)]
+pub struct DecoderModelEntry<const RADIX: usize, T>
+    where T: Quasi<RADIX>
+{
+    pub freq: Freq,
+    pub cumul_freq: Freq,
+    pub quasi_folded: T,
 }
 
 pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {

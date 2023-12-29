@@ -1,15 +1,14 @@
 use std::cmp::max;
 use std::ops::Index;
 
-use crate::ans::traits::RESERVED_TO_SYMBOL;
 use crate::ans::EncoderModelEntry;
 use crate::utils::{cross_entropy, entropy};
-use crate::{RawSymbol, Symbol, K_LOG2, LOG2_B};
+use crate::{RawSymbol, Symbol, K_LOG2, LOG2_B, MAX_RAW_SYMBOL};
+
 use anyhow::{bail, Result};
+
 use strength_reduce::StrengthReducedU64;
 
-/// The maximum symbol we expect to see in the input.
-const MAX_RAW_SYMBOL: RawSymbol = (1 << RESERVED_TO_SYMBOL) - 1;
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
 /// distribution of frequencies.
@@ -42,7 +41,7 @@ impl FoldedANSModel4Encoder {
                 Self::folding_without_streaming_out(*sym, radix, fidelity)
             };
 
-            *frequencies.get_mut(folded_sym as usize).unwrap() += 1;
+            *frequencies.get_mut(folded_sym as usize).expect("Symbols from input must be at most 2^48 - 1") += 1;
             max_sym = max(max_sym, folded_sym);
         }
 
@@ -60,12 +59,12 @@ impl FoldedANSModel4Encoder {
             };
 
             table.push(EncoderModelEntry {
-                freq: *freq as u32,
+                freq: *freq as u16,
                 upperbound: ((1 << (K_LOG2 + LOG2_B)) * *freq) as u64,
                 cumul_freq: last_covered_freq,
                 reciprocal,
             });
-            last_covered_freq += *freq as u32;
+            last_covered_freq += *freq as u16;
         }
 
         Self {
@@ -74,18 +73,14 @@ impl FoldedANSModel4Encoder {
         }
     }
 
-    fn folding_without_streaming_out(
-        mut symbol: RawSymbol,
-        radix: usize,
-        fidelity: usize,
-    ) -> Symbol {
+    fn folding_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
         let mut offset = 0;
-        let cuts = (((u64::ilog2(symbol) as usize) + 1) - fidelity) / radix;
+        let cuts = (((u64::ilog2(sym) as usize) + 1) - fidelity) / radix;
         let bit_to_cut = cuts * radix;
-        symbol >>= bit_to_cut;
+        sym >>= bit_to_cut;
         offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
 
-        u16::try_from(symbol + offset).expect("Folded symbol is bigger than u16::MAX")
+        u16::try_from(sym + offset).expect("Folded symbol is bigger than u16::MAX")
     }
 
     fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, usize) {

@@ -15,6 +15,7 @@ itertools = "0.12.0"
 bitvec = "1.0.1"
 sucds = { version = "0.8.1", features = ["intrinsics"] }
 strength_reduce = "0.2.4"
+rand = { version = "0.8.5", features = [] }
 
 [dev-dependencies]
 criterion = "0.5.1"

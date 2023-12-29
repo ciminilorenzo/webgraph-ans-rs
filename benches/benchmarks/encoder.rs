@@ -12,14 +12,14 @@ use crate::benchmarks::{FIDELITY};
 
 fn fast_encoding_bench(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("encoder");
+    let mut group = c.benchmark_group("encoding");
     group.measurement_time(std::time::Duration::from_secs(30));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
     group.sample_size(50);
 
     let coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
 
-    group.bench_function("faster encoder", |b| {
+    group.bench_function("with vec of bytes", |b| {
         b.iter_batched(|| coder.clone(), |mut coder| coder.encode_all(), BatchSize::SmallInput)
     });
     group.finish()
@@ -28,10 +28,10 @@ fn fast_encoding_bench(c: &mut Criterion) {
 
 fn encoding_bench(c: &mut Criterion) {
     let symbols = get_symbols();
-    let mut group = c.benchmark_group("encoder");
+    let mut group = c.benchmark_group("encoding");
     group.measurement_time(std::time::Duration::from_secs(30));
     group.throughput(criterion::Throughput::Elements(symbols.len() as u64));
-    group.sample_size(50);
+    group.sample_size(20);
 
     let coder = FoldedStreamANSCoder::<
         FIDELITY,
@@ -39,7 +39,7 @@ fn encoding_bench(c: &mut Criterion) {
         BitVec<usize, Msb0>
     >::with_parameters(&symbols, BitVec::<usize, Msb0>::new());
 
-    group.bench_function("encoder", |b| {
+    group.bench_function("with bitvec", |b| {
         b.iter_batched(|| coder.clone(), |mut coder| coder.encode_all(), BatchSize::SmallInput)
     });
     group.finish()

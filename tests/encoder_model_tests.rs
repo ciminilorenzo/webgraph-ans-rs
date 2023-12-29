@@ -1,4 +1,3 @@
-/*
 use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
 use folded_streaming_rans::ans::EncoderModelEntry;
 
@@ -18,7 +17,11 @@ fn correct_distribution_is_created() {
     expected.push(EncoderModelEntry::from((3,  206158430208, 29))); // symbol `5`
 
     let model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
-    assert_eq!(expected, model.to_raw_parts());
+    let table = model.to_raw_parts();
+
+    for index in 0..expected.len() {
+        assert_eq!(expected[index], table[index]);
+    }
 }
 
 #[test]
@@ -31,4 +34,3 @@ fn correct_data_is_retrieved(){
         model[1]
     )
 }
-*/

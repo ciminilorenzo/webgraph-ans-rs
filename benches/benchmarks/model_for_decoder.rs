@@ -30,9 +30,9 @@ fn probing_benchmark(c: &mut Criterion) {
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
-    let vec_frame = VecFrame::<RADIX>::new(&table, log_m, folding_offset, folding_threshold);
-    let elias_frame = EliasFanoFrame::<RADIX>::new(&table, log_m, folding_offset, folding_threshold);
-    let bitvec_frame = Rank9SelFrame::<RADIX>::new(&table, log_m, folding_offset, folding_threshold);
+    let vec_frame = VecFrame::<RADIX, u64>::new(&table, log_m, folding_offset, folding_threshold);
+    let elias_frame = EliasFanoFrame::<RADIX, u64>::new(&table, log_m, folding_offset, folding_threshold);
+    let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(&table, log_m, folding_offset, folding_threshold);
 
     let mut group = c.benchmark_group("Probing");
     group.measurement_time(std::time::Duration::from_secs(15));

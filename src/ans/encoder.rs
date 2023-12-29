@@ -48,6 +48,7 @@ impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, 
 }
 
 impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
+
     /// Creates the standard FoldedStreamANSEncoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8. This means that, by using this
@@ -77,8 +78,7 @@ where
         let symbols_left = symbols_iter.remainder();
 
         for symbol in symbols_left.iter().rev() {
-            states[0] =
-                self.encode_symbol(*symbol, states[0], &mut norm, &mut folded_bits);
+            states[0] = self.encode_symbol(*symbol, states[0], &mut norm, &mut folded_bits);
         }
 
         symbols_iter.rev().for_each(|chunk| {
