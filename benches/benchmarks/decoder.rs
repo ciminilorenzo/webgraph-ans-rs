@@ -54,8 +54,8 @@ fn decode_with_rank_as_frame(c: &mut Criterion) {
 
     let prelude = coder.serialize();
     let table = Rank9SelFrame::<FASTER_RADIX, u64>::new(
-        &prelude.table,
-        prelude.log2_frame_size,
+        &prelude.tables,
+        prelude.frame_sizes,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
     );
@@ -109,8 +109,8 @@ fn decode_with_bitvec(c: &mut Criterion) {
     let prelude = coder.serialize();
 
     let frame = VecFrame::<FASTER_RADIX, u64>::new(
-        &prelude.table,
-        prelude.log2_frame_size,
+        &prelude.tables,
+        prelude.frame_sizes,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
     );
@@ -166,8 +166,8 @@ fn decode_with_32bit_quasi_folded(c: &mut Criterion) {
     let prelude = coder.serialize();
 
     let frame = VecFrame::<FASTER_RADIX, u32>::new(
-        &prelude.table,
-        prelude.log2_frame_size,
+        &prelude.tables,
+        prelude.frame_sizes,
         FOLDING_OFFSET,
         FOLDING_THRESHOLD,
     );

@@ -6,7 +6,9 @@ pub mod dec_model;
 pub mod decoder;
 pub mod enc_model;
 pub mod encoder;
+pub mod enc_model_builder;
 mod traits;
+
 
 /// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
@@ -17,7 +19,7 @@ pub struct EncoderModelEntry {
     pub freq: Freq,
     pub upperbound: u64,
     pub cumul_freq: Freq,
-    pub reciprocal: StrengthReducedU64,
+    pub fast_divisor: StrengthReducedU64,
 }
 
 impl PartialEq for EncoderModelEntry {
@@ -25,13 +27,13 @@ impl PartialEq for EncoderModelEntry {
         self.freq == other.freq &&
             self.upperbound == other.upperbound &&
             self.cumul_freq == other.cumul_freq &&
-            self.reciprocal.get() == other.reciprocal.get()
+            self.fast_divisor.get() == other.fast_divisor.get()
     }
 }
 
 impl From<(Freq, u64, Freq)> for EncoderModelEntry {
     fn from(tuple: (Freq, u64, Freq)) -> Self {
-        let reciprocal = if tuple.0 > 0 {
+        let fast_divisor = if tuple.0 > 0 {
             StrengthReducedU64::new(tuple.0 as u64)
         } else {
             StrengthReducedU64::new(1)
@@ -41,7 +43,7 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
             freq: tuple.0,
             upperbound: tuple.1,
             cumul_freq: tuple.2,
-            reciprocal,
+            fast_divisor,
         }
     }
 }
@@ -59,10 +61,7 @@ pub struct DecoderModelEntry<const RADIX: usize, T>
 
 pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
-    pub table: Vec<EncoderModelEntry>,
-
-    /// The length of the sequence to decode.
-    pub sequence_length: u64,
+    pub tables: Vec<Vec<EncoderModelEntry>>,
 
     /// The normalized bits during the encoding process.
     pub normalized_bits: Vec<u32>,
@@ -70,7 +69,8 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// The folded bits during the encoding process.
     pub folded_bits: F,
 
-    pub log2_frame_size: usize,
+    /// Contains the log2 of the frame size for each model.
+    pub frame_sizes: Vec<usize>,
 
-    pub states: [State; 4],
+    pub state: State,
 }

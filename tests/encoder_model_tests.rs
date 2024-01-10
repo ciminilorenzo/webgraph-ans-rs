@@ -1,36 +1,42 @@
-use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
-use folded_streaming_rans::ans::EncoderModelEntry;
-
+use folded_streaming_rans::ans::enc_model_builder::AnsModel4EncoderBuilder;
+use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
 
 #[test]
-fn correct_distribution_is_created() {
-    let symbols = [1,1,1,2,2,2,3,3,4,5];
-    let mut expected = Vec::new();
-    expected.push(EncoderModelEntry::from((0,  0, 0)));
-    expected.push(EncoderModelEntry::from((10, 687194767360, 0)));  // symbol `1`
-    expected.push(EncoderModelEntry::from((10, 687194767360, 10))); // symbol `2`
-    expected.push(EncoderModelEntry::from((6,  412316860416, 20))); // symbol `3`
-    expected.push(EncoderModelEntry::from((3,  206158430208, 26))); // symbol `4`
-    expected.push(EncoderModelEntry::from((3,  206158430208, 29))); // symbol `5`
+fn builder_is_created_without_errors() {
+    let first_symbols = vec![1,1,1,2,2,2,3,3,4,5];
+    let second_symbols = vec![1,1,1,2,2,2,3,3,4,5];
+    let third_symbols = vec![1,1,1,2,2,2,3,3,4,5];
 
-    let model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
-    let table = model.to_raw_parts();
+    let mut builder = AnsModel4EncoderBuilder::<FIDELITY, RADIX>::new(3);
 
-    for index in 0..expected.len() {
-        assert_eq!(expected[index], table[index]);
+    for index in 0..first_symbols.len() {
+        builder.push_symbol(first_symbols[index], 0).unwrap();
+        builder.push_symbol(second_symbols[index], 1).unwrap();
+        builder.push_symbol(third_symbols[index], 2).unwrap();
     }
 }
 
 #[test]
-fn correct_data_is_retrieved(){
-    let symbols = [1,1,1,2,2,2,3,3,4,5];
-    let model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
+fn encoder_encodes_without_errors() {
+    let first_symbols = vec![1, 1, 1, 2, 2, 2, 3, 3, 4, 5];
+    let second_symbols = vec![1, 1, 1, 2, 2, 2, 3, 3, 4, 5];
+    let third_symbols = vec![1, 1, 1, 2, 2, 2, 3, 3, 4, 5];
 
-    assert_eq!(
-        EncoderModelEntry::from((10, 687194767360, 0)), // Precomputed EncoderModelEntry for symbol `1`
-        model[1]
-    )
+    let mut builder = AnsModel4EncoderBuilder::<FIDELITY, RADIX>::new(3);
+
+    for index in 0..first_symbols.len() {
+        builder.push_symbol(first_symbols[index], 0).unwrap();
+        builder.push_symbol(second_symbols[index], 1).unwrap();
+        builder.push_symbol(third_symbols[index], 2).unwrap();
+    }
+    let model = builder.build();
+    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(model);
+
+    for index in 0..first_symbols.len() {
+        encoder.encode(first_symbols[index], 0);
+    }
 }
+

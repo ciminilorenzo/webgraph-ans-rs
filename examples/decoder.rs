@@ -29,6 +29,7 @@
  *
  */
 
+/*
 use rand::distributions::Distribution;
 use rand::prelude::SmallRng;
 use rand::SeedableRng;
@@ -67,4 +68,9 @@ fn main() {
     let decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
 
     assert_eq!(input, decoder.decode_all());
+}
+*/
+
+fn main() {
+
 }

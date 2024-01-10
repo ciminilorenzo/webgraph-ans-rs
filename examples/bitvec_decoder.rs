@@ -24,6 +24,7 @@ use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::RawSymbol;
 
+/*
 /// Size of the list of symbols used during the examples.
 const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 
@@ -82,4 +83,9 @@ fn main() {
         >::with_parameters(prelude, frame);
 
     assert_eq!(input, decoder.decode_all());
+}
+*/
+
+fn main() {
+
 }

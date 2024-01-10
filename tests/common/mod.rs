@@ -11,7 +11,7 @@ use folded_streaming_rans::RawSymbol;
 pub const FIDELITY: usize = 2;
 pub const FASTER_RADIX: usize = 8;
 /// Size of the list of symbols used to test.
-const SYMBOL_LIST_LENGTH: usize = 1_000_000;
+pub const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 /// Maximum value that the zipfian distribution can output.
 const MAXIMUM_SYMBOL: u64 = 1 << 20;
 
@@ -26,8 +26,8 @@ pub fn get_folding_threshold(radix: usize, fidelity: usize) -> u64 {
 
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian
 /// distribution that can output values up to [`MAXIMUM_SYMBOL`].
-pub fn get_symbols() -> Vec<RawSymbol> {
-    let mut rng = SmallRng::seed_from_u64(0);
+pub fn get_symbols(seed: u64) -> Vec<RawSymbol> {
+    let mut rng = SmallRng::seed_from_u64(seed);
     let distribution = Zipf::new(MAXIMUM_SYMBOL, 1.0).unwrap();
     let mut symbols = Vec::with_capacity(SYMBOL_LIST_LENGTH);
 

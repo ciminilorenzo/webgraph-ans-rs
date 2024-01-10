@@ -3,8 +3,9 @@ mod common;
 use rstest::*;
 
 use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
-use folded_streaming_rans::ans::enc_model::FoldedANSModel4Encoder;
+use folded_streaming_rans::ans::enc_model::SymbolLookup;
 use folded_streaming_rans::{RawSymbol, State};
+use folded_streaming_rans::ans::enc_model_builder::AnsModel4EncoderBuilder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
@@ -23,27 +24,33 @@ fn probe_works_for_all_types_of_frames(
     #[case] slots: Vec<usize>,
     #[case] expected_symbols: Vec<u64>,
 ) {
-    let encoder_model = FoldedANSModel4Encoder::new(&symbols, RADIX, FIDELITY);
-    let raw_frame = encoder_model.to_raw_parts();
+    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, RADIX>::new(1);
 
+    for symbol in symbols {
+        encoder_model_builder.push_symbol(symbol, 0).unwrap();
+    }
+
+    let encoder_model = encoder_model_builder.build();
+    let tables = encoder_model.tables;
+    let frame_sizes = encoder_model.frame_sizes;
     let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
     let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
     let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(
-        &raw_frame,
-        encoder_model.log2_frame_size,
+        tables.clone(),
+        frame_sizes.clone(),
         folding_offset,
         folding_threshold,
     );
     let vec_frame = VecFrame::<RADIX, u64>::new(
-        &raw_frame,
-        encoder_model.log2_frame_size,
+        tables.clone(),
+        frame_sizes.clone(),
         folding_offset,
         folding_threshold,
     );
     let elias_frame = EliasFanoFrame::<RADIX, u64>::new(
-        &raw_frame,
-        encoder_model.log2_frame_size,
+        tables.clone(),
+        frame_sizes.clone(),
         folding_offset,
         folding_threshold,
     );
@@ -51,8 +58,8 @@ fn probe_works_for_all_types_of_frames(
     for i in 0..slots.len() {
         let slot_to_probe = slots[i] as State;
 
-        assert_eq!(expected_symbols[i], bitvec_frame[slot_to_probe].quasi_folded);
-        assert_eq!(expected_symbols[i], elias_frame[slot_to_probe].quasi_folded);
-        assert_eq!(expected_symbols[i], vec_frame[slot_to_probe].quasi_folded);
+        assert_eq!(expected_symbols[i], bitvec_frame.symbol(slot_to_probe, 0).quasi_folded);
+        assert_eq!(expected_symbols[i], elias_frame.symbol(slot_to_probe, 0).quasi_folded);
+        assert_eq!(expected_symbols[i], vec_frame.symbol(slot_to_probe, 0).quasi_folded);
     }
 }

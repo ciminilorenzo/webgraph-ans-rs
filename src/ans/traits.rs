@@ -194,3 +194,10 @@ impl <const RADIX: usize> Quasi<RADIX> for u64 {
         (symbol, folds as u32)
     }
 }
+
+
+pub trait Decode {
+    fn get_frame_mask(&self, model_index: usize) -> u64;
+
+    fn get_log2_frame_size(&self, model_index: usize) -> usize;
+}
