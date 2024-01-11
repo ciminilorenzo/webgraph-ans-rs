@@ -3,10 +3,10 @@ use anyhow::bail;
 
 use strength_reduce::StrengthReducedU64;
 
-use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
-use crate::ans::enc_model::AnsModel4Encoder;
-use crate::ans::EncoderModelEntry;
-use crate::utils::{cross_entropy, entropy};
+use crate::{EncoderModelEntry, LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
+use crate::multi_model_ans::model4encoder::AnsModel4Encoder;
+use crate::utils::ans_utilities::folding_without_streaming_out;
+use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
 
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
@@ -27,7 +27,8 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
 
     /// Creates a new AnsModel4EncoderBuilder with the given number of models.
     pub fn new(models: usize) -> Self {
-        let presumed_max_bucket: Symbol = Self::folding_without_streaming_out(MAX_RAW_SYMBOL, RADIX, FIDELITY);
+        // we can calculate the biggest folded sym that we can see. This is used to create a vec with already-allocated frequencies
+        let presumed_max_bucket: Symbol = folding_without_streaming_out(MAX_RAW_SYMBOL, RADIX, FIDELITY);
         let frequencies = vec![ vec![0_usize; presumed_max_bucket as usize]; models];
 
         Self {
@@ -42,15 +43,13 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
             bail!("Symbol can't be bigger than u48::MAX");
         }
 
-        let folded_sym = if symbol < Self::FOLDING_THRESHOLD {
-            symbol as Symbol
-        } else {
-            Self::folding_without_streaming_out(symbol, RADIX, FIDELITY)
+        let folded_sym = match symbol < Self::FOLDING_THRESHOLD {
+            true => symbol as Symbol,
+            false => folding_without_streaming_out(symbol, RADIX, FIDELITY),
         };
 
-        unsafe { // it can be unsafe since we are sure that there is a frequency in that position
-            *self.frequencies[model_index].get_unchecked_mut(folded_sym as usize) += 1
-        };
+        // this unwrap is safe since we have already filled the vec with all zeros
+        *self.frequencies[model_index].get_mut(folded_sym as usize).unwrap() += 1;
         self.max_sym[model_index] = max(self.max_sym[model_index], folded_sym);
 
         Ok(())
@@ -61,15 +60,14 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
         let mut frame_sizes = Vec::with_capacity(self.models);
 
         for model_index in 0..self.models {
-            let symbols_len = self.frequencies[model_index].iter().filter(|freq| **freq > 0).count();
+            let symbols = self.frequencies[model_index].iter().filter(|freq| **freq > 0).count();
             let (approx_freqs, m) = Self::approx_freqs(
                 &self.frequencies[model_index],
-                symbols_len,
+                symbols,
                 self.max_sym[model_index],
             );
             let mut table: Vec<EncoderModelEntry> = Vec::with_capacity(self.max_sym[model_index] as usize + 1);
             let mut last_covered_freq = 0;
-
             let log_m = m.ilog2() as usize;
             let k = 32 - log_m;     // !!! K = 32 - log2(M) !!!
 
@@ -88,7 +86,6 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
                 });
                 last_covered_freq += *freq as u16;
             }
-
             tables.push(table);
             frame_sizes.push(log_m);
         }
@@ -97,16 +94,6 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
             tables,
             frame_sizes,
         }
-    }
-
-    fn folding_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
-        let mut offset = 0;
-        let cuts = (((u64::ilog2(sym) as usize) + 1) - fidelity) / radix;
-        let bit_to_cut = cuts * radix;
-        sym >>= bit_to_cut;
-        offset += (((1 << radix) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
-
-        u16::try_from(sym + offset).expect("Folded symbol is bigger than u16::MAX")
     }
 
     fn approx_freqs(freqs: &[usize], n: usize, max_sym: Symbol) -> (Vec<usize>, usize) {
@@ -121,12 +108,11 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
             total_freq += freq;
             indexed_freqs.push((*freq, index));
         }
-
         indexed_freqs.shrink_to_fit();
-        let mut frame_size = if n.is_power_of_two() {
-            n
-        } else {
-            n.next_power_of_two()
+
+        let mut frame_size = match n.is_power_of_two() {
+            true => n,
+            false => n.next_power_of_two(),
         };
         let mut approx_freqs: Vec<usize>;
 
@@ -148,14 +134,13 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
         };
 
         loop {
-            assert!(frame_size <= (1 << 28), "frame_size must be at most 2^28");
+            assert!(frame_size <= (1 << 32), "The left extreme of the interval must be 2^32.");
 
-            let scaling_result = Self::try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
+            let scaling_result = try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
 
             match scaling_result {
                 Ok(new_freqs) => {
-                    let cross_entropy =
-                        cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
+                    let cross_entropy = cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
 
                     // we are done if the cross entropy of the new distr is lower than the entropy of
                     // the original distribution times a multiplicative factor TETA.
@@ -174,49 +159,5 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
         }
         approx_freqs.drain(max_sym as usize + 1..);
         (approx_freqs, frame_size)
-    }
-
-    /// Tries to scale frequencies in `freqs` by using the new common denominator `new_frame`. This algorithm
-    /// gives priority to low frequency symbols in order to be sure that the extra space the new frame size
-    /// is supplying is firstly given to symbols with approximated frequency lower than 0.
-    ///
-    /// # Returns
-    /// The approximated frequencies if is possibile to approximate with the given `new_frame` else, if too
-    /// many symbols have frequency lower than 1 - meaning that M is not big enough to handle the whole
-    /// set of symbols - an error is returned.
-    pub fn try_scale_freqs(
-        freqs: &[usize],
-        sorted_indices: &[usize],
-        n: usize,
-        mut total_freq: usize,
-        mut new_frame: isize,
-    ) -> anyhow::Result<Vec<usize>> {
-        let mut approx_freqs = freqs.to_vec();
-        let ratio = new_frame as f64 / total_freq as f64;
-
-        let get_approx_freq = |scale: f64, sym_freq: f64| -> usize {
-            let new_freq = max(1, (0.5 + scale * sym_freq).floor() as usize);
-
-            if new_freq > ((1 << 16) - 1) {
-                panic!("Cannot have frequencies bigger than 2^16 - 1. Freq is {}", new_freq);
-            }
-            new_freq
-        };
-
-        for (index, sym_index) in sorted_indices.iter().enumerate() {
-            let sym_freq = freqs[*sym_index];
-            let second_ratio = new_frame as f64 / total_freq as f64;
-            let scale =
-                (n - index) as f64 * ratio / n as f64 + index as f64 * second_ratio / n as f64;
-
-            approx_freqs[*sym_index] = get_approx_freq(scale, sym_freq as f64);
-            new_frame -= approx_freqs[*sym_index] as isize;
-            total_freq -= sym_freq;
-
-            if new_frame < 0 {
-                bail!("Cannot approximate frequencies with this new frame size!");
-            }
-        }
-        Ok(approx_freqs)
     }
 }

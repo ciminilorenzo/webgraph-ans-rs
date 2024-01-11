@@ -13,17 +13,6 @@
  * to create the binary to profile, run: cargo build --release --example bitvec_decoder
  */
 
-use bitvec::order::Msb0;
-use bitvec::vec::BitVec;
-use rand::prelude::{Distribution, SmallRng};
-use rand::SeedableRng;
-use rand_distr::Zipf;
-
-use folded_streaming_rans::ans::dec_model::VecFrame;
-use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
-use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
-use folded_streaming_rans::RawSymbol;
-
 /*
 /// Size of the list of symbols used during the examples.
 const SYMBOL_LIST_LENGTH: usize = 1_000_000;

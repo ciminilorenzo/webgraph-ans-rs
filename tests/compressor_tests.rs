@@ -1,11 +1,10 @@
 mod common;
 
-use std::ops::RemAssign;
 use rand::prelude::SliceRandom;
-use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
-use folded_streaming_rans::ans::enc_model_builder::AnsModel4EncoderBuilder;
-use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 use folded_streaming_rans::RawSymbol;
+use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
+use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
+use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
 
 use crate::common::*;
 
@@ -19,14 +18,14 @@ fn decoder_decodes_correctly_a_single_dummy_sequence() {
     }
 
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(encoder_model);
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
 
     for symbol in &source {
         encoder.encode(*symbol, 0); // second traversal to encode the symbols
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -49,7 +48,7 @@ fn decoder_decodes_correctly_dummy_sequences() {
     }
 
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(encoder_model);
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
 
     for index in 0..first_source.len() {
         encoder.encode(first_source[index], 0);
@@ -57,7 +56,7 @@ fn decoder_decodes_correctly_dummy_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
 
     let mut first_decoded_sequence: Vec<RawSymbol> = Vec::new();
     let mut second_decoded_sequence: Vec<RawSymbol> = Vec::new();
@@ -87,7 +86,7 @@ fn decoder_decodes_correctly_dummy_interleaved_sequences() {
     }
 
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(encoder_model);
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
 
     // create a unique source of symbols and randomize it
     let mut random_unified_source = vec![first_source, second_source].concat();
@@ -109,7 +108,7 @@ fn decoder_decodes_correctly_dummy_interleaved_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new()];
 
     random_unified_source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
@@ -129,10 +128,10 @@ fn decoder_decodes_correctly_dummy_interleaved_sequences() {
 #[test]
 fn decoder_decodes_correctly_real_interleaved_sequences() {
     // (model_index, symbol)
-    let first_sequence = get_symbols(0).iter().map(|symbol| (0, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
-    let second_sequence = get_symbols(1).iter().map(|symbol| (1, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
-    let third_sequence = get_symbols(2).iter().map(|symbol| (2, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
-    let fourth_sequence = get_symbols(3).iter().map(|symbol| (3, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+    let first_sequence = get_zipfian_distr(0, 1.0).iter().map(|symbol| (0, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+    let second_sequence = get_zipfian_distr(1, 1.0).iter().map(|symbol| (1, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+    let third_sequence = get_zipfian_distr(2, 1.0).iter().map(|symbol| (2, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+    let fourth_sequence = get_zipfian_distr(1, 1.0).iter().map(|symbol| (3, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
 
     let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
 
@@ -143,8 +142,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
         encoder_model_builder.push_symbol(fourth_sequence[index].1, 3).unwrap();
     }
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(encoder_model);
-
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
     let mut source = vec![first_sequence, second_sequence, third_sequence, fourth_sequence].concat();
     source.shuffle(&mut rand::thread_rng()); // randomize the order of the symbols to encode
 
@@ -160,7 +158,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
@@ -178,23 +176,23 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
 }
 
 #[test]
-// Frame sizes: [9, 13, 13, 10]
+// Frame sizes: [9, 14, 13, 10] (note that these actually are log_2 of the frame sizes)
 fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     // let's get a random sequence of symbols to encode and map them to have this shape: (model_index, symbol)
-    let first_sequence = get_symbols(0)
+    let first_sequence = get_zipfian_distr(0, 1.3)
         .iter()
         .map(|symbol| (0, *symbol)).collect::<Vec<(usize, RawSymbol)>>()[..SYMBOL_LIST_LENGTH/2000].to_vec();
 
-    let second_sequence = get_symbols(1)
+    let second_sequence = get_zipfian_distr(1, 1.2)
         .iter()
         .map(|symbol| (1, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
 
-    let third_sequence = get_symbols(2)
+    let third_sequence = get_zipfian_distr(2, 1.0)
         .iter()
         .map(|symbol| (2, *symbol))
         .collect::<Vec<(usize, RawSymbol)>>();
 
-    let fourth_sequence = get_symbols(3)
+    let fourth_sequence = get_zipfian_distr(3, 1.4)
         .iter()
         .map(|symbol| (3, *symbol))
         .collect::<Vec<(usize, RawSymbol)>>()[..SYMBOL_LIST_LENGTH/1000].to_vec();
@@ -210,7 +208,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     }
 
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(encoder_model);
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
     let mut expected = vec![Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     for (model_index, symbol) in &source {
@@ -223,7 +221,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = FoldedStreamANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse

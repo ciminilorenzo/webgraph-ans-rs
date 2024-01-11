@@ -3,6 +3,7 @@
  *
  */
 
+
 use rand::prelude::{Distribution, SmallRng};
 use rand::SeedableRng;
 use rand_distr::Zipf;
@@ -26,9 +27,9 @@ pub fn get_folding_threshold(radix: usize, fidelity: usize) -> u64 {
 
 /// Creates a sequence of size [`SYMBOL_LIST_LENGTH`], containing symbols sampled from a Zipfian
 /// distribution that can output values up to [`MAXIMUM_SYMBOL`].
-pub fn get_symbols(seed: u64) -> Vec<RawSymbol> {
+pub fn get_zipfian_distr(seed: u64, exponent: f32) -> Vec<RawSymbol> {
     let mut rng = SmallRng::seed_from_u64(seed);
-    let distribution = Zipf::new(MAXIMUM_SYMBOL, 1.0).unwrap();
+    let distribution = Zipf::new(MAXIMUM_SYMBOL, exponent).unwrap();
     let mut symbols = Vec::with_capacity(SYMBOL_LIST_LENGTH);
 
     for _ in 0..SYMBOL_LIST_LENGTH {

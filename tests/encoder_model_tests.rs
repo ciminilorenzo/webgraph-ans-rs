@@ -1,5 +1,5 @@
-use folded_streaming_rans::ans::enc_model_builder::AnsModel4EncoderBuilder;
-use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
+use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
+use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
@@ -33,7 +33,7 @@ fn encoder_encodes_without_errors() {
         builder.push_symbol(third_symbols[index], 2).unwrap();
     }
     let model = builder.build();
-    let mut encoder = FoldedStreamANSCoder::<FIDELITY>::new(model);
+    let mut encoder = ANSEncoder::<FIDELITY>::new(model);
 
     for index in 0..first_symbols.len() {
         encoder.encode(first_symbols[index], 0);

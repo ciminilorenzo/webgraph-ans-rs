@@ -1,67 +1,24 @@
-use crate::ans::traits::{Fold, Quasi};
-use crate::{Freq, State};
-use strength_reduce::StrengthReducedU64;
+use crate::{EncoderModelEntry, State};
+use crate::traits::folding::Fold;
 
-pub mod dec_model;
-pub mod decoder;
-pub mod enc_model;
-pub mod encoder;
-pub mod enc_model_builder;
-mod traits;
+mod encoder;
+mod decoder;
+mod model4encoder;
+mod model4decoder;
 
+pub const K: usize = 16;
+pub const K_LOG2: usize = 4;
 
-/// The default value for RADIX used by both the encoder and the decoder.
-pub const FASTER_RADIX: usize = 8;
-
-#[readonly::make]
-#[derive(Clone, Debug)]
-pub struct EncoderModelEntry {
-    pub freq: Freq,
-    pub upperbound: u64,
-    pub cumul_freq: Freq,
-    pub fast_divisor: StrengthReducedU64,
-}
-
-impl PartialEq for EncoderModelEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq &&
-            self.upperbound == other.upperbound &&
-            self.cumul_freq == other.cumul_freq &&
-            self.fast_divisor.get() == other.fast_divisor.get()
-    }
-}
-
-impl From<(Freq, u64, Freq)> for EncoderModelEntry {
-    fn from(tuple: (Freq, u64, Freq)) -> Self {
-        let fast_divisor = if tuple.0 > 0 {
-            StrengthReducedU64::new(tuple.0 as u64)
-        } else {
-            StrengthReducedU64::new(1)
-        };
-
-        Self {
-            freq: tuple.0,
-            upperbound: tuple.1,
-            cumul_freq: tuple.2,
-            fast_divisor,
-        }
-    }
-}
-
-
-#[readonly::make]
-#[derive(Clone, Debug, Default)]
-pub struct DecoderModelEntry<const RADIX: usize, T>
-    where T: Quasi<RADIX>
-{
-    pub freq: Freq,
-    pub cumul_freq: Freq,
-    pub quasi_folded: T,
-}
+/// How big M (the frame) can be. This constrained is imposed by the fact that B and K are fixed and
+/// State is a u64.
+pub const MAXIMUM_LOG2_M: usize = 28;
 
 pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
-    pub tables: Vec<Vec<EncoderModelEntry>>,
+    pub table: Vec<EncoderModelEntry>,
+
+    /// The length of the sequence to decode.
+    pub sequence_length: u64,
 
     /// The normalized bits during the encoding process.
     pub normalized_bits: Vec<u32>,
@@ -69,8 +26,7 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// The folded bits during the encoding process.
     pub folded_bits: F,
 
-    /// Contains the log2 of the frame size for each model.
-    pub frame_sizes: Vec<usize>,
+    pub log2_frame_size: usize,
 
-    pub state: State,
+    pub states: [State; 4],
 }

@@ -2,10 +2,10 @@ mod common;
 
 use rstest::*;
 
-use folded_streaming_rans::ans::dec_model::{EliasFanoFrame, Rank9SelFrame, VecFrame};
-use folded_streaming_rans::ans::enc_model::SymbolLookup;
 use folded_streaming_rans::{RawSymbol, State};
-use folded_streaming_rans::ans::enc_model_builder::AnsModel4EncoderBuilder;
+use folded_streaming_rans::multi_model_ans::model4decoder::{EliasFanoFrame, Rank9SelFrame, VecFrame};
+use folded_streaming_rans::multi_model_ans::model4encoder::SymbolLookup;
+use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;

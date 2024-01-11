@@ -1,13 +1,12 @@
-use crate::ans::EncoderModelEntry;
-use crate::ans::traits::Decode;
-use crate::Symbol;
+use crate::{EncoderModelEntry, Symbol};
+use crate::traits::quasi::Decode;
+
 
 pub trait SymbolLookup<Idx> {
     type Output;
 
     fn symbol(&self, data: Idx, model_index: usize) -> &Self::Output;
 }
-
 
 #[derive(Clone)]
 pub struct AnsModel4Encoder {

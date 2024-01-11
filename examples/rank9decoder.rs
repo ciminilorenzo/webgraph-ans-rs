@@ -13,15 +13,6 @@
  * to create the binary to profile, run: cargo build --release --example rank9decoder
  *
  */
-use rand::distributions::Distribution;
-use rand::prelude::SmallRng;
-use rand::SeedableRng;
-use rand_distr::Zipf;
-use folded_streaming_rans::ans::dec_model::Rank9SelFrame;
-
-use folded_streaming_rans::ans::decoder::FoldedStreamANSDecoder;
-use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
-use folded_streaming_rans::RawSymbol;
 
 /*
 /// Size of the list of symbols used during the examples.

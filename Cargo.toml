@@ -8,7 +8,6 @@ debug = true
 opt-level = 3
 
 [dependencies]
-readonly = "0.2.11"
 anyhow = "1.0.75"
 sux = { git =  "https://github.com/vigna/sux-rs", branch = "main" }
 itertools = "0.12.0"

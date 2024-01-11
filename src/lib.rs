@@ -1,12 +1,12 @@
+use strength_reduce::StrengthReducedU64;
+use crate::traits::quasi::Quasi;
+
 pub mod ans;
-pub mod utils;
+pub mod multi_model_ans;
 
-pub const K: usize = 16;
-pub const K_LOG2: usize = 4;
+mod traits;
+mod utils;
 
-/// How big M (the frame) can be. This constrained is imposed by the fact that B and K are fixed and
-/// State is a u64.
-pub const MAXIMUM_LOG2_M: usize = 28;
 
 /// How many bits are extracted/added from/to the state during the encoding/decoding process.
 pub const LOG2_B: usize = 32;
@@ -31,5 +31,48 @@ pub type RawSymbol = u64;
 pub type State = u64;
 
 /// The type representing the frequencies of the symbols. This type is bounded to be u16 since we deliberately accept to
-/// have frequencies that can reach at most that value.
+/// have frequencies that can reach at most this value. This is done in order to have entries for the decoder that have
+/// both the frequency and cumulated frequency of each symbol as 16-bit unsigned.
 pub type Freq = u16;
+
+/// The default value for RADIX used by both the encoder and the decoder.
+pub const FASTER_RADIX: usize = 8;
+
+
+#[derive(Clone, Debug)]
+pub struct EncoderModelEntry {
+    pub freq: Freq,
+    pub upperbound: u64,
+    pub cumul_freq: Freq,
+    pub fast_divisor: StrengthReducedU64,
+}
+
+impl PartialEq for EncoderModelEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.freq == other.freq
+            && self.upperbound == other.upperbound
+            && self.cumul_freq == other.cumul_freq
+            && self.fast_divisor.get() == other.fast_divisor.get()
+    }
+}
+
+impl From<(Freq, u64, Freq)> for EncoderModelEntry {
+    fn from(tuple: (Freq, u64, Freq)) -> Self {
+        Self {
+            freq: tuple.0,
+            upperbound: tuple.1,
+            cumul_freq: tuple.2,
+            fast_divisor: match tuple.0 > 0 {
+                true => StrengthReducedU64::new(tuple.0 as u64),
+                false => StrengthReducedU64::new(1),
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX>> {
+    pub freq: Freq,
+    pub cumul_freq: Freq,
+    pub quasi_folded: T,
+}

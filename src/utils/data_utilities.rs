@@ -1,5 +1,43 @@
+use std::cmp::max;
 use std::ops::Neg;
+use anyhow::{bail, Result};
 
+/// Tries to scale frequencies in `freqs` by using the new common denominator `new_frame`. This algorithm
+/// gives priority to low frequency symbols in order to be sure that the extra space the new frame size
+/// is supplying is firstly given to symbols with approximated frequency lower than 0.
+///
+/// # Returns
+/// The approximated frequencies if is possibile to approximate with the given `new_frame` else, if too
+/// many symbols have frequency lower than 1 - meaning that M is not big enough to handle the whole
+/// set of symbols - an error is returned.
+pub fn try_scale_freqs(freqs: &[usize], sorted_indices: &[usize], n: usize, mut m: usize, mut new_m: isize, ) -> Result<Vec<usize>> {
+    let mut approx_freqs = freqs.to_vec();
+    let ratio = new_m as f64 / m as f64;
+
+    let get_approx_freq = |scale: f64, sym_freq: f64| -> usize {
+        let new_freq = max(1, (0.5 + scale * sym_freq).floor() as usize);
+
+        if new_freq >= u16::MAX as usize {
+            panic!("Cannot have frequencies bigger than 2^16 - 1. Freq is {}", new_freq);
+        }
+        new_freq
+    };
+
+    for (index, sym_index) in sorted_indices.iter().enumerate() {
+        let sym_freq = freqs[*sym_index];
+        let second_ratio = new_m as f64 / m as f64;
+        let scale = (n - index) as f64 * ratio / n as f64 + index as f64 * second_ratio / n as f64;
+
+        approx_freqs[*sym_index] = get_approx_freq(scale, sym_freq as f64);
+        new_m -= approx_freqs[*sym_index] as isize;
+        m -= sym_freq;
+
+        if new_m < 0 {
+            bail!("Cannot approximate frequencies with this new frame size!");
+        }
+    }
+    Ok(approx_freqs)
+}
 
 pub fn entropy(distr: &[usize], total_freq: f64) -> f64 {
     let mut entropy = 0.0;
@@ -66,5 +104,3 @@ mod tests {
         assert_eq!("21.71", format!("{:.2}", self_entropy(&distr, m as f64)));
     }
 }
-
-

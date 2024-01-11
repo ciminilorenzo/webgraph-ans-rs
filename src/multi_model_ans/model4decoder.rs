@@ -2,10 +2,9 @@ use sux::prelude::*;
 
 use sucds::bit_vectors::{Rank, Rank9Sel};
 
-use crate::ans::traits::{Decode, Quasi};
-use crate::ans::{DecoderModelEntry, EncoderModelEntry};
-use crate::{State, Symbol};
-use crate::ans::enc_model::SymbolLookup;
+use crate::{DecoderModelEntry, EncoderModelEntry, State, Symbol};
+use crate::multi_model_ans::model4encoder::SymbolLookup;
+use crate::traits::quasi::{Decode, Quasi};
 
 
 pub struct EliasFanoFrame<const RADIX: usize, T>
@@ -121,10 +120,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
 
                 match sym_data.cumul_freq {
                     0 => (),
-                    _ => {
-                        let bit = vec.get_mut(sym_data.cumul_freq as usize).unwrap();
-                        *bit = true;
-                    }
+                    _ => *vec.get_mut(sym_data.cumul_freq as usize).unwrap() = true,
                 }
 
                 symbols.push(DecoderModelEntry {
