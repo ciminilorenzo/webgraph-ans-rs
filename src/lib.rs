@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use strength_reduce::StrengthReducedU64;
 use crate::traits::quasi::Quasi;
 

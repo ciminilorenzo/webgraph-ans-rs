@@ -1,6 +1,7 @@
 use bitvec::field::BitField;
 use bitvec::prelude::{BitVec, Msb0};
 use bitvec::view::BitView;
+
 use crate::{RawSymbol, Symbol};
 use crate::traits::quasi::Quasi;
 

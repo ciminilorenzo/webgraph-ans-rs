@@ -1,6 +1,6 @@
 use std::ops::Index;
 use sucds::bit_vectors::{Rank, Rank9Sel};
-use sux::prelude::{ConvertTo, EliasFano, EliasFanoBuilder, Pred, QuantumIndex};
+use sux::prelude::*;
 
 use crate::{DecoderModelEntry, EncoderModelEntry, State, Symbol};
 use crate::traits::quasi::Quasi;
@@ -37,7 +37,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
             });
 
         frame_builder.push(1 << log2_frame).unwrap();
-        let frame: EliasFano<QuantumIndex> = frame_builder.build().convert_to().unwrap();
+        let frame: EliasFano = frame_builder.build().convert_to().unwrap();
 
         Self {
             symbols,

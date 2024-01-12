@@ -1,9 +1,3 @@
-/*
- * Utility functions and consts used by the tests.
- *
- */
-
-
 use rand::prelude::{Distribution, SmallRng};
 use rand::SeedableRng;
 use rand_distr::Zipf;

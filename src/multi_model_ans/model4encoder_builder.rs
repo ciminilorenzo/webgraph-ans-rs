@@ -1,5 +1,5 @@
 use std::cmp::max;
-use anyhow::bail;
+use anyhow::{bail, Result};
 
 use strength_reduce::StrengthReducedU64;
 
@@ -38,7 +38,7 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
         }
     }
 
-    pub fn push_symbol(&mut self, symbol: RawSymbol, model_index: usize) -> anyhow::Result<()> {
+    pub fn push_symbol(&mut self, symbol: RawSymbol, model_index: usize) -> Result<()> {
         if symbol > MAX_RAW_SYMBOL {
             bail!("Symbol can't be bigger than u48::MAX");
         }

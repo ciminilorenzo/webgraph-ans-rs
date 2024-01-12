@@ -1,12 +1,14 @@
-mod common;
+mod utils;
 
-use rand::prelude::SliceRandom;
+use bitvec::prelude::{BitVec, Msb0};
+use utils::*;
+
+use rand::prelude::{IteratorRandom, SliceRandom};
 use folded_streaming_rans::RawSymbol;
 use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
+use folded_streaming_rans::multi_model_ans::model4decoder::VecFrame;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
-
-use crate::common::*;
 
 #[test]
 fn decoder_decodes_correctly_a_single_dummy_sequence() {
@@ -176,7 +178,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
 }
 
 #[test]
-// Frame sizes: [9, 14, 13, 10] (note that these actually are log_2 of the frame sizes)
+// Frame sizes: [9, 14, 13, 10] (note that these are actually log_2 of the frame sizes)
 fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     // let's get a random sequence of symbols to encode and map them to have this shape: (model_index, symbol)
     let first_sequence = get_zipfian_distr(0, 1.3)
@@ -236,4 +238,111 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     assert_eq!(expected[1], decoded[1]);
     assert_eq!(expected[2], decoded[2]);
     assert_eq!(expected[3], decoded[3]);
+}
+
+#[test]
+fn test_random_access() {
+    // let's get a random sequence of symbols to encode and map them to have this shape: (model_index, symbol)
+    let first_sequence = get_zipfian_distr(0, 1.3)
+        .iter()
+        .map(|symbol| (0, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+
+    let second_sequence = get_zipfian_distr(1, 1.2)
+        .iter()
+        .map(|symbol| (1, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
+
+    let third_sequence = get_zipfian_distr(2, 1.0)
+        .iter()
+        .map(|symbol| (2, *symbol))
+        .collect::<Vec<(usize, RawSymbol)>>();
+
+    let fourth_sequence = get_zipfian_distr(3, 1.4)
+        .iter()
+        .map(|symbol| (3, *symbol))
+        .collect::<Vec<(usize, RawSymbol)>>();
+
+    // now let's unify each source in a single one and randomize it
+    let mut source = vec![first_sequence, second_sequence, third_sequence, fourth_sequence].concat();
+    source.shuffle(&mut rand::thread_rng());
+
+    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
+
+    for (model_index, symbol) in &source {
+        encoder_model_builder.push_symbol(*symbol, *model_index).unwrap();
+    }
+
+    let encoder_model = encoder_model_builder.build();
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model);
+
+    // let's take 100 random indexes of symbols that will lately want to decode
+    let random_symbols_indexes = (0..source.len()).into_iter().choose_multiple(&mut rand::thread_rng(), 100);
+    let mut phases = Vec::new();
+    let mut expected = Vec::new();
+
+    for (model_index, symbol) in &source {
+        encoder.encode(*symbol, *model_index);
+
+        if random_symbols_indexes.contains(&model_index) {
+            phases.push(encoder.get_current_compressor_phase()); // save the phase of the symbol at index i
+            expected.push(*symbol); // save the symbol at index i
+        }
+    }
+
+    let prelude = encoder.serialize();
+    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+
+    for phase_index in 0..phases.len() {
+        let phase = phases[phase_index].clone();
+        assert_eq!(decoder.decode_from_phase(phase, 0), expected[phase_index]);
+    }
+}
+
+#[test]
+fn test_random_access_with_bitvec() {
+    let sequence = get_zipfian_distr(0, 1.2);
+    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, 5>::new(1);
+
+    for symbol in &sequence {
+        encoder_model_builder.push_symbol(*symbol, 0).unwrap();
+    }
+
+    let encoder_model = encoder_model_builder.build();
+    let mut encoder = ANSEncoder::<FIDELITY, 5, BitVec<usize, Msb0>>::with_parameters(encoder_model, BitVec::new());
+
+    // let's take 100 random indexes of symbols that will lately want to decode
+    let random_symbols_indexes = (0..sequence.len()).into_iter().choose_multiple(&mut rand::thread_rng(), 100);
+
+    let mut phases = Vec::new();
+    let mut expected = Vec::new();
+
+    for index in 0..sequence.len() {
+        encoder.encode(sequence[index], 0);
+
+        if random_symbols_indexes.contains(&index) {
+            phases.push(encoder.get_current_compressor_phase()); // save the phase of the symbol at index i
+            expected.push(sequence[index]); // save the symbol at index i
+        }
+    }
+
+    let prelude = encoder.serialize();
+
+    let frame = VecFrame::<5, u64>::new(
+        prelude.tables.clone(),
+        prelude.frame_sizes.clone(),
+        get_folding_offset(5, FIDELITY),
+        get_folding_threshold(5, FIDELITY),
+    );
+
+    let mut decoder = ANSDecoder::<
+        FIDELITY,
+        5,
+        u64,
+        VecFrame<5, u64>,
+        BitVec<usize, Msb0>
+    >::with_parameters(prelude, frame);
+
+    for phase_index in 0..phases.len() {
+        let phase = phases[phase_index].clone();
+        assert_eq!(decoder.decode_from_phase(phase, 0), expected[phase_index]);
+    }
 }

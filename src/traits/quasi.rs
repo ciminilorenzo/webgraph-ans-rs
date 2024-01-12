@@ -59,11 +59,10 @@ impl Quasi<8> for u32 {
     }
 }
 
-// Regarding the trait's implementation for this type, the following arrangement is used:
-// - the 16 MSB are used to store the number of folds
-// - the 48 LSB are used to store the quasi-folded symbol
+
 impl <const RADIX: usize> Quasi<RADIX> for u64 {
 
+    // We reserve 48 bits to represent the symbol and the remaining 16 bits to represent the number of folds.
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 
     fn quasi_fold(sym: Symbol, folding_threshold: u64, folding_offset: u64) -> Self {
@@ -79,7 +78,7 @@ impl <const RADIX: usize> Quasi<RADIX> for u64 {
         symbol <<= folds * RADIX as u64;
 
         // in this case we can avoid checking that the symbol is too big to be quasi-unfolded since it's already been
-        // checked that symbols are not bigger than (2^48 - 1) in the enc_model:44.
+        // checked.
         symbol | folds_bits
     }
 

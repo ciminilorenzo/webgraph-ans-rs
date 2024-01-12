@@ -1,4 +1,5 @@
 use crate::{RawSymbol, State, LOG2_B, DecoderModelEntry, FASTER_RADIX};
+use crate::multi_model_ans::encoder::ANSCompressorPhase;
 use crate::multi_model_ans::model4decoder::VecFrame;
 use crate::multi_model_ans::model4encoder::SymbolLookup;
 use crate::multi_model_ans::Prelude;
@@ -29,6 +30,8 @@ pub struct ANSDecoder<
     state: State,
 
     last_unfolded_pos: usize,
+
+    last_normalized_pos: usize,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<FIDELITY, RADIX, H, M, F>
@@ -44,6 +47,7 @@ where
     /// given model.
     pub fn with_parameters(prelude: Prelude<RADIX, F>, model: M) -> Self {
         Self {
+            last_normalized_pos: prelude.normalized_bits.len(),
             last_unfolded_pos: prelude.folded_bits.len(),
             model,
             normalized_bits: prelude.normalized_bits,
@@ -91,11 +95,21 @@ where
             * (symbol_entry.freq as State) + slot as State
             - (symbol_entry.cumul_freq as State);
 
+
         if self.state < Self::LOWER_BOUND {
-            let bits = self.normalized_bits.pop().unwrap();
+            self.last_normalized_pos -= 1;
+            let bits = self.normalized_bits[self.last_normalized_pos];
             self.state = (self.state << LOG2_B) | bits as State;
         }
 
         self.folded_bits.unfold_symbol(symbol_entry.quasi_folded, &mut self.last_unfolded_pos)
+    }
+
+    pub fn decode_from_phase(&mut self, phase: ANSCompressorPhase, model_index: usize) -> RawSymbol {
+        self.state = phase.state;
+        self.last_unfolded_pos = phase.folded;
+        self.last_normalized_pos = phase.normalized;
+
+        Self::decode(self, model_index)
     }
 }

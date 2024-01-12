@@ -101,4 +101,19 @@ impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F
             state: self.state,
         }
     }
+
+    pub fn get_current_compressor_phase(&self) -> ANSCompressorPhase {
+        ANSCompressorPhase {
+            state: self.state,
+            normalized: self.normalized_bits.len(),
+            folded: self.folded_bits.len(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ANSCompressorPhase {
+    pub state: State,
+    pub normalized: usize,
+    pub folded: usize,
 }

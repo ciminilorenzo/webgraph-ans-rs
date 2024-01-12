@@ -24,6 +24,9 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     pub state: State,
 }
 
+
+// WIP: these could possibly be associated to every possible index of the model. At this point functions like
+// decode would take a ModelIndex instead of a usize.
 pub enum ModelIndex {
     ReferenceNumber,
     BlockCount,

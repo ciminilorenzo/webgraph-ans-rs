@@ -1,6 +1,7 @@
-mod common;
+mod utils;
 
 use rstest::*;
+use utils::*;
 
 use folded_streaming_rans::{RawSymbol, State};
 use folded_streaming_rans::multi_model_ans::model4decoder::{EliasFanoFrame, Rank9SelFrame, VecFrame};
@@ -33,8 +34,8 @@ fn probe_works_for_all_types_of_frames(
     let encoder_model = encoder_model_builder.build();
     let tables = encoder_model.tables;
     let frame_sizes = encoder_model.frame_sizes;
-    let folding_offset = ((1 << (FIDELITY - 1)) * ((1 << RADIX) - 1)) as RawSymbol;
-    let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+    let folding_offset = get_folding_offset(RADIX, FIDELITY);
+    let folding_threshold = get_folding_threshold(RADIX, FIDELITY);
 
     let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(
         tables.clone(),
