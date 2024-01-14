@@ -1,14 +1,16 @@
 #![allow(dead_code)]
 
-use strength_reduce::StrengthReducedU64;
 use crate::traits::quasi::Quasi;
-
+use epserde::prelude::*;
+use epserde::traits::ZeroCopy;
+use strength_reduce::StrengthReducedU64;
 pub mod ans;
 pub mod multi_model_ans;
 
+pub mod bvgraph;
+
 mod traits;
 mod utils;
-
 
 /// How many bits are extracted/added from/to the state during the encoding/decoding process.
 pub const LOG2_B: usize = 32;
@@ -40,7 +42,6 @@ pub type Freq = u16;
 /// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
 
-
 #[derive(Clone, Debug)]
 pub struct EncoderModelEntry {
     pub freq: Freq,
@@ -67,13 +68,15 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
             fast_divisor: match tuple.0 > 0 {
                 true => StrengthReducedU64::new(tuple.0 as u64),
                 false => StrengthReducedU64::new(1),
-            }
+            },
         }
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX>> {
+#[derive(Clone, Copy, Debug, Default, Epserde)]
+#[repr(C)]
+#[zero_copy]
+pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX> + ZeroCopy + 'static> {
     pub freq: Freq,
     pub cumul_freq: Freq,
     pub quasi_folded: T,

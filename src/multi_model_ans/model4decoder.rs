@@ -1,15 +1,15 @@
+use epserde::Epserde;
+use sucds::bit_vectors::{Rank, Rank9Sel};
 use sux::prelude::*;
 
-use sucds::bit_vectors::{Rank, Rank9Sel};
-
-use crate::{DecoderModelEntry, EncoderModelEntry, State, Symbol};
 use crate::multi_model_ans::model4encoder::SymbolLookup;
 use crate::traits::quasi::{Decode, Quasi};
+use crate::{DecoderModelEntry, EncoderModelEntry, State, Symbol};
 
-
+#[derive(Epserde)]
 pub struct EliasFanoFrame<const RADIX: usize, T>
-    where
-        T: Quasi<RADIX>
+where
+    T: Quasi<RADIX>,
 {
     /// Contains the log2 of the frame size for each model.
     frame_sizes: Vec<usize>,
@@ -21,8 +21,7 @@ pub struct EliasFanoFrame<const RADIX: usize, T>
     frames: Vec<EliasFano>,
 }
 
-impl <const RADIX: usize, T: Quasi<RADIX>> Decode for EliasFanoFrame<RADIX, T> {
-
+impl<const RADIX: usize, T: Quasi<RADIX>> Decode for EliasFanoFrame<RADIX, T> {
     #[inline(always)]
     fn get_frame_mask(&self, model_index: usize) -> u64 {
         (1 << self.frame_sizes[model_index]) - 1
@@ -35,7 +34,6 @@ impl <const RADIX: usize, T: Quasi<RADIX>> Decode for EliasFanoFrame<RADIX, T> {
 }
 
 impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
-
     pub fn new(
         tables: Vec<Vec<EncoderModelEntry>>,
         frame_sizes: Vec<usize>,
@@ -46,12 +44,18 @@ impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
         let mut elias_table = Vec::with_capacity(tables.len());
 
         tables.iter().enumerate().for_each(|(model_index, table)| {
-            let nonzero_symbols = tables[model_index].iter().filter(|sym| sym.freq > 0).count();
+            let nonzero_symbols = tables[model_index]
+                .iter()
+                .filter(|sym| sym.freq > 0)
+                .count();
             let mut symbols = Vec::with_capacity(nonzero_symbols);
-            let mut frame_builder = EliasFanoBuilder::new(nonzero_symbols + 1, (1 << frame_sizes[model_index]) + 1);
+            let mut frame_builder =
+                EliasFanoBuilder::new(nonzero_symbols + 1, (1 << frame_sizes[model_index]) + 1);
 
             for (sym, sym_data) in table.iter().enumerate() {
-                if sym_data.freq == 0 { continue; }
+                if sym_data.freq == 0 {
+                    continue;
+                }
 
                 frame_builder.push(sym_data.cumul_freq as usize).unwrap();
 
@@ -76,16 +80,19 @@ impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
     }
 }
 
-impl <const RADIX: usize, T: Quasi<RADIX>> SymbolLookup<State> for EliasFanoFrame<RADIX, T> {
+impl<const RADIX: usize, T: Quasi<RADIX>> SymbolLookup<State> for EliasFanoFrame<RADIX, T> {
     type Output = DecoderModelEntry<RADIX, T>;
 
     #[inline(always)]
     fn symbol(&self, slot: State, model_index: usize) -> &Self::Output {
-        let symbol_index = unsafe { self.frames[model_index].pred_unchecked::<false>(&(slot as usize)).0 as Symbol };
+        let symbol_index = unsafe {
+            self.frames[model_index]
+                .pred_unchecked::<false>(&(slot as usize))
+                .0 as Symbol
+        };
         &self.symbols[model_index][symbol_index as usize]
     }
 }
-
 
 #[derive(Clone)]
 pub struct Rank9SelFrame<const RADIX: usize, T: Quasi<RADIX>> {
@@ -109,7 +116,10 @@ impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
         let mut rank9_table = Vec::with_capacity(tables.len());
 
         tables.iter().enumerate().for_each(|(model_index, table)| {
-            let nonzero_symbols = tables[model_index].iter().filter(|sym| sym.freq > 0).count();
+            let nonzero_symbols = tables[model_index]
+                .iter()
+                .filter(|sym| sym.freq > 0)
+                .count();
             let mut symbols = Vec::with_capacity(nonzero_symbols);
             let mut vec = vec![false; 1 << frame_sizes[model_index]];
 
@@ -142,8 +152,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
     }
 }
 
-impl <const RADIX: usize, T: Quasi<RADIX>> Decode for Rank9SelFrame<RADIX, T> {
-
+impl<const RADIX: usize, T: Quasi<RADIX>> Decode for Rank9SelFrame<RADIX, T> {
     #[inline(always)]
     fn get_frame_mask(&self, model_index: usize) -> u64 {
         (1 << self.frame_sizes[model_index]) - 1
@@ -165,7 +174,6 @@ impl<const RADIX: usize, T: Quasi<RADIX>> SymbolLookup<State> for Rank9SelFrame<
     }
 }
 
-
 #[derive(Clone)]
 pub struct VecFrame<const RADIX: usize, T: Quasi<RADIX>> {
     /// Contains the log2 of the frame size for each model.
@@ -177,7 +185,6 @@ pub struct VecFrame<const RADIX: usize, T: Quasi<RADIX>> {
 }
 
 impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
-
     pub fn new(
         tables: Vec<Vec<EncoderModelEntry>>,
         frame_sizes: Vec<usize>,
@@ -200,7 +207,11 @@ impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
                     *vec.get_mut(slot as usize).unwrap() = DecoderModelEntry {
                         freq: symbol_entry.freq,
                         cumul_freq: symbol_entry.cumul_freq,
-                        quasi_folded: T::quasi_fold(sym as Symbol, folding_threshold, folding_offset),
+                        quasi_folded: T::quasi_fold(
+                            sym as Symbol,
+                            folding_threshold,
+                            folding_offset,
+                        ),
                     };
                 }
                 last_slot += symbol_entry.freq;
@@ -216,8 +227,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
     }
 }
 
-impl <const RADIX: usize, T: Quasi<RADIX>> Decode for VecFrame<RADIX, T> {
-
+impl<const RADIX: usize, T: Quasi<RADIX>> Decode for VecFrame<RADIX, T> {
     #[inline(always)]
     fn get_frame_mask(&self, model_index: usize) -> u64 {
         (1 << self.frame_sizes[model_index]) - 1

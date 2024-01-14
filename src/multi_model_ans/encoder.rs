@@ -1,18 +1,18 @@
-use crate::{RawSymbol, State, Symbol, LOG2_B, FASTER_RADIX};
 use crate::multi_model_ans::model4encoder::{AnsModel4Encoder, SymbolLookup};
 use crate::multi_model_ans::Prelude;
 use crate::traits::folding::Fold;
 use crate::traits::quasi::Decode;
-
+use crate::{RawSymbol, State, Symbol, FASTER_RADIX, LOG2_B};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 #[derive(Clone)]
-pub struct ANSEncoder<const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, F = Vec<u8>>
-    where
-        F: Fold<RADIX> + Default + Clone,
-{
+pub struct ANSEncoder<
+    const FIDELITY: usize,
+    const RADIX: usize = FASTER_RADIX,
+    F: Fold<RADIX> + Default + Clone = Vec<u8>,
+> {
     model: AnsModel4Encoder,
 
     pub state: State,
@@ -25,8 +25,8 @@ pub struct ANSEncoder<const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, 
 }
 
 impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F>
-    where
-        F: Fold<RADIX> + Default + Clone,
+where
+    F: Fold<RADIX> + Default + Clone,
 {
     /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
     const FOLDING_THRESHOLD: RawSymbol = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
@@ -45,7 +45,6 @@ impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F
 }
 
 impl<const FIDELITY: usize> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
-
     /// Creates the standard FoldedStreamANSEncoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8. This means that, by using this
@@ -58,10 +57,9 @@ impl<const FIDELITY: usize> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
 
 /// Encoding functions
 impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F>
-    where
-        F: Fold<RADIX> + Default + Clone,
+where
+    F: Fold<RADIX> + Default + Clone,
 {
-
     /// Encodes a single symbol by using the data in the model with the given index.
     ///
     /// Note that the ANS decodes the sequence in reverse order.

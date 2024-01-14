@@ -1,10 +1,10 @@
-use std::ops::Index;
-use crate::{DecoderModelEntry, FASTER_RADIX, LOG2_B, RawSymbol, State};
 use crate::ans::model4decoder::VecFrame;
-use crate::ans::{K_LOG2, Prelude};
+use crate::ans::{Prelude, K_LOG2};
 use crate::traits::folding::Fold;
 use crate::traits::quasi::Quasi;
-
+use crate::{DecoderModelEntry, RawSymbol, State, FASTER_RADIX, LOG2_B};
+use epserde::traits::ZeroCopy;
+use std::ops::Index;
 
 #[derive(Clone)]
 pub struct FoldedStreamANSDecoder<
@@ -12,11 +12,11 @@ pub struct FoldedStreamANSDecoder<
     const RADIX: usize = FASTER_RADIX,
     H = u64,
     M = VecFrame<RADIX, H>,
-    F = Vec<u8>>
-    where
-        H: Quasi<RADIX>,
-        M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-        F: Fold<RADIX>,
+    F = Vec<u8>,
+> where
+    H: Quasi<RADIX> + ZeroCopy,
+    M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
+    F: Fold<RADIX>,
 {
     model: M,
 
@@ -41,11 +41,12 @@ pub struct FoldedStreamANSDecoder<
     sequence_length: u64,
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, H, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, H, M, F>
-    where
-        H: Quasi<RADIX>,
-        M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-        F: Fold<RADIX>,
+impl<const FIDELITY: usize, const RADIX: usize, H, M, F>
+    FoldedStreamANSDecoder<FIDELITY, RADIX, H, M, F>
+where
+    H: Quasi<RADIX>,
+    M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
+    F: Fold<RADIX>,
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -66,7 +67,8 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F> FoldedStreamANSDecoder<
     }
 }
 
-impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>>
+impl<const FIDELITY: usize>
+    FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>>
 {
     /// Creates the standard FoldedStreamANSDecoder from the given parameters.
     ///
@@ -89,11 +91,12 @@ impl<const FIDELITY: usize> FoldedStreamANSDecoder<FIDELITY, FASTER_RADIX, u64, 
 }
 
 /// Decoding functions.
-impl<const FIDELITY: usize, const RADIX: usize, H, M, F> FoldedStreamANSDecoder<FIDELITY, RADIX, H, M, F>
-    where
-        H: Quasi<RADIX>,
-        M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-        F: Fold<RADIX>,
+impl<const FIDELITY: usize, const RADIX: usize, H, M, F>
+    FoldedStreamANSDecoder<FIDELITY, RADIX, H, M, F>
+where
+    H: Quasi<RADIX>,
+    M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
+    F: Fold<RADIX>,
 {
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {
@@ -105,29 +108,38 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F> FoldedStreamANSDecoder<
         let mut current_symbol_index: usize = 0;
 
         while current_symbol_index < loop_threshold as usize {
-            decoded[current_symbol_index] = self.decode_sym(&mut states[3], &mut normalized_iter, &mut last_unfolded_pos);
-            decoded[current_symbol_index + 1] = self.decode_sym(&mut states[2], &mut normalized_iter, &mut last_unfolded_pos);
-            decoded[current_symbol_index + 2] = self.decode_sym(&mut states[1], &mut normalized_iter, &mut last_unfolded_pos);
-            decoded[current_symbol_index + 3] = self.decode_sym(&mut states[0], &mut normalized_iter, &mut last_unfolded_pos);
+            decoded[current_symbol_index] =
+                self.decode_sym(&mut states[3], &mut normalized_iter, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 1] =
+                self.decode_sym(&mut states[2], &mut normalized_iter, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 2] =
+                self.decode_sym(&mut states[1], &mut normalized_iter, &mut last_unfolded_pos);
+            decoded[current_symbol_index + 3] =
+                self.decode_sym(&mut states[0], &mut normalized_iter, &mut last_unfolded_pos);
             current_symbol_index += 4;
         }
 
         while current_symbol_index < self.sequence_length as usize {
-            decoded[current_symbol_index] = self.decode_sym(&mut states[0], &mut normalized_iter, &mut last_unfolded_pos);
+            decoded[current_symbol_index] =
+                self.decode_sym(&mut states[0], &mut normalized_iter, &mut last_unfolded_pos);
             current_symbol_index += 1;
         }
         decoded
     }
 
-    fn decode_sym<'a, I>(&self, state: &mut State, norm: &mut I, unfolded_last_out: &mut usize) -> RawSymbol
-        where
-            I : Iterator<Item = &'a u32>
+    fn decode_sym<'a, I>(
+        &self,
+        state: &mut State,
+        norm: &mut I,
+        unfolded_last_out: &mut usize,
+    ) -> RawSymbol
+    where
+        I: Iterator<Item = &'a u32>,
     {
         let slot = *state & self.frame_mask;
         let symbol_entry = &self.model[slot as State];
 
-        *state = (*state >> self.log2_frame_size)
-            * (symbol_entry.freq as State) + slot as State
+        *state = (*state >> self.log2_frame_size) * (symbol_entry.freq as State) + slot as State
             - (symbol_entry.cumul_freq as State);
 
         if *state < self.lower_bound {
@@ -135,6 +147,7 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F> FoldedStreamANSDecoder<
             *state = (*state << LOG2_B) | *bits as State;
         }
 
-        self.folded_bits.unfold_symbol(symbol_entry.quasi_folded, unfolded_last_out)
+        self.folded_bits
+            .unfold_symbol(symbol_entry.quasi_folded, unfolded_last_out)
     }
 }

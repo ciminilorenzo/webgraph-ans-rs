@@ -1,12 +1,11 @@
 pub mod decoder;
-pub mod model4encoder_builder;
-pub mod model4decoder;
 pub mod encoder;
+pub mod model4decoder;
 pub mod model4encoder;
+pub mod model4encoder_builder;
 
 use crate::traits::folding::Fold;
 use crate::{EncoderModelEntry, State};
-
 
 pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
@@ -23,7 +22,6 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
 
     pub state: State,
 }
-
 
 // WIP: these could possibly be associated to every possible index of the model. At this point functions like
 // decode would take a ModelIndex instead of a usize.

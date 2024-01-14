@@ -1,6 +1,6 @@
-use crate::{EncoderModelEntry, Symbol};
 use crate::traits::quasi::Decode;
-
+use crate::{EncoderModelEntry, Symbol};
+use epserde::prelude::*;
 
 pub trait SymbolLookup<Idx> {
     type Output;
@@ -10,7 +10,6 @@ pub trait SymbolLookup<Idx> {
 
 #[derive(Clone)]
 pub struct AnsModel4Encoder {
-
     /// Contains a vec of entries for each model where, inside each vec, each index contains the data
     /// related to the symbol equal to that index.
     pub tables: Vec<Vec<EncoderModelEntry>>,

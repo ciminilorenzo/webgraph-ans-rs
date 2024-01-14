@@ -1,4 +1,5 @@
 use crate::{RawSymbol, Symbol};
+use epserde::traits::ZeroCopy;
 
 /// A trait for those types which are quasi-foldable and quasi-unfoldable (according to the
 /// value of the current `RADIX` value).
@@ -6,10 +7,7 @@ use crate::{RawSymbol, Symbol};
 /// Currently, since the biggest symbol can be at most 2^48 - 1, the biggest type on
 /// which this trait can be implemented is `u64`.
 pub trait Quasi<const RADIX: usize>:
-Into<u64>
-+ Clone
-+ Default
-+ Copy
+    Into<u64> + Clone + Default + Copy + ZeroCopy + 'static
 {
     /// Given the width of the current type, how many bits are reserved to represent the symbol.
     ///
@@ -29,7 +27,6 @@ Into<u64>
 // This means that we can make at most 3 folds (representable by two bits). This is the reason
 // why we reserve 30 bits to represent the symbol.
 impl Quasi<8> for u32 {
-
     const BIT_RESERVED_FOR_SYMBOL: u64 = 30;
 
     fn quasi_fold(sym: Symbol, folding_threshold: u64, folding_offset: u64) -> Self {
@@ -59,9 +56,7 @@ impl Quasi<8> for u32 {
     }
 }
 
-
-impl <const RADIX: usize> Quasi<RADIX> for u64 {
-
+impl<const RADIX: usize> Quasi<RADIX> for u64 {
     // We reserve 48 bits to represent the symbol and the remaining 16 bits to represent the number of folds.
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 

@@ -9,13 +9,19 @@ opt-level = 3
 
 [dependencies]
 anyhow = "1.0.75"
-sux = { git =  "https://github.com/vigna/sux-rs", branch = "main" }
+sux = "0.1.1"
 itertools = "0.12.0"
 bitvec = "1.0.1"
 sucds = { version = "0.8.1", features = ["intrinsics"] }
 strength_reduce = "0.2.4"
 rand = { version = "0.8.5", features = [] }
-
+webgraph = { path = "../webgraph-rs" }
+clap = "4.4.16"
+stderrlog = "0.5.4"
+env_logger = "0.10.1"
+tempfile = "3.9.0"
+epserde = "0.2.1"
+mem_dbg = "0.1.3"
 [dev-dependencies]
 criterion = "0.5.1"
 pprof = { version = "0.13.0", features = ["flamegraph", "criterion", "frame-pointer"] }

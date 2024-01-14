@@ -1,14 +1,13 @@
 use bitvec::order::Msb0;
 use bitvec::prelude::BitVec;
-use criterion::{BatchSize, Criterion, criterion_group};
+use criterion::{criterion_group, BatchSize, Criterion};
 
 use pprof::criterion::{Output, PProfProfiler};
 
 use folded_streaming_rans::ans::encoder::FoldedStreamANSCoder;
 
 use crate::benchmarks::get_symbols;
-use crate::benchmarks::{FIDELITY};
-
+use crate::benchmarks::FIDELITY;
 
 fn fast_encoding_bench(c: &mut Criterion) {
     let symbols = get_symbols();
@@ -20,11 +19,14 @@ fn fast_encoding_bench(c: &mut Criterion) {
     let coder = FoldedStreamANSCoder::<FIDELITY>::new(&symbols);
 
     group.bench_function("with vec of bytes", |b| {
-        b.iter_batched(|| coder.clone(), |mut coder| coder.encode_all(), BatchSize::SmallInput)
+        b.iter_batched(
+            || coder.clone(),
+            |mut coder| coder.encode_all(),
+            BatchSize::SmallInput,
+        )
     });
     group.finish()
 }
-
 
 fn encoding_bench(c: &mut Criterion) {
     let symbols = get_symbols();
@@ -36,11 +38,15 @@ fn encoding_bench(c: &mut Criterion) {
     let coder = FoldedStreamANSCoder::<
         FIDELITY,
         8, // equal to the one used above
-        BitVec<usize, Msb0>
+        BitVec<usize, Msb0>,
     >::with_parameters(&symbols, BitVec::<usize, Msb0>::new());
 
     group.bench_function("with bitvec", |b| {
-        b.iter_batched(|| coder.clone(), |mut coder| coder.encode_all(), BatchSize::SmallInput)
+        b.iter_batched(
+            || coder.clone(),
+            |mut coder| coder.encode_all(),
+            BatchSize::SmallInput,
+        )
     });
     group.finish()
 }
