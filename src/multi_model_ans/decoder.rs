@@ -2,7 +2,7 @@ use crate::multi_model_ans::encoder::ANSCompressorPhase;
 use crate::multi_model_ans::model4decoder::VecFrame;
 use crate::multi_model_ans::model4encoder::SymbolLookup;
 use crate::multi_model_ans::Prelude;
-use crate::traits::folding::Fold;
+use crate::traits::folding::FoldRead;
 use crate::traits::quasi::{Decode, Quasi};
 use crate::{DecoderModelEntry, RawSymbol, State, FASTER_RADIX, LOG2_B};
 
@@ -17,7 +17,7 @@ pub struct ANSDecoder<
 > where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     model: M,
 
@@ -39,7 +39,7 @@ impl<'a, const FIDELITY: usize, const RADIX: usize, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     /// The lower bound of the interval.
     const LOWER_BOUND: State = 1 << 32;
@@ -86,7 +86,7 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<'_, FIDELITY
 where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     pub fn decode(&mut self, model_index: usize) -> RawSymbol {
         let slot = self.state & self.model.get_frame_mask(model_index);

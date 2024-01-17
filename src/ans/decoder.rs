@@ -1,6 +1,6 @@
 use crate::ans::model4decoder::VecFrame;
 use crate::ans::{Prelude, K_LOG2};
-use crate::traits::folding::Fold;
+use crate::traits::folding::FoldRead;
 use crate::traits::quasi::Quasi;
 use crate::{DecoderModelEntry, RawSymbol, State, FASTER_RADIX, LOG2_B};
 use epserde::traits::ZeroCopy;
@@ -16,7 +16,7 @@ pub struct FoldedStreamANSDecoder<
 > where
     H: Quasi<RADIX> + ZeroCopy,
     M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     model: M,
 
@@ -46,7 +46,7 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     /// Creates a FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -96,7 +96,7 @@ impl<const FIDELITY: usize, const RADIX: usize, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Index<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     /// Decodes the whole sequence given as input.
     pub fn decode_all(&self) -> Vec<RawSymbol> {

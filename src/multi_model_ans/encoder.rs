@@ -1,6 +1,6 @@
 use crate::multi_model_ans::model4encoder::{ANSModel4Encoder, SymbolLookup};
 use crate::multi_model_ans::Prelude;
-use crate::traits::folding::Fold;
+use crate::traits::folding::{FoldRead, FoldWrite};
 use crate::traits::quasi::Decode;
 use crate::{RawSymbol, State, Symbol, FASTER_RADIX, LOG2_B};
 
@@ -11,7 +11,7 @@ const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 pub struct ANSEncoder<
     const FIDELITY: usize,
     const RADIX: usize = FASTER_RADIX,
-    F: Fold<RADIX> + Default + Clone = Vec<u8>,
+    F: FoldWrite<RADIX> + Default + Clone = Vec<u8>,
 > {
     model: ANSModel4Encoder,
 
@@ -26,7 +26,7 @@ pub struct ANSEncoder<
 
 impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F>
 where
-    F: Fold<RADIX> + Default + Clone,
+    F: FoldWrite<RADIX> + Default + Clone,
 {
     /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
     const FOLDING_THRESHOLD: RawSymbol = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
@@ -58,7 +58,7 @@ impl<const FIDELITY: usize> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
 /// Encoding functions
 impl<const FIDELITY: usize, const RADIX: usize, F> ANSEncoder<FIDELITY, RADIX, F>
 where
-    F: Fold<RADIX> + Default + Clone,
+    F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
     /// Encodes a single symbol by using the data in the model with the given index.
     ///

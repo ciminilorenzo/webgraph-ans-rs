@@ -1,13 +1,11 @@
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 
-use mem_dbg::*;
-use webgraph::{
-    graph::bvgraph::BVComp,
-    traits::SequentialLabelling,
-};
 use anyhow::Result;
-use webgraph::prelude::{VecGraph};
-
+use epserde::prelude::*;
+use folded_streaming_rans::multi_model_ans::Prelude;
+use mem_dbg::*;
+use webgraph::prelude::VecGraph;
+use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
 
 #[test]
 fn test_model_builder() -> Result<()> {
@@ -22,13 +20,8 @@ fn test_model_builder() -> Result<()> {
     bvcomp.extend(graph.iter())?;
     let encoder = bvcomp.flush()?.build();
 
-    let mut bvcomp = BVComp::<BVGraphWriter<2, 8, Vec<u8>, >>::new(
-        BVGraphWriter::new(encoder),
-        7,
-        2,
-        3,
-        0
-    );
+    let mut bvcomp =
+        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
 
     // second iteration: encodes the graph
     bvcomp.extend(graph.iter())?;
@@ -36,10 +29,10 @@ fn test_model_builder() -> Result<()> {
     let mut encoder = bvcomp.flush()?.into_inner();
     let prelude = encoder.serialize();
 
-    dbg!(prelude.normalized_bits.mem_size(SizeFlags::default()) * 8);
-    dbg!(prelude.folded_bits.mem_size(SizeFlags::default()) * 8);
-    dbg!(prelude.frame_sizes.mem_size(SizeFlags::default()) * 8);
-    dbg!(prelude.state.mem_size(SizeFlags::default()) * 8);
+    prelude.mem_dbg(DbgFlags::default())?;
+    prelude.store("pippo")?;
+
+    let prelude2 = <Prelude<8, Vec<u8>>>::load_mem("pippo")?;
 
     Ok(())
 }
@@ -48,16 +41,12 @@ fn test_model_builder() -> Result<()> {
 fn test_model_builder2() -> Result<()> {
     env_logger::builder().is_test(true).try_init().unwrap();
 
-    let graph = VecGraph::from_arc_list( &[(0usize, 1usize), (1, 2), (1, 3), (2, 4), (3, 4)]);
-
-    for arc in graph.iter() {
-        println!("{:?}", arc);
-    }
-
-
-
-
-
+    let graph = VecGraph::from_arc_list(&[(0usize, 1usize), (1, 2), (1, 3), (2, 4), (3, 4)]);
+    /*
+        for arc in graph.iter() {
+            println!("{:?}", arc);
+        }
+    */
     /*
     let model_builder = BVGraphModelBuilder::<2, 8>::new(dir.path().join("model"));
     let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(model_builder, 7, 2, 3, 0);
@@ -88,5 +77,3 @@ fn test_model_builder2() -> Result<()> {
 
     Ok(())
 }
-
-

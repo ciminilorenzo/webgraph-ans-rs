@@ -1,11 +1,11 @@
-use strength_reduce::StrengthReducedU64;
+use crate::traits::folding::FoldRead;
 use crate::{Freq, State};
-use crate::traits::folding::Fold;
+use strength_reduce::StrengthReducedU64;
 
-mod encoder;
 mod decoder;
-mod model4encoder;
+mod encoder;
 mod model4decoder;
+mod model4encoder;
 
 pub const K: usize = 16;
 pub const K_LOG2: usize = 4;
@@ -14,7 +14,7 @@ pub const K_LOG2: usize = 4;
 /// State is a u64.
 pub const MAXIMUM_LOG2_M: usize = 28;
 
-pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
+pub struct Prelude<const RADIX: usize, F: FoldRead<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub table: Vec<EncoderModelEntry>,
 

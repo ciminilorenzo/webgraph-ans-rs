@@ -2,24 +2,22 @@ use std::error::Error;
 
 use webgraph::prelude::{BVGraphCodesReader, BVGraphCodesReaderBuilder};
 
-use crate::multi_model_ans::decoder::ANSDecoder;
-use crate::multi_model_ans::model4encoder::SymbolLookup;
-use crate::{DecoderModelEntry, State};
 use crate::bvgraph::Component;
-use crate::multi_model_ans::Prelude;
+use crate::multi_model_ans::decoder::ANSDecoder;
+use crate::multi_model_ans::encoder::ANSCompressorPhase;
 use crate::multi_model_ans::model4decoder::VecFrame;
-use crate::traits::folding::Fold;
+use crate::multi_model_ans::model4encoder::SymbolLookup;
+use crate::multi_model_ans::Prelude;
+use crate::traits::folding::FoldRead;
 use crate::traits::quasi::{Decode, Quasi};
 use crate::FASTER_RADIX;
-use crate::multi_model_ans::encoder::ANSCompressorPhase;
-
+use crate::{DecoderModelEntry, State};
 
 // can create code readers. This is done so that the builder can own the data,
 // and the readers can be created and thrown away freely.
 
 /// A builder for [`ANSBVGraphReader`].
 pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
-
     /// The vec of ANSCompressorPhase, one for each node of the graph.
     phases: Vec<ANSCompressorPhase>,
 
@@ -27,17 +25,13 @@ pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
     prelude: Prelude<FASTER_RADIX, Vec<u8>>, // it's the one that owns the data.
 }
 
-impl <const FIDELITY: usize> ANSBVGraphReaderBuilder<FIDELITY> {
-
+impl<const FIDELITY: usize> ANSBVGraphReaderBuilder<FIDELITY> {
     pub fn new(prelude: Prelude<FASTER_RADIX, Vec<u8>>, phases: Vec<ANSCompressorPhase>) -> Self {
-        Self {
-            prelude,
-            phases,
-        }
+        Self { prelude, phases }
     }
 }
 
-impl <const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
+impl<const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
     type Reader<'a> = ANSBVGraphReader<'a, FIDELITY> where Self: 'a;
 
     fn get_reader(&self, offset: u64) -> Result<Self::Reader<'_>, Box<dyn Error>> {
@@ -49,23 +43,24 @@ impl <const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuild
 }
 
 /// An implementation of [`BVGraphCodesReader`] that reads from an ANS-encoded graph.
-pub struct ANSBVGraphReader <
+pub struct ANSBVGraphReader<
     'a,
     const FIDELITY: usize,
     const RADIX: usize = FASTER_RADIX,
     H = u64,
     M = VecFrame<RADIX, H>,
-    F = Vec<u8>>
-    where
-        H: Quasi<RADIX>,
-        M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-        F: Fold<RADIX>,
+    F = Vec<u8>,
+> where
+    H: Quasi<RADIX>,
+    M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
+    F: FoldRead<RADIX>,
 {
     pub decoder: ANSDecoder<'a, FIDELITY, RADIX, H, M, F>,
 }
 
-impl <'a, const FIDELITY: usize> ANSBVGraphReader <'a, FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>> {
-
+impl<'a, const FIDELITY: usize>
+    ANSBVGraphReader<'a, FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>>
+{
     pub fn new(prelude: &'a Prelude<FASTER_RADIX, Vec<u8>>) -> Self {
         Self {
             decoder: ANSDecoder::<FIDELITY>::new(prelude),
@@ -73,11 +68,12 @@ impl <'a, const FIDELITY: usize> ANSBVGraphReader <'a, FIDELITY, FASTER_RADIX, u
     }
 }
 
-impl<'a, const FIDELITY: usize, const RADIX: usize, H, M, F> BVGraphCodesReader for ANSBVGraphReader <'a, FIDELITY, RADIX, H, M, F>
+impl<'a, const FIDELITY: usize, const RADIX: usize, H, M, F> BVGraphCodesReader
+    for ANSBVGraphReader<'a, FIDELITY, RADIX, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-    F: Fold<RADIX>,
+    F: FoldRead<RADIX>,
 {
     fn read_outdegree(&mut self) -> u64 {
         self.decoder.decode(Component::Outdegree as usize)

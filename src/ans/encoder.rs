@@ -1,15 +1,19 @@
 use crate::ans::model4encoder::SingleANSModel4Encoder;
-use crate::{FASTER_RADIX, LOG2_B, RawSymbol, State, Symbol};
-use crate::ans::{K_LOG2, Prelude};
-use crate::traits::folding::Fold;
+use crate::ans::{Prelude, K_LOG2};
+use crate::traits::folding::{FoldRead, FoldWrite};
+use crate::{RawSymbol, State, Symbol, FASTER_RADIX, LOG2_B};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 #[derive(Clone)]
-pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, F = Vec<u8>>
-    where
-        F: Fold<RADIX> + Default + Clone,
+pub struct FoldedStreamANSCoder<
+    'a,
+    const FIDELITY: usize,
+    const RADIX: usize = FASTER_RADIX,
+    F = Vec<u8>,
+> where
+    F: FoldWrite<RADIX> + Default + Clone,
 {
     model: SingleANSModel4Encoder,
 
@@ -29,8 +33,8 @@ pub struct FoldedStreamANSCoder<'a, const FIDELITY: usize, const RADIX: usize = 
 }
 
 impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-    where
-        F: Fold<RADIX> + Default + Clone,
+where
+    F: FoldWrite<RADIX> + Default + Clone,
 {
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
@@ -48,7 +52,6 @@ impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, 
 }
 
 impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
-
     /// Creates the standard FoldedStreamANSEncoder from the given parameters.
     ///
     /// The standard decoder uses fixed radix of 8. This means that, by using this
@@ -61,8 +64,8 @@ impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX,
 
 /// Encoding functions
 impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-    where
-        F: Fold<RADIX> + Default + Clone,
+where
+    F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
     /// Encodes the whole input sequence.
     ///
@@ -93,7 +96,13 @@ impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, 
         self.folded_bits = folded_bits;
     }
 
-    fn encode_symbol(&self, sym: RawSymbol, mut state: State, norm: &mut Vec<u32>, folded_bits: &mut F) -> State {
+    fn encode_symbol(
+        &self,
+        sym: RawSymbol,
+        mut state: State,
+        norm: &mut Vec<u32>,
+        folded_bits: &mut F,
+    ) -> State {
         let symbol = if sym < self.folding_threshold {
             sym as Symbol
         } else {

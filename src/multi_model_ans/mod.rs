@@ -4,10 +4,14 @@ pub mod model4decoder;
 pub mod model4encoder;
 pub mod model4encoder_builder;
 
-use crate::traits::folding::Fold;
+use epserde::prelude::*;
+use mem_dbg::*;
+
+use crate::traits::folding::FoldRead;
 use crate::{Freq, State};
 
-pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
+#[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
+pub struct Prelude<const RADIX: usize, F: FoldRead<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub tables: Vec<Vec<EncoderModelEntry>>,
 
@@ -23,16 +27,20 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     pub state: State,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Epserde, MemDbg, MemSize)]
+#[repr(C)]
+#[zero_copy]
 pub struct EncoderModelEntry {
     pub freq: Freq,
-    pub upperbound: u64,
     pub cumul_freq: Freq,
+    pub upperbound: u64,
 }
 
 impl PartialEq for EncoderModelEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq && self.upperbound == other.upperbound && self.cumul_freq == other.cumul_freq
+        self.freq == other.freq
+            && self.upperbound == other.upperbound
+            && self.cumul_freq == other.cumul_freq
     }
 }
 

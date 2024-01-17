@@ -2,16 +2,15 @@ use bitvec::field::BitField;
 use bitvec::prelude::{BitVec, Msb0};
 use bitvec::view::BitView;
 
-use crate::{RawSymbol, Symbol};
 use crate::traits::quasi::Quasi;
-
+use crate::{RawSymbol, Symbol};
 
 /// This Fold trait allows for folding and unfolding symbols from a source.
 ///
 /// The generic constant `RADIX` is used to specify the value of the radix parameter used to fold
 /// symbols.
 #[allow(clippy::len_without_is_empty)]
-pub trait Fold<const RADIX: usize> {
+pub trait FoldWrite<const RADIX: usize> {
     /// The constant RADIX value used to fold symbols.
     const RADIX: usize = RADIX;
 
@@ -22,13 +21,18 @@ pub trait Fold<const RADIX: usize> {
 
     /// Performs the so called 'symbol folding'.
     fn fold_symbol(&mut self, symbol: RawSymbol, fidelity: usize) -> Symbol;
+}
+
+pub trait FoldRead<const RADIX: usize> {
+    /// The constant RADIX value used to fold symbols.
+    const RADIX: usize = RADIX;
 
     fn len(&self) -> usize;
 
     /// Unfolds a symbol from the given `mapped_num` and returns it.
-    fn unfold_symbol<T: Quasi<RADIX>> (&self, mapped_num: T, last_read: &mut usize) -> RawSymbol {
+    fn unfold_symbol<T: Quasi<RADIX>>(&self, mapped_num: T, last_read: &mut usize) -> RawSymbol {
         let (quasi_unfolded, folds) = T::quasi_unfold(mapped_num);
-        let folded_bits= self.read_folds(folds as usize, last_read);
+        let folded_bits = self.read_folds(folds as usize, last_read);
 
         quasi_unfolded.into() | folded_bits
     }
@@ -37,25 +41,44 @@ pub trait Fold<const RADIX: usize> {
     fn read_folds(&self, folds: usize, last_read: &mut usize) -> RawSymbol;
 }
 
-
-impl Fold<8> for Vec<u8> { // the fastest implementation since uses a vec of bytes
+impl FoldWrite<8> for Vec<u8> {
+    // the fastest implementation since uses a vec of bytes
 
     fn fold_symbol(&mut self, mut symbol: RawSymbol, fidelity: usize) -> Symbol {
         let folds = Self::get_folds_number(symbol, fidelity);
-        let offset = (((1 << Self::RADIX) - 1) * (1 << (fidelity - 1))) * folds as RawSymbol;
+        let offset = (((1 << 8) - 1) * (1 << (fidelity - 1))) * folds as RawSymbol;
         let bytes = symbol.to_be_bytes();
 
         self.extend_from_slice(bytes[8 - folds..].as_ref());
 
-        symbol >>= folds * Self::RADIX;
+        symbol >>= folds * 8;
         (symbol + offset) as u16
     }
+}
 
+impl FoldRead<8> for &[u8] {
     fn len(&self) -> usize {
         self.len()
     }
 
-    fn read_folds (&self, folds: usize, last_read: &mut usize) -> RawSymbol {
+    fn read_folds(&self, folds: usize, last_read: &mut usize) -> RawSymbol {
+        let mut folded_bytes: u64 = 0;
+
+        for index in 0..folds {
+            *last_read -= 1;
+            folded_bytes |= (self[*last_read] as u64) << ((index) * 8);
+        }
+
+        folded_bytes
+    }
+}
+
+impl FoldRead<8> for Vec<u8> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn read_folds(&self, folds: usize, last_read: &mut usize) -> RawSymbol {
         let mut folded_bytes: u64 = 0;
 
         for index in 0..folds {
@@ -70,10 +93,9 @@ impl Fold<8> for Vec<u8> { // the fastest implementation since uses a vec of byt
 // This is a general implementation that folds symbols given any reasonable radix.
 // This generality makes this implementation slower since it doesn't allow relevant optimizations
 // used with radix equal to 8.
-impl<const RADIX: usize> Fold<RADIX> for BitVec<usize, Msb0> {
-
+impl<const RADIX: usize> FoldWrite<RADIX> for BitVec<usize, Msb0> {
     fn fold_symbol(&mut self, mut symbol: RawSymbol, fidelity: usize) -> Symbol {
-        let cuts = <Self as Fold<RADIX>>::get_folds_number(symbol, fidelity);
+        let cuts = <Self as FoldWrite<RADIX>>::get_folds_number(symbol, fidelity);
         let offset = (((1 << RADIX) - 1) * (1 << (fidelity - 1))) * cuts as RawSymbol;
         let bit_to_cut = cuts * RADIX;
 
@@ -88,7 +110,9 @@ impl<const RADIX: usize> Fold<RADIX> for BitVec<usize, Msb0> {
 
         (symbol + offset) as u16
     }
+}
 
+impl<const RADIX: usize> FoldRead<RADIX> for BitVec<usize, Msb0> {
     fn len(&self) -> usize {
         self.len()
     }
