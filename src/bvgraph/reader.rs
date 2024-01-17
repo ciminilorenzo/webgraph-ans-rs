@@ -13,8 +13,6 @@ use crate::traits::quasi::{Decode, Quasi};
 use crate::FASTER_RADIX;
 use crate::{DecoderModelEntry, State};
 
-// can create code readers. This is done so that the builder can own the data,
-// and the readers can be created and thrown away freely.
 
 /// A builder for [`ANSBVGraphReader`].
 pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
@@ -22,25 +20,29 @@ pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
     phases: Vec<ANSCompressorPhase>,
 
     /// The prelude resulting from the encoding process of the graph.
-    prelude: Prelude<FASTER_RADIX, Vec<u8>>, // it's the one that owns the data.
+    prelude: Prelude<FASTER_RADIX, Vec<u8>>,
 }
 
 impl<const FIDELITY: usize> ANSBVGraphReaderBuilder<FIDELITY> {
     pub fn new(prelude: Prelude<FASTER_RADIX, Vec<u8>>, phases: Vec<ANSCompressorPhase>) -> Self {
-        Self { prelude, phases }
+        Self {
+            prelude,
+            phases
+        }
     }
 }
 
-impl<const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
+impl <const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
     type Reader<'a> = ANSBVGraphReader<'a, FIDELITY> where Self: 'a;
 
-    fn get_reader(&self, offset: u64) -> Result<Self::Reader<'_>, Box<dyn Error>> {
-        let mut code_reader = ANSBVGraphReader::<'_, FIDELITY>::new(&self.prelude); // it's given as reference.
-        let phase = self.phases.get(offset as usize).unwrap();
+    fn get_reader(&self, node: usize) -> Result<Self::Reader<'_>, Box<dyn Error>> {
+        let mut code_reader = ANSBVGraphReader::<'_, FIDELITY>::new(&self.prelude);
+        let phase = self.phases.get(node).unwrap();
         code_reader.decoder.set_compressor_at_phase(&phase);
         Ok(code_reader)
     }
 }
+
 
 /// An implementation of [`BVGraphCodesReader`] that reads from an ANS-encoded graph.
 pub struct ANSBVGraphReader<

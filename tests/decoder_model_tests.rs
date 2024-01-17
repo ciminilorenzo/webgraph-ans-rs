@@ -38,20 +38,20 @@ fn probe_works_for_all_types_of_frames(
     let folding_threshold = get_folding_threshold(RADIX, FIDELITY);
 
     let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(
-        tables.clone(),
-        frame_sizes.clone(),
+        &tables,
+        &frame_sizes,
         folding_offset,
         folding_threshold,
     );
     let vec_frame = VecFrame::<RADIX, u64>::new(
-        tables.clone(),
-        frame_sizes.clone(),
+        &tables,
+        &frame_sizes,
         folding_offset,
         folding_threshold,
     );
     let elias_frame = EliasFanoFrame::<RADIX, u64>::new(
-        tables.clone(),
-        frame_sizes.clone(),
+        &tables,
+        &frame_sizes,
         folding_offset,
         folding_threshold,
     );

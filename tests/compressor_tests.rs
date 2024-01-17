@@ -27,7 +27,7 @@ fn decoder_decodes_correctly_a_single_dummy_sequence() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -58,7 +58,7 @@ fn decoder_decodes_correctly_dummy_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
 
     let mut first_decoded_sequence: Vec<RawSymbol> = Vec::new();
     let mut second_decoded_sequence: Vec<RawSymbol> = Vec::new();
@@ -110,7 +110,7 @@ fn decoder_decodes_correctly_dummy_interleaved_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new()];
 
     random_unified_source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
@@ -160,7 +160,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
@@ -223,7 +223,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(), Vec::new(), Vec::new(), Vec::new()];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
@@ -289,7 +289,7 @@ fn test_random_access() {
     }
 
     let prelude = encoder.serialize();
-    let mut decoder = ANSDecoder::<FIDELITY>::new(prelude);
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude);
 
     for phase_index in 0..phases.len() {
         let phase = phases[phase_index].clone();
@@ -327,8 +327,8 @@ fn test_random_access_with_bitvec() {
     let prelude = encoder.serialize();
 
     let frame = VecFrame::<5, u64>::new(
-        prelude.tables.clone(),
-        prelude.frame_sizes.clone(),
+        &prelude.tables.clone(),
+        &prelude.frame_sizes.clone(),
         get_folding_offset(5, FIDELITY),
         get_folding_threshold(5, FIDELITY),
     );
@@ -339,7 +339,7 @@ fn test_random_access_with_bitvec() {
         u64,
         VecFrame<5, u64>,
         BitVec<usize, Msb0>
-    >::with_parameters(prelude, frame);
+    >::with_parameters(&prelude, frame);
 
     for phase_index in 0..phases.len() {
         let phase = phases[phase_index].clone();

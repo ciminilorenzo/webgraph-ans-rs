@@ -216,13 +216,12 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(self) -> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
-        self.encoder
+    pub fn into_inner(self) -> (ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>, Vec<ANSCompressorPhase>) {
+        (self.encoder, self.phases)
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter
-    for BVGraphWriter<FIDELITY, RADIX, F>
+impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
 where
     F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
@@ -241,6 +240,8 @@ where
                     self.encoder.encode(symbol as u64, component);
                 }
             }
+            // save state of the encoder as soon as it finishes encoding the node
+            self.phases.push(self.encoder.get_current_compressor_phase());
         }
 
         // Increase and cleanup
@@ -249,8 +250,6 @@ where
             symbols.clear();
         }
 
-        self.phases
-            .push(self.encoder.get_current_compressor_phase());
         self.data[Component::Outdegree as usize].push(value as usize);
         len(value)
     }
@@ -299,10 +298,10 @@ where
     fn flush(&mut self) -> Result<(), Self::Error> {
         for (component, symbols) in self.data.iter().enumerate().rev() {
             for &symbol in symbols.iter().rev() {
-                println!("symbol: {} with component: {}", symbol, component);
                 self.encoder.encode(symbol as u64, component);
             }
         }
+        self.phases.push(self.encoder.get_current_compressor_phase());
         Ok(())
     }
 }

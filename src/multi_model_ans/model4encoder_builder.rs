@@ -4,6 +4,7 @@ use anyhow::{bail, Result};
 use strength_reduce::StrengthReducedU64;
 
 use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
+use crate::bvgraph::Component;
 use crate::multi_model_ans::EncoderModelEntry;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::utils::ans_utilities::folding_without_streaming_out;
@@ -70,7 +71,7 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
             let mut table: Vec<EncoderModelEntry> = Vec::with_capacity(self.max_sym[model_index] as usize + 1);
             let mut last_covered_freq = 0;
             let log_m = m.ilog2() as usize;
-            let k = 32 - log_m;     // !!! K = 32 - log2(M) !!!
+            let mut k = 32 - log_m;     // !!! K = 32 - log2(M) !!!
 
             for freq in approx_freqs.iter() {
                 let fast_divisor = if *freq > 0 {
@@ -79,9 +80,11 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
                     StrengthReducedU64::new(1)
                 };
 
+                k = if log_m > 0 {k} else {31}; // TODO: Addressed here for now
+
                 table.push(EncoderModelEntry {
                     freq: *freq as u16,
-                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64,
+                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64, // TODO: If M is 0 (not used a specific model at all) this panics
                     cumul_freq: last_covered_freq,
                 });
                 last_covered_freq += *freq as u16;

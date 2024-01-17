@@ -19,19 +19,19 @@ pub struct ANSDecoder<
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
     F: FoldRead<RADIX>,
 {
-    model: M,
+    pub model: M,
 
     /// The normalized bits during the encoding process.
-    normalized_bits: &'a Vec<u32>,
+    pub normalized_bits: &'a Vec<u32>,
 
     /// The folded bits during the encoding process.
-    folded_bits: &'a F,
+    pub folded_bits: &'a F,
 
-    state: State,
+    pub state: State,
 
-    last_unfolded_pos: usize,
+    pub last_unfolded_pos: usize,
 
-    last_normalized_pos: usize,
+    pub last_normalized_pos: usize,
 }
 
 impl<'a, const FIDELITY: usize, const RADIX: usize, H, M, F>
