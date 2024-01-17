@@ -8,12 +8,12 @@ use folded_streaming_rans::RawSymbol;
 use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
 use folded_streaming_rans::multi_model_ans::model4decoder::VecFrame;
-use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
+use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 
 #[test]
 fn decoder_decodes_correctly_a_single_dummy_sequence() {
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(1);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(1);
 
     for symbol in &source {
         encoder_model_builder.push_symbol(*symbol, 0).unwrap(); // first traversal to build the statistics
@@ -42,7 +42,7 @@ fn decoder_decodes_correctly_a_single_dummy_sequence() {
 fn decoder_decodes_correctly_dummy_sequences() {
     let first_source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let second_source = vec![1_u64, 3, 3, 3, 2, 2, 3, 3, 4, 5];
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(2);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(2);
 
     for index in 0..first_source.len() {
         encoder_model_builder.push_symbol(first_source[index], 0).unwrap();
@@ -80,7 +80,7 @@ fn decoder_decodes_correctly_dummy_interleaved_sequences() {
     // (model_index, symbol)
     let first_source = vec![(0, 1_u64),(0, 1),(0, 1),(0, 2),(0, 2),(0,2),(0, 3),(0, 3),(0, 4),(0,5)];
     let second_source = vec![(1, 1_u64),(1, 1),(1, 1),(1, 1),(1, 4),(1,3),(1, 3),(1, 3),(1, 4),(1,10)];
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(2);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(2);
 
     for index in 0..first_source.len() {
         encoder_model_builder.push_symbol(first_source[index].1, 0).unwrap();
@@ -135,7 +135,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences() {
     let third_sequence = get_zipfian_distr(2, 1.0).iter().map(|symbol| (2, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
     let fourth_sequence = get_zipfian_distr(1, 1.0).iter().map(|symbol| (3, *symbol)).collect::<Vec<(usize, RawSymbol)>>();
 
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
 
     for index in 0..first_sequence.len() {
         encoder_model_builder.push_symbol(first_sequence[index].1, 0).unwrap();
@@ -203,7 +203,7 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     let mut source = vec![first_sequence, second_sequence, third_sequence, fourth_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
 
     for (model_index, symbol) in &source {
         encoder_model_builder.push_symbol(*symbol, *model_index).unwrap();
@@ -265,7 +265,7 @@ fn test_random_access() {
     let mut source = vec![first_sequence, second_sequence, third_sequence, fourth_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(4);
 
     for (model_index, symbol) in &source {
         encoder_model_builder.push_symbol(*symbol, *model_index).unwrap();
@@ -300,7 +300,7 @@ fn test_random_access() {
 #[test]
 fn test_random_access_with_bitvec() {
     let sequence = get_zipfian_distr(0, 1.2);
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, 5>::new(1);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, 5>::new(1);
 
     for symbol in &sequence {
         encoder_model_builder.push_symbol(*symbol, 0).unwrap();

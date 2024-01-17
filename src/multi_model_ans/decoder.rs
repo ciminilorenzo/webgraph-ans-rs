@@ -6,9 +6,10 @@ use crate::multi_model_ans::Prelude;
 use crate::traits::folding::Fold;
 use crate::traits::quasi::{Decode, Quasi};
 
-/// The streaming rangeANS decoder that uses the symbol folding technique.
+
 #[derive(Clone)]
-pub struct ANSDecoder<
+pub struct ANSDecoder <
+    'a,
     const FIDELITY: usize,
     const RADIX: usize = FASTER_RADIX,
     H = u64,
@@ -22,10 +23,10 @@ pub struct ANSDecoder<
     model: M,
 
     /// The normalized bits during the encoding process.
-    normalized_bits: Vec<u32>,
+    normalized_bits: &'a Vec<u32>,
 
     /// The folded bits during the encoding process.
-    folded_bits: F,
+    folded_bits: &'a F,
 
     state: State,
 
@@ -34,7 +35,7 @@ pub struct ANSDecoder<
     last_normalized_pos: usize,
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<FIDELITY, RADIX, H, M, F>
+impl<'a, const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<'a, FIDELITY, RADIX, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
@@ -43,44 +44,43 @@ where
     /// The lower bound of the interval.
     const LOWER_BOUND: State = 1 << 32;
 
-    /// Creates a personalized FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX` and the
-    /// given model.
-    pub fn with_parameters(prelude: Prelude<RADIX, F>, model: M) -> Self {
+    /// Creates a personalized FoldedStreamANSDecoder with the current values of `FIDELITY` and `RADIX`
+    /// and the given model.
+    pub fn with_parameters(prelude:  &Prelude<RADIX, F>, model: M) -> Self {
         Self {
             last_normalized_pos: prelude.normalized_bits.len(),
             last_unfolded_pos: prelude.folded_bits.len(),
             model,
-            normalized_bits: prelude.normalized_bits,
-            folded_bits: prelude.folded_bits,
+            normalized_bits: &prelude.normalized_bits,
+            folded_bits: &prelude.folded_bits,
             state: prelude.state,
         }
     }
 }
 
-impl<const FIDELITY: usize> ANSDecoder<FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>>
-{
+impl<const FIDELITY: usize> ANSDecoder <'_, FIDELITY, FASTER_RADIX, u64, VecFrame<FASTER_RADIX, u64>, Vec<u8>> {
     /// Creates the standard FoldedStreamANSDecoder from the given parameters.
     ///
     /// The standard decoder uses fixed types for this struct's generics. This means that,
     /// by using this constructor, you're prevented from tuning any another parameter but fidelity.
     /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
-    pub fn new(prelude: Prelude<FASTER_RADIX, Vec<u8>>) -> Self {
+    pub fn new(prelude: &Prelude<FASTER_RADIX, Vec<u8>>) -> Self {
         let folding_offset = (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1);
         let folding_threshold = 1 << (FIDELITY + FASTER_RADIX - 1);
 
         let vec_model = VecFrame::<FASTER_RADIX, u64>::new(
-            prelude.tables.clone(),
-            prelude.frame_sizes.clone(),
+            &prelude.tables,
+            &prelude.frame_sizes,
             folding_offset,
             folding_threshold,
         );
 
-        Self::with_parameters(prelude, vec_model)
+        Self::with_parameters(&prelude, vec_model)
     }
 }
 
 /// Decoding functions.
-impl<const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<FIDELITY, RADIX, H, M, F>
+impl<const FIDELITY: usize, const RADIX: usize, H, M, F> ANSDecoder<'_, FIDELITY, RADIX, H, M, F>
 where
     H: Quasi<RADIX>,
     M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
@@ -111,5 +111,11 @@ where
         self.last_normalized_pos = phase.normalized;
 
         Self::decode(self, model_index)
+    }
+
+    pub fn set_compressor_at_phase(&mut self, phase: &ANSCompressorPhase) {
+        self.state = phase.state;
+        self.last_unfolded_pos = phase.folded;
+        self.last_normalized_pos = phase.normalized;
     }
 }

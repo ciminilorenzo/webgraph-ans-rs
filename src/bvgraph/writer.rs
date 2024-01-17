@@ -1,28 +1,19 @@
-use epserde::prelude::*;
 use std::{convert::Infallible, path::Path};
-use sucds::serial;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::{
     multi_model_ans::{
-        encoder::ANSEncoder, model4encoder::AnsModel4Encoder,
-        model4encoder_builder::AnsModel4EncoderBuilder,
+        encoder::ANSEncoder, model4encoder::ANSModel4Encoder,
+        model4encoder_builder::ANSModel4EncoderBuilder,
     },
     traits::folding::Fold,
+    FASTER_RADIX,
 };
+use crate::bvgraph::Component;
+use crate::multi_model_ans::encoder::ANSCompressorPhase;
 
-/// An enumeration of the components getting a different model in the Rust
-/// implementation of the BV format.
-pub enum Component {
-    Outdegree,
-    ReferenceOffset,
-    BlockCount,
-    Blocks,
-    IntervalCount,
-    IntervalStart,
-    IntervalLen,
-    FirstResidual,
-    Residual,
+fn len(value: u64) -> Result<usize, Infallible> {
+    Ok((value + 2).ilog2() as usize)
 }
 
 /// A mock writer that returns `⌊log₂(x)⌋` as the number of bits written
@@ -79,7 +70,7 @@ impl BVGraphCodesWriter for Log2MockWriter {
     }
 }
 
-/// A [`BVGraphCodesWriter`] that builds an [`AnsModel4Encoder`] using the
+/// A [`BVGraphCodesWriter`] that builds an [`ANSModel4Encoder`] using the
 /// symbols written to it.
 ///
 /// Note that a [`BVGraphCodesWriter`] needs a mock writer to measure code
@@ -87,27 +78,28 @@ impl BVGraphCodesWriter for Log2MockWriter {
 /// of bits written encoding `x`.
 pub struct BVGraphModelBuilder<const FIDELITY: usize, const RADIX: usize> {
     path: Box<Path>, // unused
-    model_builder: AnsModel4EncoderBuilder<FIDELITY, RADIX>,
+    model_builder: ANSModel4EncoderBuilder<FIDELITY, RADIX>,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize> BVGraphModelBuilder<FIDELITY, RADIX> {
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
             path: path.as_ref().to_owned().into_boxed_path(),
-            model_builder: AnsModel4EncoderBuilder::<FIDELITY, RADIX>::new(9),
+            model_builder: ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(9),
         }
     }
 
-    /// Build an [`AnsModel4Encoder`] from the symbols written to this
+    /// Build an [`ANSModel4Encoder`] from the symbols written to this
     /// [`BVGraphModelBuilder`].
-    pub fn build(self) -> AnsModel4Encoder {
+    pub fn build(self) -> ANSModel4Encoder {
         self.model_builder.build()
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter
-    for BVGraphModelBuilder<FIDELITY, RADIX>
-{
+// Questa struct viene usata nella prima passata per popolare i diversi modelli (sono 9) dentro il ANSModel4EncoderBuilder.
+// Contiene tutti i metodi per scrivere i vari componenti del grafo.
+// Per esempio write_outdegree inserisce all'interno del modello relativo il dato.
+impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphModelBuilder<FIDELITY, RADIX> {
     type Error = Infallible;
 
     type MockWriter = Log2MockWriter;
@@ -117,56 +109,47 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::Outdegree as usize);
+        self.model_builder.push_symbol(value, Component::Outdegree as usize);
         len(value)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::ReferenceOffset as usize);
+        self.model_builder.push_symbol(value, Component::ReferenceOffset as usize);
         len(value)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::BlockCount as usize);
+        self.model_builder.push_symbol(value, Component::BlockCount as usize);
         len(value)
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::Blocks as usize);
+        self.model_builder.push_symbol(value, Component::Blocks as usize);
         len(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::IntervalCount as usize);
+        self.model_builder.push_symbol(value, Component::IntervalCount as usize);
         len(value)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::IntervalStart as usize);
+        self.model_builder.push_symbol(value, Component::IntervalStart as usize);
         len(value)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::IntervalLen as usize);
+        self.model_builder.push_symbol(value, Component::IntervalLen as usize);
         len(value)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::FirstResidual as usize);
+        self.model_builder.push_symbol(value, Component::FirstResidual as usize);
         len(value)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder
-            .push_symbol(value, Component::Residual as usize);
+        self.model_builder.push_symbol(value, Component::Residual as usize);
         len(value)
     }
 
@@ -180,22 +163,25 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter
 /// Data is gathered in a number of buffers, one for each [component](`Component`).
 /// At the next node (i.e. when `write_outdegree` is called again), the buffers
 /// are emptied in reverse order.
-pub struct BVGraphWriter<
-    const FIDELITY: usize,
-    const RADIX: usize,
+pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize, F>
+where
     F: Fold<RADIX> + Default + Clone,
-> {
+{
+    /// The container containing the buffers (one for each [component](`Component`)) where symbols are collected.
     data: [Vec<usize>; 9],
+
+    /// The index of the node the encoder is currently encoding.
     curr_node: usize,
+
+    /// The encoder used by this writer to encode symbols.
     encoder: ANSEncoder<FIDELITY, RADIX, F>,
+
+    /// A buffer containing a [`ANSCompressorPhase`], one for each node.
+    phases: Vec<ANSCompressorPhase>,
 }
 
-fn len(value: u64) -> Result<usize, Infallible> {
-    Ok((value + 2).ilog2() as usize)
-}
-
-impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, 8, Vec<u8>> {
-    pub fn new(model: AnsModel4Encoder) -> Self {
+impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
+    pub fn new(model: ANSModel4Encoder) -> Self {
         Self {
             curr_node: usize::MAX,
             data: [
@@ -209,18 +195,20 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, 8, Vec<u8>> {
                 Vec::new(),
                 Vec::new(),
             ],
-            encoder: ANSEncoder::<FIDELITY, 8, Vec<u8>>::with_parameters(model, Vec::<u8>::new()),
+            encoder: ANSEncoder::<FIDELITY, FASTER_RADIX, Vec<u8>>::with_parameters(model, Vec::<u8>::new()),
+            phases: Vec::new(),
         }
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(self) -> ANSEncoder<FIDELITY, 8, Vec<u8>> {
+    pub fn into_inner(self) -> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
         self.encoder
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, F: Fold<RADIX> + Default + Clone> BVGraphCodesWriter
-    for BVGraphWriter<FIDELITY, RADIX, F>
+impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
+where
+    F: Fold<RADIX> + Default + Clone,
 {
     type Error = Infallible;
 
@@ -232,19 +220,20 @@ impl<const FIDELITY: usize, const RADIX: usize, F: Fold<RADIX> + Default + Clone
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         if self.curr_node != usize::MAX {
-            for (i, v) in self.data.iter().enumerate().rev() {
-                for &x in v.iter().rev() {
-                    self.encoder.encode(x as u64, i);
+            for (component, symbols) in self.data.iter().enumerate().rev() {
+                for &symbol in symbols.iter().rev() {
+                    self.encoder.encode(symbol as u64, component);
                 }
             }
         }
 
         // Increase and cleanup
         self.curr_node = self.curr_node.wrapping_add(1);
-        for v in &mut self.data {
-            v.clear();
+        for symbols in &mut self.data {
+            symbols.clear();
         }
 
+        self.phases.push(self.encoder.get_current_compressor_phase());
         self.data[Component::Outdegree as usize].push(value as usize);
         len(value)
     }
@@ -289,11 +278,12 @@ impl<const FIDELITY: usize, const RADIX: usize, F: Fold<RADIX> + Default + Clone
         len(value)
     }
 
+    // Dump last node
     fn flush(&mut self) -> Result<(), Self::Error> {
-        // Dump last node
-        for (i, v) in self.data.iter().enumerate().rev() {
-            for &x in v.iter().rev() {
-                self.encoder.encode(x as u64, i);
+        for (component, symbols) in self.data.iter().enumerate().rev() {
+            for &symbol in symbols.iter().rev() {
+                println!("symbol: {} with component: {}", symbol, component);
+                self.encoder.encode(symbol as u64, component);
             }
         }
         Ok(())

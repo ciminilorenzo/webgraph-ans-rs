@@ -1,4 +1,4 @@
-use crate::multi_model_ans::model4encoder::{AnsModel4Encoder, SymbolLookup};
+use crate::multi_model_ans::model4encoder::{ANSModel4Encoder, SymbolLookup};
 use crate::multi_model_ans::Prelude;
 use crate::traits::folding::Fold;
 use crate::traits::quasi::Decode;
@@ -13,7 +13,7 @@ pub struct ANSEncoder<
     const RADIX: usize = FASTER_RADIX,
     F: Fold<RADIX> + Default + Clone = Vec<u8>,
 > {
-    model: AnsModel4Encoder,
+    model: ANSModel4Encoder,
 
     pub state: State,
 
@@ -34,7 +34,7 @@ where
     /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
     /// given model. Please note that this constructor will return a decoder that uses a BitVec as
     /// folded bits, which is way slower than the one that uses a Vec of bytes.
-    pub fn with_parameters(model: AnsModel4Encoder, folded_bits: F) -> Self {
+    pub fn with_parameters(model: ANSModel4Encoder, folded_bits: F) -> Self {
         Self {
             state: 1_u64 << 32,
             model,
@@ -50,7 +50,7 @@ impl<const FIDELITY: usize> ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>> {
     /// The standard decoder uses fixed radix of 8. This means that, by using this
     /// constructor, you're prevented from tuning any another parameter but fidelity.
     /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
-    pub fn new(model: AnsModel4Encoder) -> Self {
+    pub fn new(model: ANSModel4Encoder) -> Self {
         Self::with_parameters(model, Vec::new())
     }
 }
@@ -76,7 +76,7 @@ where
             self.state = Self::shrink_state(self.state, &mut self.normalized_bits);
         }
 
-        let block = self.state / sym_data.fast_divisor;
+        let block = self.state / sym_data.freq as u64;
 
         self.state = (block << self.model.get_log2_frame_size(model_index))
             + sym_data.cumul_freq as u64
@@ -100,6 +100,12 @@ where
         }
     }
 
+    /// Returns the current phase of the compressor, that is: the current state, the index of the last chunk of 32 bits
+    /// that have been normalized, and the index of the last chunk of [`RADIX`] bits that have been folded.
+    ///
+    /// An [`ANSCompressorPhase`] can be utilized to restore the state of the compressor at a given point in time. In the
+    /// specific, if the compressor actual phase is `phase`, then the next decode symbol will be the same as the one
+    /// that led the compressor to the phase `phase`.
     pub fn get_current_compressor_phase(&self) -> ANSCompressorPhase {
         ANSCompressorPhase {
             state: self.state,

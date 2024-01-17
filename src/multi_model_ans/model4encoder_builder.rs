@@ -3,8 +3,9 @@ use anyhow::{bail, Result};
 
 use strength_reduce::StrengthReducedU64;
 
-use crate::{EncoderModelEntry, LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
-use crate::multi_model_ans::model4encoder::AnsModel4Encoder;
+use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
+use crate::multi_model_ans::EncoderModelEntry;
+use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::utils::ans_utilities::folding_without_streaming_out;
 use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
 
@@ -16,13 +17,13 @@ use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
 const THETA: f64 = 1.001;
 
 
-pub struct AnsModel4EncoderBuilder <const FIDELITY: usize, const RADIX: usize> {
+pub struct ANSModel4EncoderBuilder<const FIDELITY: usize, const RADIX: usize> {
     models: usize,
     frequencies: Vec<Vec<usize>>,
     max_sym: Vec<Symbol>,
 }
 
-impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELITY, RADIX> {
+impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELITY, RADIX> {
     const FOLDING_THRESHOLD: RawSymbol = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
 
     /// Creates a new AnsModel4EncoderBuilder with the given number of models.
@@ -55,7 +56,7 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
         Ok(())
     }
 
-    pub fn build(self) -> AnsModel4Encoder {
+    pub fn build(self) -> ANSModel4Encoder {
         let mut tables: Vec<Vec<EncoderModelEntry>> = Vec::with_capacity(self.models);
         let mut frame_sizes = Vec::with_capacity(self.models);
 
@@ -82,7 +83,6 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
                     freq: *freq as u16,
                     upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64,
                     cumul_freq: last_covered_freq,
-                    fast_divisor,
                 });
                 last_covered_freq += *freq as u16;
             }
@@ -90,7 +90,7 @@ impl <const FIDELITY: usize, const RADIX: usize> AnsModel4EncoderBuilder <FIDELI
             frame_sizes.push(log_m);
         }
 
-        AnsModel4Encoder {
+        ANSModel4Encoder {
             tables,
             frame_sizes,
         }

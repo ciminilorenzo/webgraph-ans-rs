@@ -6,7 +6,7 @@ use utils::*;
 use folded_streaming_rans::{RawSymbol, State};
 use folded_streaming_rans::multi_model_ans::model4decoder::{EliasFanoFrame, Rank9SelFrame, VecFrame};
 use folded_streaming_rans::multi_model_ans::model4encoder::SymbolLookup;
-use folded_streaming_rans::multi_model_ans::model4encoder_builder::AnsModel4EncoderBuilder;
+use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
@@ -25,7 +25,7 @@ fn probe_works_for_all_types_of_frames(
     #[case] slots: Vec<usize>,
     #[case] expected_symbols: Vec<u64>,
 ) {
-    let mut encoder_model_builder = AnsModel4EncoderBuilder::<FIDELITY, RADIX>::new(1);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(1);
 
     for symbol in symbols {
         encoder_model_builder.push_symbol(symbol, 0).unwrap();

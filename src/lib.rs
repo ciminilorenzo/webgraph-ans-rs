@@ -1,9 +1,10 @@
 #![allow(dead_code)]
+#![allow(unused_must_use)]
+#![allow(unused_variables)]
 
 use crate::traits::quasi::Quasi;
 use epserde::prelude::*;
 use epserde::traits::ZeroCopy;
-use strength_reduce::StrengthReducedU64;
 pub mod ans;
 pub mod multi_model_ans;
 
@@ -42,36 +43,6 @@ pub type Freq = u16;
 /// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
 
-#[derive(Clone, Debug)]
-pub struct EncoderModelEntry {
-    pub freq: Freq,
-    pub upperbound: u64,
-    pub cumul_freq: Freq,
-    pub fast_divisor: StrengthReducedU64,
-}
-
-impl PartialEq for EncoderModelEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq
-            && self.upperbound == other.upperbound
-            && self.cumul_freq == other.cumul_freq
-            && self.fast_divisor.get() == other.fast_divisor.get()
-    }
-}
-
-impl From<(Freq, u64, Freq)> for EncoderModelEntry {
-    fn from(tuple: (Freq, u64, Freq)) -> Self {
-        Self {
-            freq: tuple.0,
-            upperbound: tuple.1,
-            cumul_freq: tuple.2,
-            fast_divisor: match tuple.0 > 0 {
-                true => StrengthReducedU64::new(tuple.0 as u64),
-                false => StrengthReducedU64::new(1),
-            },
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default, Epserde)]
 #[repr(C)]

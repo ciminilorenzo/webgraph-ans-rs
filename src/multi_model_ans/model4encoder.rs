@@ -1,6 +1,6 @@
+use crate::multi_model_ans::EncoderModelEntry;
 use crate::traits::quasi::Decode;
-use crate::{EncoderModelEntry, Symbol};
-use epserde::prelude::*;
+use crate::Symbol;
 
 pub trait SymbolLookup<Idx> {
     type Output;
@@ -9,7 +9,7 @@ pub trait SymbolLookup<Idx> {
 }
 
 #[derive(Clone)]
-pub struct AnsModel4Encoder {
+pub struct ANSModel4Encoder {
     /// Contains a vec of entries for each model where, inside each vec, each index contains the data
     /// related to the symbol equal to that index.
     pub tables: Vec<Vec<EncoderModelEntry>>,
@@ -18,7 +18,7 @@ pub struct AnsModel4Encoder {
     pub frame_sizes: Vec<usize>,
 }
 
-impl Decode for AnsModel4Encoder {
+impl Decode for ANSModel4Encoder {
     #[inline(always)]
     fn get_frame_mask(&self, model_index: usize) -> u64 {
         (1 << self.frame_sizes[model_index]) - 1
@@ -30,7 +30,7 @@ impl Decode for AnsModel4Encoder {
     }
 }
 
-impl SymbolLookup<Symbol> for AnsModel4Encoder {
+impl SymbolLookup<Symbol> for ANSModel4Encoder {
     type Output = EncoderModelEntry;
 
     #[inline(always)]

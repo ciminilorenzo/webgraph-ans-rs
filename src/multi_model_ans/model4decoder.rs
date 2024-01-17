@@ -4,7 +4,8 @@ use sux::prelude::*;
 
 use crate::multi_model_ans::model4encoder::SymbolLookup;
 use crate::traits::quasi::{Decode, Quasi};
-use crate::{DecoderModelEntry, EncoderModelEntry, State, Symbol};
+use crate::{DecoderModelEntry, State, Symbol};
+use crate::multi_model_ans::EncoderModelEntry;
 
 #[derive(Epserde)]
 pub struct EliasFanoFrame<const RADIX: usize, T>
@@ -35,8 +36,8 @@ impl<const RADIX: usize, T: Quasi<RADIX>> Decode for EliasFanoFrame<RADIX, T> {
 
 impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
     pub fn new(
-        tables: Vec<Vec<EncoderModelEntry>>,
-        frame_sizes: Vec<usize>,
+        tables: &Vec<Vec<EncoderModelEntry>>,
+        frame_sizes: &Vec<usize>,
         folding_offset: u64,
         folding_threshold: u64,
     ) -> Self {
@@ -73,7 +74,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
         });
 
         Self {
-            frame_sizes,
+            frame_sizes: frame_sizes.clone(),
             symbols: symbols_table,
             frames: elias_table,
         }
@@ -107,8 +108,8 @@ pub struct Rank9SelFrame<const RADIX: usize, T: Quasi<RADIX>> {
 
 impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
     pub fn new(
-        tables: Vec<Vec<EncoderModelEntry>>,
-        frame_sizes: Vec<usize>,
+        tables: &Vec<Vec<EncoderModelEntry>>,
+        frame_sizes: &Vec<usize>,
         folding_offset: u64,
         folding_threshold: u64,
     ) -> Self {
@@ -145,7 +146,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
         });
 
         Self {
-            frame_sizes,
+            frame_sizes: frame_sizes.clone(),
             symbols: symbols_table,
             frames: rank9_table,
         }
@@ -186,8 +187,8 @@ pub struct VecFrame<const RADIX: usize, T: Quasi<RADIX>> {
 
 impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
     pub fn new(
-        tables: Vec<Vec<EncoderModelEntry>>,
-        frame_sizes: Vec<usize>,
+        tables: &Vec<Vec<EncoderModelEntry>>,
+        frame_sizes: &Vec<usize>,
         folding_offset: u64,
         folding_threshold: u64,
     ) -> Self {
@@ -207,7 +208,7 @@ impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
                     *vec.get_mut(slot as usize).unwrap() = DecoderModelEntry {
                         freq: symbol_entry.freq,
                         cumul_freq: symbol_entry.cumul_freq,
-                        quasi_folded: T::quasi_fold(
+                        quasi_folded: T::quasi_fold (
                             sym as Symbol,
                             folding_threshold,
                             folding_offset,
@@ -216,12 +217,11 @@ impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
                 }
                 last_slot += symbol_entry.freq;
             }
-
             vectors.push(vec);
         });
 
         Self {
-            frame_sizes,
+            frame_sizes: frame_sizes.clone(),
             symbols: vectors,
         }
     }

@@ -5,7 +5,7 @@ pub mod model4encoder;
 pub mod model4encoder_builder;
 
 use crate::traits::folding::Fold;
-use crate::{EncoderModelEntry, State};
+use crate::{Freq, State};
 
 pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
@@ -23,26 +23,25 @@ pub struct Prelude<const RADIX: usize, F: Fold<RADIX>> {
     pub state: State,
 }
 
-// WIP: these could possibly be associated to every possible index of the model. At this point functions like
-// decode would take a ModelIndex instead of a usize.
-pub enum ModelIndex {
-    ReferenceNumber,
-    BlockCount,
-    IntervalsCount,
-    IntervalLeftExtreme,
-    IntervalLength,
-    Residual,
+#[derive(Clone, Debug)]
+pub struct EncoderModelEntry {
+    pub freq: Freq,
+    pub upperbound: u64,
+    pub cumul_freq: Freq,
 }
 
-impl ModelIndex {
-    pub fn index(&self) -> usize {
-        match self {
-            ModelIndex::ReferenceNumber => 0,
-            ModelIndex::BlockCount => 1,
-            ModelIndex::IntervalsCount => 2,
-            ModelIndex::IntervalLeftExtreme => 3,
-            ModelIndex::IntervalLength => 4,
-            ModelIndex::Residual => 5,
+impl PartialEq for EncoderModelEntry {
+    fn eq(&self, other: &Self) -> bool {
+        self.freq == other.freq && self.upperbound == other.upperbound && self.cumul_freq == other.cumul_freq
+    }
+}
+
+impl From<(Freq, u64, Freq)> for EncoderModelEntry {
+    fn from(tuple: (Freq, u64, Freq)) -> Self {
+        Self {
+            freq: tuple.0,
+            upperbound: tuple.1,
+            cumul_freq: tuple.2,
         }
     }
 }
