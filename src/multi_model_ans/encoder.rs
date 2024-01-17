@@ -1,3 +1,5 @@
+use epserde::Epserde;
+use mem_dbg::{MemDbg, MemSize};
 use crate::multi_model_ans::model4encoder::{ANSModel4Encoder, SymbolLookup};
 use crate::multi_model_ans::Prelude;
 use crate::traits::folding::{FoldRead, FoldWrite};
@@ -115,7 +117,9 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]
+#[zero_copy]
+#[repr(C)]
 pub struct ANSCompressorPhase {
     pub state: State,
     pub normalized: usize,

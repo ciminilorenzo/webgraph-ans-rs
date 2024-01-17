@@ -242,13 +242,13 @@ where
                 .rev()
             {
                 for &symbol in symbols.iter().rev() {
-                    self.encoder.encode(symbol as u64, component);
+                    self.encoder.encode(symbol as u64, component + Component::FirstResidual as usize);
                 }
             }
 
             debug_assert_eq!(
-                self.data[Component::Outdegree as usize].len(),
-                self.data[Component::ReferenceOffset as usize].len()
+                self.data[Component::IntervalStart as usize].len(),
+                self.data[Component::IntervalLen as usize].len()
             );
 
             for i in (0..self.data[Component::IntervalStart as usize].len()).rev() {
