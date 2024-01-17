@@ -235,7 +235,39 @@ where
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         if self.curr_node != usize::MAX {
-            for (component, symbols) in self.data.iter().enumerate().rev() {
+            for (component, symbols) in self.data
+                [Component::FirstResidual as usize..=Component::Residual as usize]
+                .iter()
+                .enumerate()
+                .rev()
+            {
+                for &symbol in symbols.iter().rev() {
+                    self.encoder.encode(symbol as u64, component);
+                }
+            }
+
+            debug_assert_eq!(
+                self.data[Component::Outdegree as usize].len(),
+                self.data[Component::ReferenceOffset as usize].len()
+            );
+
+            for i in (0..self.data[Component::IntervalStart as usize].len()).rev() {
+                self.encoder.encode(
+                    self.data[Component::IntervalLen as usize][i] as u64,
+                    Component::IntervalLen as usize,
+                );
+                self.encoder.encode(
+                    self.data[Component::IntervalStart as usize][i] as u64,
+                    Component::IntervalStart as usize,
+                );
+            }
+
+            for (component, symbols) in self.data
+                [Component::Outdegree as usize..=Component::IntervalCount as usize]
+                .iter()
+                .enumerate()
+                .rev()
+            {
                 for &symbol in symbols.iter().rev() {
                     self.encoder.encode(symbol as u64, component);
                 }
