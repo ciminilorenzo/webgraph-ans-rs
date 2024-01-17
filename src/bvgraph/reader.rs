@@ -13,7 +13,6 @@ use crate::traits::quasi::{Decode, Quasi};
 use crate::FASTER_RADIX;
 use crate::{DecoderModelEntry, State};
 
-
 /// A builder for [`ANSBVGraphReader`].
 pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
     /// The vec of ANSCompressorPhase, one for each node of the graph.
@@ -25,14 +24,11 @@ pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize> {
 
 impl<const FIDELITY: usize> ANSBVGraphReaderBuilder<FIDELITY> {
     pub fn new(prelude: Prelude<FASTER_RADIX, Vec<u8>>, phases: Vec<ANSCompressorPhase>) -> Self {
-        Self {
-            prelude,
-            phases
-        }
+        Self { prelude, phases }
     }
 }
 
-impl <const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
+impl<const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<FIDELITY> {
     type Reader<'a> = ANSBVGraphReader<'a, FIDELITY> where Self: 'a;
 
     fn get_reader(&self, node: usize) -> Result<Self::Reader<'_>, Box<dyn Error>> {
@@ -42,7 +38,6 @@ impl <const FIDELITY: usize> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuild
         Ok(code_reader)
     }
 }
-
 
 /// An implementation of [`BVGraphCodesReader`] that reads from an ANS-encoded graph.
 pub struct ANSBVGraphReader<

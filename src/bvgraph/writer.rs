@@ -78,14 +78,12 @@ impl BVGraphCodesWriter for Log2MockWriter {
 /// lengths. We use a [`Log2MockWriter`] that returns `⌊log₂(x)⌋` as the number
 /// of bits written encoding `x`.
 pub struct BVGraphModelBuilder<const FIDELITY: usize, const RADIX: usize> {
-    path: Box<Path>, // unused
     model_builder: ANSModel4EncoderBuilder<FIDELITY, RADIX>,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize> BVGraphModelBuilder<FIDELITY, RADIX> {
-    pub fn new(path: impl AsRef<Path>) -> Self {
+    pub fn new() -> Self {
         Self {
-            path: path.as_ref().to_owned().into_boxed_path(),
             model_builder: ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(9),
         }
     }
@@ -216,12 +214,18 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(self) -> (ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>, Vec<ANSCompressorPhase>) {
+    pub fn into_inner(
+        self,
+    ) -> (
+        ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>,
+        Vec<ANSCompressorPhase>,
+    ) {
         (self.encoder, self.phases)
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
+impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter
+    for BVGraphWriter<FIDELITY, RADIX, F>
 where
     F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
@@ -242,7 +246,8 @@ where
                 .rev()
             {
                 for &symbol in symbols.iter().rev() {
-                    self.encoder.encode(symbol as u64, component + Component::FirstResidual as usize);
+                    self.encoder
+                        .encode(symbol as u64, component + Component::FirstResidual as usize);
                 }
             }
 
@@ -273,7 +278,8 @@ where
                 }
             }
             // save state of the encoder as soon as it finishes encoding the node
-            self.phases.push(self.encoder.get_current_compressor_phase());
+            self.phases
+                .push(self.encoder.get_current_compressor_phase());
         }
 
         // Increase and cleanup
@@ -333,7 +339,8 @@ where
                 self.encoder.encode(symbol as u64, component);
             }
         }
-        self.phases.push(self.encoder.get_current_compressor_phase());
+        self.phases
+            .push(self.encoder.get_current_compressor_phase());
         Ok(())
     }
 }

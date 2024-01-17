@@ -1,7 +1,11 @@
+use std::path::{Path, PathBuf};
+
 use anyhow::Result;
 use clap::Parser;
+use epserde::prelude::*;
+use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
+use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
-
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
 struct Args {
@@ -31,5 +35,25 @@ pub fn main() -> Result<()> {
 
     let seq_graph = webgraph::graph::bvgraph::load_seq(&args.basename)?;
 
+    let model_builder = BVGraphModelBuilder::<2, 8>::new();
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(model_builder, 7, 2, 3, 0);
+
+    bvcomp.extend(seq_graph.iter())?;
+    let encoder = bvcomp.flush()?.build();
+
+    let mut bvcomp =
+        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
+
+    bvcomp.extend(seq_graph.iter())?;
+
+    let (mut encoder, phases) = bvcomp.flush()?.into_inner();
+    let prelude = encoder.serialize();
+
+    prelude.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
+    let mut buf = PathBuf::from(&args.new_basename);
+    buf.set_extension("ans");
+    prelude.store(buf.as_path())?;
+    buf.set_extension("phases");
+    phases.store(buf.as_path())?;
     Ok(())
 }
