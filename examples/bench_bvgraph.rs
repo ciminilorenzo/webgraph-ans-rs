@@ -8,6 +8,7 @@ use folded_streaming_rans::multi_model_ans::Prelude;
 
 use anyhow::Result;
 use folded_streaming_rans::multi_model_ans::encoder::ANSCompressorPhase;
+use folded_streaming_rans::utils::ans_utilities::get_mock_writer;
 
 const NODES: usize = 325557;
 const ARCS: usize = 3216152;
@@ -31,9 +32,10 @@ fn encode_graph() -> Result<()> {
     // first iteration: builds the statistics for each model
     bvcomp.extend(graph.iter())?;
     let encoder = bvcomp.flush()?.build();
+    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes);
 
     let mut bvcomp = BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(
-        BVGraphWriter::new(encoder),
+        BVGraphWriter::new(encoder, mock_writer),
         7,
         2,
         3,
@@ -81,7 +83,7 @@ fn main() -> Result<()> {
 
     let now = std::time::Instant::now();
     let mut arcs = 0;
-    for node_index in 0..10000 {
+    for node_index in 0..NODES {
         let decoded_successors = second_graph.successors(node_index).collect::<Vec<_>>();
         arcs += decoded_successors.len();
     }

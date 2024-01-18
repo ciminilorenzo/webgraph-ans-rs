@@ -1,6 +1,6 @@
 pub mod writer;
 pub mod reader;
-mod mock_writers;
+pub mod mock_writers;
 
 /// An enumeration of the components getting a different model in the Rust
 /// implementation of the BV format.

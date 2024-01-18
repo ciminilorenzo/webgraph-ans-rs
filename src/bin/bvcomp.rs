@@ -6,6 +6,8 @@ use epserde::prelude::*;
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
+use folded_streaming_rans::utils::ans_utilities::get_mock_writer;
+
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
 struct Args {
@@ -40,9 +42,10 @@ pub fn main() -> Result<()> {
 
     bvcomp.extend(seq_graph.iter())?;
     let encoder = bvcomp.flush()?.build();
+    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes);
 
     let mut bvcomp =
-        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
+        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);
 
     bvcomp.extend(seq_graph.iter())?;
 

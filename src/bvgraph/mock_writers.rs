@@ -2,84 +2,64 @@ use std::convert::Infallible;
 use webgraph::prelude::BVGraphCodesWriter;
 use crate::bvgraph::Component;
 use crate::bvgraph::writer::Log2MockWriter;
-use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 
-/*
 
-fn symbol_len(value: u64, model: &ANSModel4Encoder, model_index: usize) -> Result<usize, Infallible> {
-    let frequency = *model.tables[model_index][value as usize].freq;
-    let total_freq = model.tables[model_index]
-        .iter()
-        .map(|entry| entry.freq)
-        .sum::<u64>();
-
-    let probability = frequency as f64 / total_freq as f64;
-    let inverse = 1.0 / probability;
-    let shifted = inverse * (1 << 16) as f64;
-    let rounded = shifted.round() as u64;
-
-    Ok(10)
+pub struct EntropyMockWriter<> {
+    symbol_costs_table: Vec<Vec<usize>>,
 }
 
-pub struct EntropyMockWriter<'a> {
-    model: &'a ANSModel4Encoder,
-}
-
-impl <'a> EntropyMockWriter<'a> {
-    pub fn new(model: &'a ANSModel4Encoder) -> Self {
-        Self {
-            model,
-        }
+impl EntropyMockWriter {
+    pub fn new(symbol_costs_table: Vec<Vec<usize>>) -> Self {
+        Self { symbol_costs_table }
     }
 }
 
 impl BVGraphCodesWriter for EntropyMockWriter {
     type Error = Infallible;
 
-    type MockWriter = Log2MockWriter;
+    type MockWriter = Log2MockWriter; // it's essentially a marker
 
     fn mock(&self) -> Self::MockWriter {
-        Log2MockWriter::new()
+        Log2MockWriter {} // thus we can return a fake one
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::Outdegree as usize)
+        Ok(self.symbol_costs_table[Component::Outdegree as usize][value as usize])
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::ReferenceOffset as usize)
+        Ok(self.symbol_costs_table[Component::ReferenceOffset as usize][value as usize])
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::BlockCount as usize)
+        Ok(self.symbol_costs_table[Component::BlockCount as usize][value as usize])
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::Blocks as usize)
+        Ok(self.symbol_costs_table[Component::Blocks as usize][value as usize])
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::IntervalCount as usize)
+        Ok(self.symbol_costs_table[Component::IntervalCount as usize][value as usize])
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::IntervalStart as usize)
+        Ok(self.symbol_costs_table[Component::IntervalStart as usize][value as usize])
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::IntervalLen as usize)
+        Ok(self.symbol_costs_table[Component::IntervalLen as usize][value as usize])
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::FirstResidual as usize)
+        Ok(self.symbol_costs_table[Component::FirstResidual as usize][value as usize])
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        symbol_len(value, self.model, Component::Residual as usize)
+        Ok(self.symbol_costs_table[Component::Residual as usize][value as usize])
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
 }
-*/

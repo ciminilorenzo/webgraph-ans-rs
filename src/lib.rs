@@ -11,7 +11,7 @@ pub mod multi_model_ans;
 pub mod bvgraph;
 
 mod traits;
-mod utils;
+pub mod utils;
 
 /// How many bits are extracted/added from/to the state during the encoding/decoding process.
 pub const LOG2_B: usize = 32;

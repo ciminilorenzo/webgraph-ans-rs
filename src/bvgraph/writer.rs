@@ -13,6 +13,8 @@ use crate::{
     traits::folding::FoldWrite,
     FASTER_RADIX,
 };
+use crate::bvgraph::mock_writers::EntropyMockWriter;
+use crate::utils::ans_utilities::get_mock_writer;
 
 fn len(value: u64) -> Result<usize, Infallible> {
     Ok((value + 2).ilog2() as usize)
@@ -170,7 +172,6 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphMo
 /// Data is gathered in a number of buffers, one for each [component](`Component`).
 /// At the next node (i.e. when `write_outdegree` is called again), the buffers
 /// are emptied in reverse order.
-// impl<const FIDELITY: usize, const RADIX: usize, F, MW> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F, MW>
 pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize, F>
 where
     F: FoldWrite<RADIX> + Default + Clone,
@@ -186,12 +187,10 @@ where
 
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
-
-    // _marker: PhantomData<MW>,
 }
 
 impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
-    pub fn new(model: ANSModel4Encoder) -> Self {
+    pub fn new(model: ANSModel4Encoder, mock_writer: EntropyMockWriter) -> Self {
         Self {
             curr_node: usize::MAX,
             data: [
@@ -219,17 +218,16 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
     }
 }
 
-// impl<const FIDELITY: usize, const RADIX: usize, F, MW> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F, MW>
 impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
 where
     F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
     type Error = Infallible;
 
-    type MockWriter = Log2MockWriter;
+    type MockWriter = EntropyMockWriter;
 
     fn mock(&self) -> Self::MockWriter {
-        Log2MockWriter {}
+        get_mock_writer(&self.encoder.model.tables, &self.encoder.model.frame_sizes)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
