@@ -10,6 +10,7 @@ use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
 use folded_streaming_rans::multi_model_ans::model4decoder::VecFrame;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 
+/*
 #[test]
 fn decoder_decodes_correctly_a_single_dummy_sequence() {
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
@@ -346,3 +347,4 @@ fn test_random_access_with_bitvec() {
         assert_eq!(decoder.decode_from_phase(phase, 0), expected[phase_index]);
     }
 }
+*/

@@ -4,7 +4,6 @@ use anyhow::{bail, Result};
 use strength_reduce::StrengthReducedU64;
 
 use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
-use crate::bvgraph::Component;
 use crate::multi_model_ans::EncoderModelEntry;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::utils::ans_utilities::folding_without_streaming_out;

@@ -15,7 +15,7 @@ pub struct ANSEncoder<
     const RADIX: usize = FASTER_RADIX,
     F: FoldWrite<RADIX> + Default + Clone = Vec<u8>,
 > {
-    model: ANSModel4Encoder,
+    pub model: ANSModel4Encoder,
 
     pub state: State,
 

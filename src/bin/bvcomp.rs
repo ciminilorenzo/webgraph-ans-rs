@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
@@ -33,7 +33,7 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let seq_graph = webgraph::graph::bvgraph::load_seq(&args.basename)?;
+    let seq_graph = load_seq(&args.basename)?;
 
     let model_builder = BVGraphModelBuilder::<2, 8>::new();
     let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(model_builder, 7, 2, 3, 0);

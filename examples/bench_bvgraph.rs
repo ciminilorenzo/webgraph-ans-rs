@@ -17,10 +17,9 @@ const ARCS: usize = 3216152;
 //    cnr-2000 graph.
 
 fn encode_graph() -> Result<()> {
-    let dir = tempfile::tempdir()?;
     let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000")?;
 
-    let model_builder = BVGraphModelBuilder::<2, 8>::new(dir.path().join("model"));
+    let model_builder = BVGraphModelBuilder::<2, 8>::new();
     let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(
         model_builder,
         7,

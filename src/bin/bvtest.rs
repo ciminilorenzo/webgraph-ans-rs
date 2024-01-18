@@ -1,7 +1,6 @@
 use std::{
     hint::black_box,
-    path::{Path, PathBuf},
-    time::Instant,
+    path::{PathBuf},
 };
 
 use anyhow::Result;
@@ -11,15 +10,14 @@ use epserde::prelude::*;
 use folded_streaming_rans::{
     bvgraph::{
         reader::ANSBVGraphReaderBuilder,
-        writer::{BVGraphModelBuilder, BVGraphWriter},
     },
     multi_model_ans::{encoder::ANSCompressorPhase, Prelude},
 };
-use mem_dbg::{DbgFlags, MemDbg};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
 use webgraph::prelude::*;
+
 #[derive(Parser, Debug)]
 #[command(about = "Tests the speed of an ANS graph", long_about = None)]
 struct Args {
@@ -39,14 +37,12 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let seq_graph = webgraph::graph::bvgraph::load_seq(&args.basename)?;
-
+    let seq_graph = load_seq(&args.basename)?;
     let mut buf = PathBuf::from(&args.basename);
     buf.set_extension("ans");
     let prelude = Prelude::<8, Vec<u8>>::load_full(buf.as_path())?;
     buf.set_extension("phases");
     let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
-
     let code_reader_builder = ANSBVGraphReaderBuilder::<2>::new(prelude, phases);
 
     let graph = BVGraph::<ANSBVGraphReaderBuilder<2>, EmptyDict<usize, usize>>::new(

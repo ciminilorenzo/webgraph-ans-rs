@@ -1,7 +1,5 @@
 use anyhow::Result;
-use epserde::prelude::*;
-use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
-use lender::Lender;
+use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter, Log2MockWriter};
 
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
 use webgraph::prelude::{BVGraph, EmptyDict, RandomAccessLabelling};
@@ -24,7 +22,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     //       `-> 3
     // 1 -> 5
 
-    let model_builder = BVGraphModelBuilder::<2, 8>::new();
+    let model_builder = BVGraphModelBuilder::<2, 8,>::new();
     let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(model_builder, 7, 2, 3, 0);
 
     // first iteration
@@ -73,7 +71,6 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
 #[test]
 fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
-    let dir = tempfile::tempdir()?;
     let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000")?;
     let num_nodes = graph.num_nodes();
     let num_arcs = graph.num_arcs_hint().unwrap();
@@ -83,8 +80,11 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     bvcomp.extend(graph.iter())?;
     let encoder = bvcomp.flush()?.build();
 
-    let mut bvcomp =
-        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphWriter<
+        2,
+        8,
+        Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0 // TODO: to change here as entropic
+    );
 
     bvcomp.extend(graph.iter())?;
 

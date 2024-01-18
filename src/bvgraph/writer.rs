@@ -1,4 +1,5 @@
-use std::{convert::Infallible, path::Path};
+use std::{convert::Infallible};
+use std::marker::PhantomData;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::bvgraph::Component;
@@ -95,12 +96,7 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphModelBuilder<FIDELITY, RA
     }
 }
 
-// Questa struct viene usata nella prima passata per popolare i diversi modelli (sono 9) dentro il ANSModel4EncoderBuilder.
-// Contiene tutti i metodi per scrivere i vari componenti del grafo.
-// Per esempio write_outdegree inserisce all'interno del modello relativo il dato.
-impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter
-    for BVGraphModelBuilder<FIDELITY, RADIX>
-{
+impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphModelBuilder<FIDELITY, RADIX> {
     type Error = Infallible;
 
     type MockWriter = Log2MockWriter;
@@ -168,11 +164,13 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter
     }
 }
 
+
 /// A [`BVGraphCodesWriter`] that writes to an [`ANSEncoder`].
 ///
 /// Data is gathered in a number of buffers, one for each [component](`Component`).
 /// At the next node (i.e. when `write_outdegree` is called again), the buffers
 /// are emptied in reverse order.
+// impl<const FIDELITY: usize, const RADIX: usize, F, MW> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F, MW>
 pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize, F>
 where
     F: FoldWrite<RADIX> + Default + Clone,
@@ -188,6 +186,8 @@ where
 
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
+
+    // _marker: PhantomData<MW>,
 }
 
 impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
@@ -214,18 +214,13 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(
-        self,
-    ) -> (
-        ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>,
-        Vec<ANSCompressorPhase>,
-    ) {
+    pub fn into_inner(self, ) -> (ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>, Vec<ANSCompressorPhase>) {
         (self.encoder, self.phases)
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter
-    for BVGraphWriter<FIDELITY, RADIX, F>
+// impl<const FIDELITY: usize, const RADIX: usize, F, MW> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F, MW>
+impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
 where
     F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
 {
