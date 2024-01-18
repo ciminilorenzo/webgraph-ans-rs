@@ -54,6 +54,7 @@ fn encode_graph() -> Result<()> {
     Ok(())
 }
 
+// !!!! REMEMBER TO DELETE THE FILES BEFORE RUNNING THIS BENCH IF YOU HAVE CHANGED MOCK WRITER!!!!
 fn main() -> Result<()> {
     let (prelude, phases) = match (
         <Prelude<8, Vec<u8>>>::load_full("cnr-2000-prelude"),

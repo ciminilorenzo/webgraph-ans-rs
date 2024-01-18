@@ -42,7 +42,7 @@ pub fn main() -> Result<()> {
 
     bvcomp.extend(seq_graph.iter())?;
     let encoder = bvcomp.flush()?.build();
-    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes);
+    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes, 2);
 
     let mut bvcomp =
         BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);

@@ -1,5 +1,4 @@
 use std::{convert::Infallible};
-use std::marker::PhantomData;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::bvgraph::Component;
@@ -227,7 +226,7 @@ where
     type MockWriter = EntropyMockWriter;
 
     fn mock(&self) -> Self::MockWriter {
-        get_mock_writer(&self.encoder.model.tables, &self.encoder.model.frame_sizes)
+        get_mock_writer(&self.encoder.model.tables, &self.encoder.model.frame_sizes, 2)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {

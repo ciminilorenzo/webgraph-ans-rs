@@ -38,10 +38,12 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     }
 
     let encoder = bvcomp.flush()?.build();
-    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes);
+
+    println!("FINE PRIMA PASSATA");
+    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes, 2);
 
     let mut bvcomp =
-        BVComp::<BVGraphWriter<2, 8, Vec<u8>, EntropyMockWriter>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);
+        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);
 
     // second iteration: encodes the graph
     for node_index in 0..graph.num_nodes() {
@@ -82,11 +84,12 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
 
     bvcomp.extend(graph.iter())?;
     let encoder = bvcomp.flush()?.build();
+    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes, 2);
 
     let mut bvcomp = BVComp::<BVGraphWriter<
         2,
         8,
-        Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0 // TODO: to change here as entropic
+        Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0 // TODO: to change here as entropic
     );
 
     bvcomp.extend(graph.iter())?;
