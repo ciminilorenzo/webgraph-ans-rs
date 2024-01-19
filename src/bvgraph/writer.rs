@@ -1,4 +1,5 @@
 use std::{convert::Infallible};
+use std::marker::PhantomData;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::bvgraph::Component;
@@ -12,66 +13,9 @@ use crate::{
     traits::folding::FoldWrite,
     FASTER_RADIX,
 };
-use crate::bvgraph::mock_writers::EntropyMockWriter;
-use crate::utils::ans_utilities::get_mock_writer;
+use crate::bvgraph::mock_writers::{EntropyMockWriter, len, Log2MockWriter, MockWriter};
+use crate::utils::ans_utilities::get_symbol_costs_table;
 
-fn len(value: u64) -> Result<usize, Infallible> {
-    Ok((value + 2).ilog2() as usize)
-}
-
-/// A mock writer that returns `⌊log₂(x)⌋` as the number of bits written
-/// encoding `x`.
-pub struct Log2MockWriter {}
-
-impl BVGraphCodesWriter for Log2MockWriter {
-    type Error = Infallible;
-
-    type MockWriter = Self;
-
-    fn mock(&self) -> Self::MockWriter {
-        Log2MockWriter {}
-    }
-
-    fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        len(value)
-    }
-
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
-    }
-}
 
 /// A [`BVGraphCodesWriter`] that builds an [`ANSModel4Encoder`] using the
 /// symbols written to it.
@@ -79,14 +23,24 @@ impl BVGraphCodesWriter for Log2MockWriter {
 /// Note that a [`BVGraphCodesWriter`] needs a mock writer to measure code
 /// lengths. We use a [`Log2MockWriter`] that returns `⌊log₂(x)⌋` as the number
 /// of bits written encoding `x`.
-pub struct BVGraphModelBuilder<const FIDELITY: usize, const RADIX: usize> {
+pub struct BVGraphModelBuilder<const FIDELITY: usize, const RADIX: usize, MW>
+where
+    MW: BVGraphCodesWriter + MockWriter,
+{
     model_builder: ANSModel4EncoderBuilder<FIDELITY, RADIX>,
+    symbol_costs_table: Vec<Vec<usize>>,
+    _marker: PhantomData<MW>,
 }
 
-impl<const FIDELITY: usize, const RADIX: usize> BVGraphModelBuilder<FIDELITY, RADIX> {
-    pub fn new() -> Self {
+impl<const FIDELITY: usize, const RADIX: usize, MW> BVGraphModelBuilder<FIDELITY, RADIX, MW>
+where
+    MW: BVGraphCodesWriter + MockWriter,
+{
+    pub fn new(symbol_costs_table: Vec<Vec<usize>>) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(9),
+            symbol_costs_table,
+            _marker: PhantomData,
         }
     }
 
@@ -97,13 +51,16 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphModelBuilder<FIDELITY, RA
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphModelBuilder<FIDELITY, RADIX> {
+impl<const FIDELITY: usize, const RADIX: usize, MW> BVGraphCodesWriter for BVGraphModelBuilder<FIDELITY, RADIX, MW>
+where
+    MW: BVGraphCodesWriter + MockWriter,
+{
     type Error = Infallible;
 
-    type MockWriter = Log2MockWriter;
+    type MockWriter = MW;
 
     fn mock(&self) -> Self::MockWriter {
-        Log2MockWriter {}
+        MW::build(self.symbol_costs_table.clone()) // TODO: now it's a clone
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -189,7 +146,7 @@ where
 }
 
 impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
-    pub fn new(model: ANSModel4Encoder, mock_writer: EntropyMockWriter) -> Self {
+    pub fn new(model: ANSModel4Encoder) -> Self {
         Self {
             curr_node: usize::MAX,
             data: [
@@ -226,7 +183,12 @@ where
     type MockWriter = EntropyMockWriter;
 
     fn mock(&self) -> Self::MockWriter {
-        get_mock_writer(&self.encoder.model.tables, &self.encoder.model.frame_sizes, 2)
+        let table = get_symbol_costs_table(
+            &self.encoder.model.tables,
+            &self.encoder.model.frame_sizes,
+            FIDELITY
+        );
+        EntropyMockWriter::build(table)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {

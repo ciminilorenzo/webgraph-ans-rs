@@ -6,7 +6,7 @@ use epserde::prelude::*;
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
-use folded_streaming_rans::utils::ans_utilities::get_mock_writer;
+use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -27,6 +27,7 @@ struct Args {
 }
 
 pub fn main() -> Result<()> {
+    /*
     let args = Args::parse();
 
     stderrlog::new()
@@ -42,7 +43,7 @@ pub fn main() -> Result<()> {
 
     bvcomp.extend(seq_graph.iter())?;
     let encoder = bvcomp.flush()?.build();
-    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes, 2);
+    let mock_writer = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, 2);
 
     let mut bvcomp =
         BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);
@@ -58,5 +59,6 @@ pub fn main() -> Result<()> {
     prelude.store(buf.as_path())?;
     buf.set_extension("phases");
     phases.store(buf.as_path())?;
+    */
     Ok(())
 }

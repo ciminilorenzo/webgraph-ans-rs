@@ -8,7 +8,7 @@ use folded_streaming_rans::multi_model_ans::Prelude;
 
 use anyhow::Result;
 use folded_streaming_rans::multi_model_ans::encoder::ANSCompressorPhase;
-use folded_streaming_rans::utils::ans_utilities::get_mock_writer;
+use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
 
 const NODES: usize = 325557;
 const ARCS: usize = 3216152;
@@ -32,7 +32,7 @@ fn encode_graph() -> Result<()> {
     // first iteration: builds the statistics for each model
     bvcomp.extend(graph.iter())?;
     let encoder = bvcomp.flush()?.build();
-    let mock_writer = get_mock_writer(&encoder.tables, &encoder.frame_sizes);
+    let mock_writer = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes);
 
     let mut bvcomp = BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(
         BVGraphWriter::new(encoder, mock_writer),
