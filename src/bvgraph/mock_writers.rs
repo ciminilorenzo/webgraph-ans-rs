@@ -31,6 +31,7 @@ impl BVGraphCodesWriter for EntropyMockWriter {
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
+        // cerca di prendere dati per simbolo 1
         Ok(self.symbol_costs_table[Component::ReferenceOffset as usize][value as usize])
     }
 

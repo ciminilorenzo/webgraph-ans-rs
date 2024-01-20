@@ -1,6 +1,5 @@
 mod utils;
 
-use bitvec::prelude::{BitVec, Msb0};
 use utils::*;
 
 use rand::prelude::{IteratorRandom, SliceRandom};
@@ -9,6 +8,113 @@ use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
 use folded_streaming_rans::multi_model_ans::model4decoder::VecFrame;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
+
+#[test]
+fn decoder_decodes_correctly_single_dummy_sequence() {
+    let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::<FIDELITY, FASTER_RADIX>::new(1);
+
+    for symbol in &source {
+        model4encoder_builder.push_symbol(*symbol, 0).unwrap();
+    }
+
+    let encoder_model = model4encoder_builder.build();
+    let mut encoder = ANSEncoder::<FIDELITY>::new(encoder_model); // if not specified is always 8
+
+    for symbol in &source {
+        encoder.encode(*symbol, 0);
+    }
+
+    let prelude = encoder.serialize();
+    let model = VecFrame::<FASTER_RADIX, u64>::new(
+        &prelude.tables.clone(),
+        &prelude.frame_sizes.clone(),
+        get_folding_offset(FASTER_RADIX, FIDELITY),
+        get_folding_threshold(FASTER_RADIX, FIDELITY),
+    );
+
+    let mut decoder = ANSDecoder::<FIDELITY>::new(&prelude, &model);
+    let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
+
+    for _ in 0..source.len() {
+        decoded_symbols.push(decoder.decode(0));
+    }
+    decoded_symbols.reverse(); // since encodes as a LIFO
+
+    assert_eq!(decoded_symbols, source);
+}
+
+#[test]
+fn decoder_decodes_correctly_dummy_sequence_with_folding() {
+    let source = vec![1000, 1000, 2000];
+
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::<FIDELITY, 4>::new(1);
+
+    for symbol in &source {
+        model4encoder_builder.push_symbol(*symbol, 0).unwrap();
+    }
+
+    let encoder_model = model4encoder_builder.build();
+    let mut encoder = ANSEncoder::<FIDELITY, 4>::new(encoder_model); // if not specified is always 8
+
+    for symbol in &source {
+        encoder.encode(*symbol, 0);
+    }
+
+    let prelude = encoder.serialize();
+    let model = VecFrame::<4, u64>::new(
+        &prelude.tables.clone(),
+        &prelude.frame_sizes.clone(),
+        get_folding_offset(4, FIDELITY),
+        get_folding_threshold(4, FIDELITY),
+    );
+
+    let mut decoder = ANSDecoder::<FIDELITY, 4, u64, VecFrame<4, u64>>::new(&prelude, &model);
+    let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
+
+    for _ in 0..source.len() {
+        decoded_symbols.push(decoder.decode(0));
+    }
+    decoded_symbols.reverse(); // since encodes as a LIFO
+
+    assert_eq!(decoded_symbols, source);
+}
+
+#[test]
+fn decoder_decodes_correctly_real_sequence() {
+    let source = get_zipfian_distr(0, 1.2).to_vec();
+
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::<FIDELITY, 6>::new(1);
+
+    for symbol in &source {
+        model4encoder_builder.push_symbol(*symbol, 0).unwrap();
+    }
+
+    let encoder_model = model4encoder_builder.build();
+    let mut encoder = ANSEncoder::<FIDELITY, 6>::new(encoder_model);
+
+    for symbol in &source {
+        encoder.encode(*symbol, 0);
+    }
+
+    let prelude = encoder.serialize();
+    let model = VecFrame::<6, u64>::new(
+        &prelude.tables.clone(),
+        &prelude.frame_sizes.clone(),
+        get_folding_offset(6, FIDELITY),
+        get_folding_threshold(6, FIDELITY),
+    );
+
+    let mut decoder = ANSDecoder::<FIDELITY, 6, u64, VecFrame<6, u64>>::new(&prelude, &model);
+    let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
+
+    for _ in 0..source.len() {
+        decoded_symbols.push(decoder.decode(0));
+    }
+    decoded_symbols.reverse(); // since encodes as a LIFO
+
+    assert_eq!(decoded_symbols, source);
+}
 
 /*
 #[test]

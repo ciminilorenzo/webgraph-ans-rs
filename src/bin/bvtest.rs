@@ -1,3 +1,4 @@
+/*
 use std::{
     hint::black_box,
     path::{PathBuf},
@@ -70,4 +71,9 @@ pub fn main() -> Result<()> {
     pl.done();
 
     Ok(())
+}
+*/
+
+fn main() {
+
 }

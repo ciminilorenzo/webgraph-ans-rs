@@ -1,7 +1,6 @@
 use std::cmp::max;
 use anyhow::{bail, Result};
 
-use strength_reduce::StrengthReducedU64;
 
 use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
 use crate::multi_model_ans::EncoderModelEntry;
@@ -73,17 +72,11 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
             let mut k = 32 - log_m;     // !!! K = 32 - log2(M) !!!
 
             for freq in approx_freqs.iter() {
-                let fast_divisor = if *freq > 0 {
-                    StrengthReducedU64::new(*freq as u64)
-                } else {
-                    StrengthReducedU64::new(1)
-                };
-
-                k = if log_m > 0 {k} else {31}; // TODO: Addressed here for now
+                k = if log_m > 0 {k} else {31}; // TODO: (2) Addressed here for now
 
                 table.push(EncoderModelEntry {
                     freq: *freq as u16,
-                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64, // TODO: If M is 0 (not used a specific model at all) this panics
+                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64, // TODO: (1) If M is 0 (not used a specific model at all) this panics
                     cumul_freq: last_covered_freq,
                 });
                 last_covered_freq += *freq as u16;
@@ -116,7 +109,6 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
             true => n,
             false => n.next_power_of_two(),
         };
-        let mut approx_freqs: Vec<usize>;
 
         let entropy = entropy(
             &indexed_freqs
@@ -135,31 +127,49 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
                 .collect::<Vec<usize>>()
         };
 
+        let mut approx_freqs = None;
+        let mut last_accepted_frame_size = 0;
+
         loop {
-            assert!(frame_size <= (1 << 32), "The left extreme of the interval must be 2^32.");
+            if frame_size > (1 << 15) { // we can handle frame sizes bigger than 2^15 cause we want to use u16 for cumul_freqs
+                match approx_freqs {
+                    // if there is an approximation we didn't accept cause the cross entropy was too high, let's accept it
+                    Some(approx_freqs) => {
+                        return (approx_freqs, last_accepted_frame_size);
+                    },
+                    None => {
+                        panic!("\
+                        We can't approximate the frequencies with a frame size bigger than 2^15. You may want
+                        to change RADIX and/or FIDELITY to handle this distribution.
+                        ");
+                    }
+                }
+            }
 
-            let scaling_result = try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
-
-            match scaling_result {
-                Ok(new_freqs) => {
-                    let cross_entropy = cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
+            match try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize) {
+                Ok(new_distribution) => {
+                    let cross_entropy = cross_entropy(freqs, total_freq as f64, &new_distribution, frame_size as f64);
 
                     // we are done if the cross entropy of the new distr is lower than the entropy of
                     // the original distribution times a multiplicative factor TETA.
                     if cross_entropy <= entropy * THETA {
-                        approx_freqs = new_freqs;
+                        approx_freqs = Some(new_distribution);
                         break;
                     } else {
-                        // else try with a bigger frame size
+                        // try with a bigger frame but keep the current one for now
+                        approx_freqs = Some(new_distribution);
+                        last_accepted_frame_size = frame_size;
                         frame_size *= 2;
                     }
-                }
+                },
                 Err(_) => {
                     frame_size *= 2;
                 }
             }
         }
-        approx_freqs.drain(max_sym as usize + 1..);
-        (approx_freqs, frame_size)
+        let mut approximated_frequencies = approx_freqs.unwrap();
+        approximated_frequencies.drain(max_sym as usize + 1..);
+
+        (approximated_frequencies, frame_size)
     }
 }

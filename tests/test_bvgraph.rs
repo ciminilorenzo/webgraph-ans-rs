@@ -8,6 +8,9 @@ use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyMockWriter, Log2MockWriter};
 use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
 
+const FIDELITY: usize = 2;
+const RADIX: usize = 8;
+
 #[test]
 fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     let mut graph = webgraph::graph::vec_graph::VecGraph::new();
@@ -26,8 +29,8 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     // 1 -> 5
 
     // let's pass a dummy table since the Log2MockWriter it's not going to use it
-    let model_builder = BVGraphModelBuilder::<2, 8, Log2MockWriter>::new(Vec::new());
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8, Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, Log2MockWriter>::new(Vec::new());
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<FIDELITY, RADIX, Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // first iteration -> build the model with log2 mock writer
     for node_index in 0..graph.num_nodes() {
@@ -35,16 +38,17 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
             .successors(node_index)
             .map(|x| x.0)
             .collect::<Vec<_>>();
-
         bvcomp.push(successors)?;
     }
 
     let encoder = bvcomp.flush()?.build();
 
     // now i can build with a real table
-    let real_table = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, 2);
-    let model_builder = BVGraphModelBuilder::<2, 8, EntropyMockWriter>::new(real_table);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8, EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let real_table = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, FIDELITY, RADIX);
+
+    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, EntropyMockWriter>::new(real_table);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<FIDELITY, RADIX, EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+
 
     // second iteration -> build the model with entropic mock writer
     for node_index in 0..graph.num_nodes() {
@@ -52,14 +56,13 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
             .successors(node_index)
             .map(|x| x.0)
             .collect::<Vec<_>>();
-
         bvcomp.push(successors)?;
     }
 
     let encoder = bvcomp.flush()?.build();
 
     let mut bvcomp =
-        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
+        BVComp::<BVGraphWriter<FIDELITY, RADIX>>::new(BVGraphWriter::new(encoder), 7, 2, 3, 0);
 
     // second iteration: encodes the graph
     for node_index in 0..graph.num_nodes() {
@@ -74,9 +77,9 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     let (mut encoder, phases) = bvcomp.flush()?.into_inner();
     let prelude = encoder.serialize();
 
-    let code_reader_builder = ANSBVGraphReaderBuilder::<2>::new(prelude, phases);
+    let code_reader_builder = ANSBVGraphReaderBuilder::<FIDELITY, RADIX>::new(prelude, phases);
 
-    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder<2>, EmptyDict<usize, usize>>::new(
+    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder<FIDELITY, RADIX>, EmptyDict<usize, usize>>::new(
         code_reader_builder,
         2,
         7,

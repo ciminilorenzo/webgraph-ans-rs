@@ -4,14 +4,11 @@ use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::bvgraph::Component;
 use crate::multi_model_ans::encoder::ANSCompressorPhase;
-use crate::traits::folding::FoldRead;
 use crate::{
     multi_model_ans::{
         encoder::ANSEncoder, model4encoder::ANSModel4Encoder,
         model4encoder_builder::ANSModel4EncoderBuilder,
     },
-    traits::folding::FoldWrite,
-    FASTER_RADIX,
 };
 use crate::bvgraph::mock_writers::{EntropyMockWriter, len, Log2MockWriter, MockWriter};
 use crate::utils::ans_utilities::get_symbol_costs_table;
@@ -128,10 +125,7 @@ where
 /// Data is gathered in a number of buffers, one for each [component](`Component`).
 /// At the next node (i.e. when `write_outdegree` is called again), the buffers
 /// are emptied in reverse order.
-pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize, F>
-where
-    F: FoldWrite<RADIX> + Default + Clone,
-{
+pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize> {
     /// The container containing the buffers (one for each [component](`Component`)) where symbols are collected.
     data: [Vec<usize>; 9],
 
@@ -139,14 +133,24 @@ where
     curr_node: usize,
 
     /// The encoder used by this writer to encode symbols.
-    encoder: ANSEncoder<FIDELITY, RADIX, F>,
+    encoder: ANSEncoder<FIDELITY, RADIX>,
 
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
+
+    mock_writer: EntropyMockWriter,
 }
 
-impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
+impl<const FIDELITY: usize, const RADIX: usize> BVGraphWriter<FIDELITY, RADIX> {
     pub fn new(model: ANSModel4Encoder) -> Self {
+        let encoder = ANSEncoder::<FIDELITY, RADIX>::new(model);
+        let table = get_symbol_costs_table(
+            &encoder.model.tables,
+            &encoder.model.frame_sizes,
+            FIDELITY,
+            RADIX
+        );
+
         Self {
             curr_node: usize::MAX,
             data: [
@@ -160,33 +164,29 @@ impl<const FIDELITY: usize> BVGraphWriter<FIDELITY, FASTER_RADIX, Vec<u8>> {
                 Vec::new(),
                 Vec::new(),
             ],
-            encoder: ANSEncoder::<FIDELITY, FASTER_RADIX, Vec<u8>>::with_parameters(
-                model,
-                Vec::<u8>::new(),
-            ),
+            encoder,
             phases: Vec::new(),
+            mock_writer: EntropyMockWriter::build(table),
         }
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(self, ) -> (ANSEncoder<FIDELITY, FASTER_RADIX, Vec<u8>>, Vec<ANSCompressorPhase>) {
+    pub fn into_inner(self, ) -> (ANSEncoder<FIDELITY, RADIX>, Vec<ANSCompressorPhase>) {
         (self.encoder, self.phases)
     }
 }
 
-impl<const FIDELITY: usize, const RADIX: usize, F> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX, F>
-where
-    F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
-{
+impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX> {
     type Error = Infallible;
 
     type MockWriter = EntropyMockWriter;
 
-    fn mock(&self) -> Self::MockWriter {
+    fn mock(&self) -> Self::MockWriter { // do i have to return a mock here?
         let table = get_symbol_costs_table(
             &self.encoder.model.tables,
             &self.encoder.model.frame_sizes,
-            FIDELITY
+            FIDELITY,
+            RADIX
         );
         EntropyMockWriter::build(table)
     }
@@ -243,47 +243,47 @@ where
         }
 
         self.data[Component::Outdegree as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_outdegree(value)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::ReferenceOffset as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_reference_offset(value)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::BlockCount as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_block_count(value)
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::Blocks as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_blocks(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::IntervalCount as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_interval_count(value)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::IntervalStart as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_interval_start(value)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::IntervalLen as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_interval_len(value)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::FirstResidual as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_first_residual(value)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[Component::Residual as usize].push(value as usize);
-        len(value)
+        self.mock_writer.write_residual(value)
     }
 
     // Dump last node

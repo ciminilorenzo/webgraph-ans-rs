@@ -11,15 +11,12 @@ use crate::traits::folding::FoldRead;
 use crate::{Freq, State};
 
 #[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
-pub struct Prelude<const RADIX: usize, F: FoldRead<RADIX>> {
+pub struct Prelude<const RADIX: usize> {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub tables: Vec<Vec<EncoderModelEntry>>,
 
     /// The normalized bits during the encoding process.
     pub normalized_bits: Vec<u32>,
-
-    /// The folded bits during the encoding process.
-    pub folded_bits: F,
 
     /// Contains the log2 of the frame size for each model.
     pub frame_sizes: Vec<usize>,

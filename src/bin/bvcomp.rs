@@ -1,11 +1,12 @@
-use std::path::{PathBuf};
-
+/*
+use std::path::PathBuf;
 use anyhow::Result;
 use clap::Parser;
-use epserde::prelude::*;
-use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
+use epserde::prelude::Serialize;
 use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
+use folded_streaming_rans::bvgraph::mock_writers::{EntropyMockWriter, Log2MockWriter};
+use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
 
 #[derive(Parser, Debug)]
@@ -13,8 +14,13 @@ use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
 struct Args {
     /// The basename of the graph.
     basename: String,
+
     /// The basename for the newly compressed graph.
     new_basename: String,
+
+    radix: usize,
+
+    fidelity: usize,
 
     #[clap(flatten)]
     num_cpus: NumCpusArg,
@@ -27,8 +33,9 @@ struct Args {
 }
 
 pub fn main() -> Result<()> {
-    /*
     let args = Args::parse();
+    let radix = args.radix;
+    let fidelity = args.fidelity;
 
     stderrlog::new()
         .verbosity(2)
@@ -37,19 +44,31 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let seq_graph = load_seq(&args.basename)?;
+    let model_builder = BVGraphModelBuilder::<{ radix }, { fidelity }, Log2MockWriter>::new(Vec::new());
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<{radix}, {fidelity}, Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
 
-    let model_builder = BVGraphModelBuilder::<2, 8>::new();
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<2, 8>>::new(model_builder, 7, 2, 3, 0);
+    bvcomp.extend(seq_graph.iter())?;
+
+    let encoder = bvcomp.flush()?.build();
+    let symbol_costs_table = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, fidelity, radix);
+    let model_builder = BVGraphModelBuilder::<{ radix }, { fidelity }, EntropyMockWriter>::new(symbol_costs_table);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<{radix}, {fidelity}, EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     bvcomp.extend(seq_graph.iter())?;
     let encoder = bvcomp.flush()?.build();
-    let mock_writer = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, 2);
 
-    let mut bvcomp =
-        BVComp::<BVGraphWriter<2, 8, Vec<u8>>>::new(BVGraphWriter::new(encoder, mock_writer), 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphWriter<{fidelity}, {radix}>>::new(
+        BVGraphWriter::new(encoder),
+        7,
+        2,
+        3,
+        0
+    );
 
+    // third iteration: encode with the entropy mock
     bvcomp.extend(seq_graph.iter())?;
 
+    // get phases and the encoder from the bvcomp
     let (mut encoder, phases) = bvcomp.flush()?.into_inner();
     let prelude = encoder.serialize();
 
@@ -59,6 +78,11 @@ pub fn main() -> Result<()> {
     prelude.store(buf.as_path())?;
     buf.set_extension("phases");
     phases.store(buf.as_path())?;
-    */
+
     Ok(())
+}
+*/
+
+fn main() {
+
 }
