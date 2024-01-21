@@ -19,7 +19,6 @@ pub struct ANSBVGraphReaderBuilder<const FIDELITY: usize, const RADIX: usize> {
 }
 
 impl<const FIDELITY: usize, const RADIX: usize> ANSBVGraphReaderBuilder<FIDELITY, RADIX> {
-
     pub fn new(prelude: Prelude<RADIX>, phases: Vec<ANSCompressorPhase>) -> Self {
         let folding_offset = (1u64 << (FIDELITY - 1)) * ((1 << RADIX) - 1);
         let folding_threshold = 1u64 << (FIDELITY + RADIX - 1);

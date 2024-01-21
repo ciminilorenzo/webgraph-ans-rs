@@ -1,13 +1,14 @@
-/*
 use std::path::PathBuf;
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser};
 use epserde::prelude::Serialize;
 use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
-use folded_streaming_rans::bvgraph::mock_writers::{EntropyMockWriter, Log2MockWriter};
+use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter};
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
-use folded_streaming_rans::utils::ans_utilities::get_symbol_costs_table;
+
+const FIDELITY: usize = 2;
+const RADIX: usize = 4;
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -17,10 +18,6 @@ struct Args {
 
     /// The basename for the newly compressed graph.
     new_basename: String,
-
-    radix: usize,
-
-    fidelity: usize,
 
     #[clap(flatten)]
     num_cpus: NumCpusArg,
@@ -34,8 +31,6 @@ struct Args {
 
 pub fn main() -> Result<()> {
     let args = Args::parse();
-    let radix = args.radix;
-    let fidelity = args.fidelity;
 
     stderrlog::new()
         .verbosity(2)
@@ -44,21 +39,42 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let seq_graph = load_seq(&args.basename)?;
-    let model_builder = BVGraphModelBuilder::<{ radix }, { fidelity }, Log2MockWriter>::new(Vec::new());
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<{radix}, {fidelity}, Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
+
+    let costs_table = ANSymbolTable::<FIDELITY, RADIX>::initialize_with_binary_cost(9);
+    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, Log2MockWriter<FIDELITY, RADIX>>::new(costs_table);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<
+        FIDELITY,
+        RADIX,
+        Log2MockWriter<FIDELITY, RADIX>
+    >>::new(model_builder, 7, 2, 3, 0);
 
     bvcomp.extend(seq_graph.iter())?;
 
-    let encoder = bvcomp.flush()?.build();
-    let symbol_costs_table = get_symbol_costs_table(&encoder.tables, &encoder.frame_sizes, fidelity, radix);
-    let model_builder = BVGraphModelBuilder::<{ radix }, { fidelity }, EntropyMockWriter>::new(symbol_costs_table);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<{radix}, {fidelity}, EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let model4encoder = bvcomp.flush()?.build();
+    let symbol_freqs = model4encoder.get_symbol_freqs();
+    let entropy_costs = ANSymbolTable::<FIDELITY, RADIX>::new(
+        symbol_freqs,
+        model4encoder.frame_sizes.clone()
+    );
+
+    let model_builder = BVGraphModelBuilder::<
+        FIDELITY,
+        RADIX,
+        EntropyMockWriter<FIDELITY, RADIX>
+    >::new(entropy_costs.clone());
+
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<
+        FIDELITY,
+        RADIX,
+        EntropyMockWriter<FIDELITY, RADIX>
+    >>::new(model_builder, 7, 2, 3, 0);
 
     bvcomp.extend(seq_graph.iter())?;
-    let encoder = bvcomp.flush()?.build();
 
-    let mut bvcomp = BVComp::<BVGraphWriter<{fidelity}, {radix}>>::new(
-        BVGraphWriter::new(encoder),
+    let model4encoder = bvcomp.flush()?.build();
+
+    let mut bvcomp = BVComp::<BVGraphWriter<FIDELITY, RADIX>>::new(
+        BVGraphWriter::new(model4encoder, entropy_costs),
         7,
         2,
         3,
@@ -80,9 +96,5 @@ pub fn main() -> Result<()> {
     phases.store(buf.as_path())?;
 
     Ok(())
-}
-*/
-
-fn main() {
 
 }

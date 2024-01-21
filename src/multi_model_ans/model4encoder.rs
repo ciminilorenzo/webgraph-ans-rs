@@ -1,6 +1,6 @@
-use crate::multi_model_ans::EncoderModelEntry;
+use crate::multi_model_ans::{EncoderModelEntry};
 use crate::traits::quasi::Decode;
-use crate::Symbol;
+use crate::{Freq, Symbol};
 
 pub trait SymbolLookup<Idx> {
     type Output;
@@ -16,6 +16,16 @@ pub struct ANSModel4Encoder {
 
     /// Contains the log2 of the frame size for each model.
     pub frame_sizes: Vec<usize>,
+}
+
+impl ANSModel4Encoder {
+    pub fn get_symbol_freqs(&self) -> Vec<Vec<Freq>> {
+        self
+            .tables
+            .iter()
+            .map(|x| x.iter().map(|y| y.freq).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+    }
 }
 
 impl Decode for ANSModel4Encoder {

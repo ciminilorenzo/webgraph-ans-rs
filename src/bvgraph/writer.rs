@@ -10,33 +10,30 @@ use crate::{
         model4encoder_builder::ANSModel4EncoderBuilder,
     },
 };
-use crate::bvgraph::mock_writers::{EntropyMockWriter, len, Log2MockWriter, MockWriter};
-use crate::utils::ans_utilities::get_symbol_costs_table;
+use crate::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, MockWriter};
+use crate::utils::ans_utilities::folding_without_streaming_out;
 
 
-/// A [`BVGraphCodesWriter`] that builds an [`ANSModel4Encoder`] using the
-/// symbols written to it.
-///
-/// Note that a [`BVGraphCodesWriter`] needs a mock writer to measure code
-/// lengths. We use a [`Log2MockWriter`] that returns `⌊log₂(x)⌋` as the number
-/// of bits written encoding `x`.
 pub struct BVGraphModelBuilder<const FIDELITY: usize, const RADIX: usize, MW>
 where
-    MW: BVGraphCodesWriter + MockWriter,
+    MW: BVGraphCodesWriter + MockWriter<FIDELITY, RADIX>,
 {
     model_builder: ANSModel4EncoderBuilder<FIDELITY, RADIX>,
-    symbol_costs_table: Vec<Vec<usize>>,
+    symbol_costs: ANSymbolTable<FIDELITY, RADIX>,
     _marker: PhantomData<MW>,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize, MW> BVGraphModelBuilder<FIDELITY, RADIX, MW>
 where
-    MW: BVGraphCodesWriter + MockWriter,
+    MW: BVGraphCodesWriter + MockWriter<FIDELITY, RADIX>,
 {
-    pub fn new(symbol_costs_table: Vec<Vec<usize>>) -> Self {
+    const FOLDING_THRESHOLD: u64 = 1 << (FIDELITY + RADIX - 1);
+
+    // symbol_costs should be ANSymbolTable<FIDELITY, RADIX>::initialize_with_binary_cost(9) here
+    pub fn new(symbol_costs: ANSymbolTable<FIDELITY, RADIX>) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(9),
-            symbol_costs_table,
+            symbol_costs,
             _marker: PhantomData,
         }
     }
@@ -50,68 +47,123 @@ where
 
 impl<const FIDELITY: usize, const RADIX: usize, MW> BVGraphCodesWriter for BVGraphModelBuilder<FIDELITY, RADIX, MW>
 where
-    MW: BVGraphCodesWriter + MockWriter,
+    MW: BVGraphCodesWriter + MockWriter<FIDELITY, RADIX>,
 {
     type Error = Infallible;
 
     type MockWriter = MW;
 
     fn mock(&self) -> Self::MockWriter {
-        MW::build(self.symbol_costs_table.clone()) // TODO: now it's a clone
+        // !!!!! now it's a clone since it's &Self. Otherwise i would give ownership !!!!!
+        MW::build(self.symbol_costs.clone())
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::Outdegree as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return Ok(self.symbol_costs.table[Component::Outdegree as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::Outdegree as usize][folded_sym as usize])
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::ReferenceOffset as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::ReferenceOffset as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::ReferenceOffset as usize][folded_sym as usize])
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::BlockCount as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::BlockCount as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::BlockCount as usize][folded_sym as usize])
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::Blocks as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::Blocks as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::Blocks as usize][folded_sym as usize])
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::IntervalCount as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::IntervalCount as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::IntervalCount as usize][folded_sym as usize])
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::IntervalStart as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::IntervalStart as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::IntervalStart as usize][folded_sym as usize])
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::IntervalLen as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::IntervalLen as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::IntervalLen as usize][folded_sym as usize])
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::FirstResidual as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::FirstResidual as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::FirstResidual as usize][folded_sym as usize])
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, Component::Residual as usize);
-        len(value)
+
+        if value < Self::FOLDING_THRESHOLD {
+            return  Ok(self.symbol_costs.table[Component::Residual as usize][value as usize])
+        }
+
+        let folded_sym = folding_without_streaming_out(value, RADIX, FIDELITY);
+        Ok(self.symbol_costs.table[Component::Residual as usize][folded_sym as usize])
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
@@ -138,19 +190,13 @@ pub struct BVGraphWriter<const FIDELITY: usize, const RADIX: usize> {
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
 
-    mock_writer: EntropyMockWriter,
+    mock_writer: EntropyMockWriter<FIDELITY, RADIX>,
 }
 
 impl<const FIDELITY: usize, const RADIX: usize> BVGraphWriter<FIDELITY, RADIX> {
-    pub fn new(model: ANSModel4Encoder) -> Self {
-        let encoder = ANSEncoder::<FIDELITY, RADIX>::new(model);
-        let table = get_symbol_costs_table(
-            &encoder.model.tables,
-            &encoder.model.frame_sizes,
-            FIDELITY,
-            RADIX
-        );
 
+    // costs_table should be ANSymbolTable<FIDELITY, RADIX>::new by passing the table of entries of the encoder
+    pub fn new(model: ANSModel4Encoder, costs_table: ANSymbolTable<FIDELITY, RADIX>) -> Self {
         Self {
             curr_node: usize::MAX,
             data: [
@@ -164,14 +210,14 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphWriter<FIDELITY, RADIX> {
                 Vec::new(),
                 Vec::new(),
             ],
-            encoder,
+            mock_writer: EntropyMockWriter::build(costs_table),
+            encoder: ANSEncoder::<FIDELITY, RADIX>::new(model),
             phases: Vec::new(),
-            mock_writer: EntropyMockWriter::build(table),
         }
     }
 
     /// Consume self and return the encoder.
-    pub fn into_inner(self, ) -> (ANSEncoder<FIDELITY, RADIX>, Vec<ANSCompressorPhase>) {
+    pub fn into_inner(self) -> (ANSEncoder<FIDELITY, RADIX>, Vec<ANSCompressorPhase>) {
         (self.encoder, self.phases)
     }
 }
@@ -179,16 +225,10 @@ impl<const FIDELITY: usize, const RADIX: usize> BVGraphWriter<FIDELITY, RADIX> {
 impl<const FIDELITY: usize, const RADIX: usize> BVGraphCodesWriter for BVGraphWriter<FIDELITY, RADIX> {
     type Error = Infallible;
 
-    type MockWriter = EntropyMockWriter;
+    type MockWriter = EntropyMockWriter<FIDELITY, RADIX>;
 
-    fn mock(&self) -> Self::MockWriter { // do i have to return a mock here?
-        let table = get_symbol_costs_table(
-            &self.encoder.model.tables,
-            &self.encoder.model.frame_sizes,
-            FIDELITY,
-            RADIX
-        );
-        EntropyMockWriter::build(table)
+    fn mock(&self) -> Self::MockWriter {
+        self.mock_writer.clone() // i must return costs even below so i have to keep an instance of the mock
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {

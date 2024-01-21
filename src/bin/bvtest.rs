@@ -1,4 +1,3 @@
-/*
 use std::{
     hint::black_box,
     path::{PathBuf},
@@ -18,6 +17,9 @@ use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
 use webgraph::prelude::*;
+
+const FIDELITY: usize = 2;
+const RADIX: usize = 4;
 
 #[derive(Parser, Debug)]
 #[command(about = "Tests the speed of an ANS graph", long_about = None)]
@@ -41,12 +43,12 @@ pub fn main() -> Result<()> {
     let seq_graph = load_seq(&args.basename)?;
     let mut buf = PathBuf::from(&args.basename);
     buf.set_extension("ans");
-    let prelude = Prelude::<8, Vec<u8>>::load_full(buf.as_path())?;
+    let prelude = Prelude::<RADIX>::load_full(buf.as_path())?;
     buf.set_extension("phases");
     let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
-    let code_reader_builder = ANSBVGraphReaderBuilder::<2>::new(prelude, phases);
+    let code_reader_builder = ANSBVGraphReaderBuilder::<FIDELITY, RADIX>::new(prelude, phases);
 
-    let graph = BVGraph::<ANSBVGraphReaderBuilder<2>, EmptyDict<usize, usize>>::new(
+    let graph = BVGraph::<ANSBVGraphReaderBuilder<FIDELITY, RADIX>, EmptyDict<usize, usize>>::new(
         code_reader_builder,
         2,
         7,
@@ -71,9 +73,4 @@ pub fn main() -> Result<()> {
     pl.done();
 
     Ok(())
-}
-*/
-
-fn main() {
-
 }
