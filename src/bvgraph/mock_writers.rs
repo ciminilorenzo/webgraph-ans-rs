@@ -23,6 +23,11 @@ pub struct ANSymbolTable {
 
 impl ANSymbolTable {
 
+    /// Returns a new ANSymbolTable, that is a table containing for each component, the cost of every symbol calculated
+    /// as follow:
+    /// ```text
+    /// C(x) = ((1 / p) * 2^16) + ((bytes_to_unfold * radix) * 2^16)
+    /// ```
     pub fn new(symbol_freqs: Vec<Vec<Freq>>, frame_sizes: Vec<usize>, fidelity: usize, radix: usize) -> Self {
         let mut table = Self::initialize_with_binary_cost(fidelity, radix).table;
         let folding_threshold = 1u16 << (fidelity + radix - 1);
