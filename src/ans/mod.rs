@@ -1,11 +1,14 @@
+use epserde::Epserde;
+use epserde::prelude::ZeroCopy;
 use crate::traits::folding::FoldRead;
 use crate::{Freq, State};
 use strength_reduce::StrengthReducedU64;
+use crate::traits::quasi::Quasi;
 
-mod decoder;
-mod encoder;
-mod model4decoder;
-mod model4encoder;
+pub mod decoder;
+pub mod encoder;
+pub mod model4decoder;
+pub mod model4encoder;
 
 pub const K: usize = 16;
 pub const K_LOG2: usize = 4;
@@ -61,4 +64,13 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
             },
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, Epserde)]
+#[repr(C)]
+#[zero_copy]
+pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX> + ZeroCopy + 'static> {
+    pub freq: Freq,
+    pub cumul_freq: Freq,
+    pub quasi_folded: T,
 }

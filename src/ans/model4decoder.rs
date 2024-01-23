@@ -1,10 +1,10 @@
 use crate::traits::quasi::Quasi;
-use crate::{DecoderModelEntry, State, Symbol};
+use crate::{State, Symbol};
 use epserde::prelude::*;
 use std::ops::Index;
 use sucds::bit_vectors::{Rank, Rank9Sel};
 use sux::prelude::*;
-use crate::ans::EncoderModelEntry;
+use crate::ans::{DecoderModelEntry, EncoderModelEntry};
 
 #[derive(Epserde)]
 pub struct EliasFanoFrame<const RADIX: usize, T>

@@ -1,12 +1,11 @@
 mod utils;
 
 use rstest::*;
-use utils::*;
 
 use folded_streaming_rans::{RawSymbol, State};
-use folded_streaming_rans::multi_model_ans::model4decoder::{EliasFanoFrame, Rank9SelFrame, VecFrame};
+use folded_streaming_rans::ans::model4decoder::*;
+use folded_streaming_rans::ans::model4encoder::SingleANSModel4Encoder;
 use folded_streaming_rans::multi_model_ans::model4encoder::SymbolLookup;
-use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
@@ -25,33 +24,25 @@ fn probe_works_for_all_types_of_frames(
     #[case] slots: Vec<usize>,
     #[case] expected_symbols: Vec<u64>,
 ) {
-    let mut encoder_model_builder = ANSModel4EncoderBuilder::<FIDELITY, RADIX>::new(1);
-
-    for symbol in symbols {
-        encoder_model_builder.push_symbol(symbol, 0).unwrap();
-    }
-
-    let encoder_model = encoder_model_builder.build();
-    let tables = encoder_model.tables;
-    let frame_sizes = encoder_model.frame_sizes;
-    let folding_offset = get_folding_offset(RADIX, FIDELITY);
-    let folding_threshold = get_folding_threshold(RADIX, FIDELITY);
+    let model4encoder = SingleANSModel4Encoder::new(&symbols, FIDELITY, RADIX);
+    let folding_threshold = (1 << (FIDELITY + RADIX - 1)) as u64;
+    let folding_offset = ((1 << RADIX) - 1) * (1 << (FIDELITY - 1));
 
     let bitvec_frame = Rank9SelFrame::<RADIX, u64>::new(
-        &tables,
-        &frame_sizes,
+        &model4encoder.table,
+        model4encoder.log2_frame_size,
         folding_offset,
         folding_threshold,
     );
     let vec_frame = VecFrame::<RADIX, u64>::new(
-        &tables,
-        &frame_sizes,
+        &model4encoder.table,
+        model4encoder.log2_frame_size,
         folding_offset,
         folding_threshold,
     );
     let elias_frame = EliasFanoFrame::<RADIX, u64>::new(
-        &tables,
-        &frame_sizes,
+        &model4encoder.table,
+        model4encoder.log2_frame_size,
         folding_offset,
         folding_threshold,
     );
@@ -59,8 +50,8 @@ fn probe_works_for_all_types_of_frames(
     for i in 0..slots.len() {
         let slot_to_probe = slots[i] as State;
 
-        assert_eq!(expected_symbols[i], bitvec_frame.symbol(slot_to_probe, 0).quasi_folded);
-        assert_eq!(expected_symbols[i], elias_frame.symbol(slot_to_probe, 0).quasi_folded);
-        assert_eq!(expected_symbols[i], vec_frame.symbol(slot_to_probe, 0).quasi_folded);
+        assert_eq!(expected_symbols[i], bitvec_frame[slot_to_probe].quasi_folded);
+        assert_eq!(expected_symbols[i], elias_frame[slot_to_probe].quasi_folded);
+        assert_eq!(expected_symbols[i], vec_frame[slot_to_probe].quasi_folded);
     }
 }

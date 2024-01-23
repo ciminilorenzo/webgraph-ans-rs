@@ -1,3 +1,4 @@
+/*
 use epserde::prelude::{Deserialize, Serialize};
 
 use webgraph::prelude::{BVComp, BVGraph, EmptyDict, RandomAccessLabelling, SequentialLabelling};
@@ -7,7 +8,7 @@ use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter}
 use folded_streaming_rans::multi_model_ans::Prelude;
 
 use anyhow::Result;
-use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter};
+use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter};
 use folded_streaming_rans::multi_model_ans::encoder::ANSCompressorPhase;
 
 const NODES: usize = 325557;
@@ -121,3 +122,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+*/
+
+fn main() {}

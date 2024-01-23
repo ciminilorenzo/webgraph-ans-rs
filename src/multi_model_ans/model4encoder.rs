@@ -1,11 +1,11 @@
 use crate::multi_model_ans::{EncoderModelEntry};
-use crate::traits::quasi::Decode;
 use crate::{Freq, Symbol};
+use crate::bvgraph::BVGraphComponent;
 
 pub trait SymbolLookup<Idx> {
     type Output;
 
-    fn symbol(&self, data: Idx, model_index: usize) -> &Self::Output;
+    fn symbol(&self, data: Idx, component: BVGraphComponent) -> &Self::Output;
 }
 
 #[derive(Clone)]
@@ -26,17 +26,15 @@ impl ANSModel4Encoder {
             .map(|x| x.iter().map(|y| y.freq).collect::<Vec<_>>())
             .collect::<Vec<_>>()
     }
-}
 
-impl Decode for ANSModel4Encoder {
     #[inline(always)]
-    fn get_frame_mask(&self, model_index: usize) -> u64 {
-        (1 << self.frame_sizes[model_index]) - 1
+    pub fn get_frame_mask(&self, component: BVGraphComponent) -> u64 {
+        (1 << self.frame_sizes[component as usize]) - 1
     }
 
     #[inline(always)]
-    fn get_log2_frame_size(&self, model_index: usize) -> usize {
-        self.frame_sizes[model_index]
+    pub fn get_log2_frame_size(&self, component: BVGraphComponent) -> usize {
+        self.frame_sizes[component as usize]
     }
 }
 
@@ -44,7 +42,7 @@ impl SymbolLookup<Symbol> for ANSModel4Encoder {
     type Output = EncoderModelEntry;
 
     #[inline(always)]
-    fn symbol(&self, symbol: Symbol, model_index: usize) -> &Self::Output {
-        &self.tables[model_index][symbol as usize]
+    fn symbol(&self, symbol: Symbol, component: BVGraphComponent) -> &Self::Output {
+        &self.tables[component as usize][symbol as usize]
     }
 }

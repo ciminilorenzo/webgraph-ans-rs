@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 
 
 use crate::{LOG2_B, MAX_RAW_SYMBOL, RawSymbol, Symbol};
+use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::EncoderModelEntry;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::utils::ans_utilities::folding_without_streaming_out;
@@ -16,50 +17,62 @@ use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
 const THETA: f64 = 1.001;
 
 
-pub struct ANSModel4EncoderBuilder<const FIDELITY: usize, const RADIX: usize> {
-    models: usize,
+pub struct ANSModel4EncoderBuilder {
+
     frequencies: Vec<Vec<usize>>,
+
+    /// For each
     max_sym: Vec<Symbol>,
+
+    /// The current fidelity used to fold the symbols.
+    fidelity: usize,
+
+    /// The current radix used to fold the symbols.
+    radix: usize,
+
+    /// Represent the threshold starting from which a symbol has to be folded.
+    folding_threshold: RawSymbol,
 }
 
-impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELITY, RADIX> {
-    const FOLDING_THRESHOLD: RawSymbol = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+impl ANSModel4EncoderBuilder {
 
     /// Creates a new AnsModel4EncoderBuilder with the given number of models.
-    pub fn new(models: usize) -> Self {
+    pub fn new(fidelity: usize, radix: usize) -> Self {
         // we can calculate the biggest folded sym that we can see. This is used to create a vec with already-allocated frequencies
-        let presumed_max_bucket: Symbol = folding_without_streaming_out(MAX_RAW_SYMBOL, RADIX, FIDELITY);
-        let frequencies = vec![ vec![0_usize; presumed_max_bucket as usize]; models];
+        let presumed_max_bucket: Symbol = folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
+        let frequencies = vec![ vec![0_usize; presumed_max_bucket as usize]; BVGraphComponent::COMPONENTS];
 
         Self {
-            models,
             frequencies,
-            max_sym: vec![0; models],
+            max_sym: vec![0; BVGraphComponent::COMPONENTS],
+            fidelity,
+            radix,
+            folding_threshold: (1 << (fidelity + radix - 1)) as u64,
         }
     }
 
-    pub fn push_symbol(&mut self, symbol: RawSymbol, model_index: usize) -> Result<()> {
+    pub fn push_symbol(&mut self, symbol: RawSymbol, component: BVGraphComponent) -> Result<()> {
         if symbol > MAX_RAW_SYMBOL {
             bail!("Symbol can't be bigger than u48::MAX");
         }
 
-        let folded_sym = match symbol < Self::FOLDING_THRESHOLD {
+        let folded_sym = match symbol < self.folding_threshold {
             true => symbol as Symbol,
-            false => folding_without_streaming_out(symbol, RADIX, FIDELITY),
+            false => folding_without_streaming_out(symbol, self.radix, self.fidelity),
         };
 
         // this unwrap is safe since we have already filled the vec with all zeros
-        *self.frequencies[model_index].get_mut(folded_sym as usize).unwrap() += 1;
-        self.max_sym[model_index] = max(self.max_sym[model_index], folded_sym);
+        *self.frequencies[component as usize].get_mut(folded_sym as usize).unwrap() += 1;
+        self.max_sym[component as usize] = max(self.max_sym[component as usize], folded_sym);
 
         Ok(())
     }
 
     pub fn build(self) -> ANSModel4Encoder {
-        let mut tables: Vec<Vec<EncoderModelEntry>> = Vec::with_capacity(self.models);
-        let mut frame_sizes = Vec::with_capacity(self.models);
+        let mut tables: Vec<Vec<EncoderModelEntry>> = Vec::with_capacity(BVGraphComponent::COMPONENTS);
+        let mut frame_sizes = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
-        for model_index in 0..self.models {
+        for model_index in 0..BVGraphComponent::COMPONENTS {
             let symbols = self.frequencies[model_index].iter().filter(|freq| **freq > 0).count();
             let (approx_freqs, m) = Self::approx_freqs(
                 &self.frequencies[model_index],
@@ -72,11 +85,11 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
             let mut k = 32 - log_m;     // !!! K = 32 - log2(M) !!!
 
             for freq in approx_freqs.iter() {
-                k = if log_m > 0 {k} else {31}; // TODO: (2) Addressed here for now
+                k = if log_m > 0 {k} else {31};
 
                 table.push(EncoderModelEntry {
                     freq: *freq as u16,
-                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64, // TODO: (1) If M is 0 (not used a specific model at all) this panics
+                    upperbound: (1_u64 << (k + LOG2_B)) * *freq as u64,
                     cumul_freq: last_covered_freq,
                 });
                 last_covered_freq += *freq as u16;
@@ -138,9 +151,8 @@ impl <const FIDELITY: usize, const RADIX: usize> ANSModel4EncoderBuilder<FIDELIT
                         return (approx_freqs, last_accepted_frame_size);
                     },
                     None => {
-                        panic!("\
-                        We can't approximate the frequencies with a frame size bigger than 2^15. You may want
-                        to change RADIX and/or FIDELITY to handle this distribution.
+                        panic!("The distribution of the symbols cannot be satisfactorily approximated with a frame
+                        size smaller than 2^16. You may want to change RADIX and/or FIDELITY to make the compressor work.
                         ");
                     }
                 }

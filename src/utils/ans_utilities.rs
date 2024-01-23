@@ -1,5 +1,4 @@
 use crate::{RawSymbol, Symbol};
-use crate::multi_model_ans::EncoderModelEntry;
 
 /// Folds a symbol without streaming out the bits.
 pub fn folding_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: usize) -> Symbol {

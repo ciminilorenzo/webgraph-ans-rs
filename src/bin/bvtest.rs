@@ -1,3 +1,4 @@
+/*
 use std::{
     hint::black_box,
     path::{PathBuf},
@@ -7,12 +8,6 @@ use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
 use epserde::prelude::*;
-use folded_streaming_rans::{
-    bvgraph::{
-        reader::ANSBVGraphReaderBuilder,
-    },
-    multi_model_ans::{encoder::ANSCompressorPhase, Prelude},
-};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -74,3 +69,6 @@ pub fn main() -> Result<()> {
 
     Ok(())
 }
+*/
+
+fn main() {}

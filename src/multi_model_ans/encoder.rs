@@ -1,80 +1,84 @@
-use epserde::Epserde;
-use mem_dbg::{MemDbg, MemSize};
+use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4encoder::{ANSModel4Encoder, SymbolLookup};
-use crate::multi_model_ans::Prelude;
-use crate::traits::quasi::Decode;
-use crate::{RawSymbol, State, Symbol, FASTER_RADIX, LOG2_B};
+use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
+use crate::{RawSymbol, State, Symbol, LOG2_B};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 #[derive(Clone)]
-pub struct ANSEncoder<const FIDELITY: usize, const RADIX: usize = FASTER_RADIX> {
+pub struct ANSEncoder {
     pub model: ANSModel4Encoder,
 
     pub state: State,
 
     /// The normalized bits during the encoding process.
-    pub normalized_bits: Vec<u32>,
+    pub stream: Vec<u32>,
+
+    /// Represent the threshold starting from which a symbol has to be folded.
+    pub folding_threshold: u64,
+
+    pub folding_offset: u64,
+
+    pub radix: usize,
+
+    pub fidelity: usize,
 }
 
-impl<const FIDELITY: usize, const RADIX: usize> ANSEncoder<FIDELITY, RADIX> {
-    /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
-    const FOLDING_THRESHOLD: RawSymbol = (1 << (FIDELITY + RADIX - 1)) as RawSymbol;
+impl ANSEncoder {
 
-    const FOLDING_OFFSET: RawSymbol = ((1 << RADIX) - 1) * (1 << (FIDELITY - 1));
-
-    pub fn new(model: ANSModel4Encoder) -> Self {
+    pub fn new(model: ANSModel4Encoder, fidelity: usize, radix: usize) -> Self {
         Self {
             state: 1_u64 << 32,
             model,
-            normalized_bits: Vec::new(),
+            stream: Vec::new(),
+            folding_threshold: (1 << (fidelity + radix - 1)) as u64,
+            folding_offset: ((1 << radix) - 1) * (1 << (fidelity - 1)),
+            radix,
+            fidelity,
         }
     }
 
-    fn get_folds_number(symbol: RawSymbol) -> usize {
-        ((u64::ilog2(symbol) + 1) as usize - FIDELITY) / RADIX
+    fn get_folds_number(&self, symbol: RawSymbol) -> usize {
+        ((u64::ilog2(symbol) + 1) as usize - self.fidelity) / self.radix
     }
 }
 
-/// Encoding functions
-impl<const FIDELITY: usize, const RADIX: usize> ANSEncoder<FIDELITY, RADIX> {
-    /// Encodes a single symbol by using the data in the model with the given index.
+impl ANSEncoder {
+    /// Encodes a single symbol of a specific [`Component`](BVGraphComponent).
     ///
     /// Note that the ANS decodes the sequence in reverse order.
-    pub fn encode(&mut self, mut symbol: RawSymbol, model_index: usize) {
+    pub fn encode(&mut self, mut symbol: RawSymbol, component: BVGraphComponent) {
         // if symbol has to be folded, dump the bytes we have to fold
-        if symbol >= Self::FOLDING_THRESHOLD {
-            let folds = Self::get_folds_number(symbol);
+        if symbol >= self.folding_threshold {
+            let folds = self.get_folds_number(symbol);
 
             for _ in 0..folds {
-                let bits_to_push = symbol & ((1 << RADIX) - 1);
+                let bits_to_push = symbol & ((1 << self.radix) - 1);
 
-                // dump in the space if there is enough space
-                if self.state.leading_zeros() >= RADIX as u32 {
-                    self.state <<= RADIX;
+                // dump in the state if there is enough space
+                if self.state.leading_zeros() >= self.radix as u32 {
+                    self.state <<= self.radix;
+                    self.state += bits_to_push;
+                } else { // otherwise, normalize the state and push the bits in the normalized bits
+                    self.state = Self::shrink_state(self.state, &mut self.stream);
+                    self.state <<= self.radix;
                     self.state += bits_to_push;
                 }
-                // otherwise, normalize the state and push the bits in the normalized bits
-                else {
-                    self.state = Self::shrink_state(self.state, &mut self.normalized_bits);
-                    self.state <<= RADIX;
-                    self.state += bits_to_push;
-                }
-                symbol >>= RADIX;
+                symbol >>= self.radix;
             }
-            symbol += Self::FOLDING_OFFSET * folds as RawSymbol;
+            symbol += self.folding_offset * folds as RawSymbol;
         }
         let symbol = symbol as Symbol;
-        let sym_data = self.model.symbol(symbol, model_index);
+        let sym_data = self.model.symbol(symbol, component);
 
         if self.state >= sym_data.upperbound {
-            self.state = Self::shrink_state(self.state, &mut self.normalized_bits);
+            self.state = Self::shrink_state(self.state, &mut self.stream);
         }
 
         let block = self.state / sym_data.freq as u64;
 
-        self.state = (block << self.model.get_log2_frame_size(model_index))
+        self.state = (block << self.model.get_log2_frame_size(component))
             + sym_data.cumul_freq as u64
             + (self.state - (block * sym_data.freq as u64));
     }
@@ -86,17 +90,17 @@ impl<const FIDELITY: usize, const RADIX: usize> ANSEncoder<FIDELITY, RADIX> {
         state
     }
 
-    pub fn serialize(&mut self) -> Prelude<RADIX> {
+    pub fn serialize(self) -> Prelude {
         Prelude {
-            tables: self.model.tables.clone(),
-            normalized_bits: self.normalized_bits.clone(),
-            frame_sizes: self.model.frame_sizes.clone(),
+            tables: self.model.tables,
+            normalized_bits: self.stream,
+            frame_sizes: self.model.frame_sizes,
             state: self.state,
         }
     }
 
-    /// Returns the current phase of the compressor, that is: the current state, the index of the last chunk of 32 bits
-    /// that have been normalized, and the index of the last chunk of [`RADIX`] bits that have been folded.
+    /// Returns the current phase of the compressor, that is: the current state and the index of the last chunk of 32 bits
+    /// that have been normalized.
     ///
     /// An [`ANSCompressorPhase`] can be utilized to restore the state of the compressor at a given point in time. In the
     /// specific, if the compressor actual phase is `phase`, then the next decode symbol will be the same as the one
@@ -104,15 +108,7 @@ impl<const FIDELITY: usize, const RADIX: usize> ANSEncoder<FIDELITY, RADIX> {
     pub fn get_current_compressor_phase(&self) -> ANSCompressorPhase {
         ANSCompressorPhase {
             state: self.state,
-            normalized: self.normalized_bits.len(),
+            stream_pointer: self.stream.len(),
         }
     }
-}
-
-#[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]
-#[zero_copy]
-#[repr(C)]
-pub struct ANSCompressorPhase {
-    pub state: State,
-    pub normalized: usize,
 }

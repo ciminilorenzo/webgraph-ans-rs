@@ -7,11 +7,10 @@ pub mod model4encoder_builder;
 use epserde::prelude::*;
 use mem_dbg::*;
 
-use crate::traits::folding::FoldRead;
 use crate::{Freq, State};
 
 #[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
-pub struct Prelude<const RADIX: usize> {
+pub struct Prelude {
     /// Contains, for each index, the data associated to the symbol equal to that index.
     pub tables: Vec<Vec<EncoderModelEntry>>,
 
@@ -22,6 +21,15 @@ pub struct Prelude<const RADIX: usize> {
     pub frame_sizes: Vec<usize>,
 
     pub state: State,
+}
+
+
+#[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]
+#[zero_copy]
+#[repr(C)]
+pub struct ANSCompressorPhase {
+    pub state: State,
+    pub stream_pointer: usize,
 }
 
 #[derive(Clone, Copy, Debug, Epserde, MemDbg, MemSize)]
@@ -49,4 +57,13 @@ impl From<(Freq, u64, Freq)> for EncoderModelEntry {
             cumul_freq: tuple.2,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, Epserde)]
+#[repr(C)]
+#[zero_copy]
+pub struct DecoderModelEntry {
+    pub freq: Freq,
+    pub cumul_freq: Freq,
+    pub quasi_folded: u64,
 }

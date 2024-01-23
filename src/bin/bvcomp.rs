@@ -1,3 +1,4 @@
+/*
 use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser};
@@ -8,7 +9,7 @@ use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWri
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 
 const FIDELITY: usize = 2;
-const RADIX: usize = 4;
+const RADIX: usize = 6;
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -46,7 +47,7 @@ pub fn main() -> Result<()> {
         FIDELITY,
         RADIX,
         Log2MockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    >>::new(model_builder, 16, 2, 2147483647, 0);
 
     bvcomp.extend(seq_graph.iter())?;
 
@@ -67,7 +68,7 @@ pub fn main() -> Result<()> {
         FIDELITY,
         RADIX,
         EntropyMockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    >>::new(model_builder, 16, 2, 2147483647, 0);
 
     bvcomp.extend(seq_graph.iter())?;
 
@@ -75,9 +76,9 @@ pub fn main() -> Result<()> {
 
     let mut bvcomp = BVComp::<BVGraphWriter<FIDELITY, RADIX>>::new(
         BVGraphWriter::new(model4encoder, entropy_costs),
-        7,
+        16,
         2,
-        3,
+        2147483647,
         0
     );
 
@@ -98,3 +99,6 @@ pub fn main() -> Result<()> {
     Ok(())
 
 }
+*/
+
+fn main() {}

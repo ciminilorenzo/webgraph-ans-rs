@@ -1,15 +1,10 @@
-#![allow(dead_code)]
 #![allow(unused_must_use)]
-#![allow(unused_variables)]
+#![allow(unconditional_recursion)]
+#![allow(dead_code)]
 
-use crate::traits::quasi::Quasi;
-use epserde::prelude::*;
-use epserde::traits::ZeroCopy;
 pub mod ans;
 pub mod multi_model_ans;
-
 pub mod bvgraph;
-
 mod traits;
 pub mod utils;
 
@@ -42,13 +37,3 @@ pub type Freq = u16;
 
 /// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
-
-
-#[derive(Clone, Copy, Debug, Default, Epserde)]
-#[repr(C)]
-#[zero_copy]
-pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX> + ZeroCopy + 'static> {
-    pub freq: Freq,
-    pub cumul_freq: Freq,
-    pub quasi_folded: T,
-}

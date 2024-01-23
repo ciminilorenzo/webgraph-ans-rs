@@ -1,65 +1,81 @@
 use webgraph::prelude::BVGraphCodesReader;
-use crate::multi_model_ans::encoder::ANSCompressorPhase;
+
 use crate::multi_model_ans::model4decoder::VecFrame;
 use crate::multi_model_ans::model4encoder::SymbolLookup;
-use crate::multi_model_ans::Prelude;
-use crate::traits::quasi::{Decode, Quasi};
-use crate::{DecoderModelEntry, RawSymbol, State, FASTER_RADIX, LOG2_B};
-use crate::bvgraph::Component;
+use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
+use crate::{RawSymbol, State, LOG2_B};
+use crate::bvgraph::BVGraphComponent;
 
 #[derive(Clone)]
-pub struct ANSDecoder<'a, const FIDELITY: usize, const RADIX: usize = FASTER_RADIX, H = u64, M = VecFrame<FASTER_RADIX, H>>
-where
-    H: Quasi<RADIX>,
-    M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-{
-    pub model: &'a M,
+pub struct ANSDecoder<'a> {
+    /// The model used to decode the sequence.
+    pub model: &'a VecFrame,
 
     /// The normalized bits during the encoding process.
-    pub normalized_bits: &'a Vec<u32>,
+    pub stream: &'a Vec<u32>,
 
+    /// The current state of the decoder.
     pub state: State,
 
-    pub normalized_pointer: usize,
+    /// The pointer to the next normalized chunk of 32 bits to be read.
+    pub stream_pointer: usize,
+
+    /// The value of fidelity currently used by the decoder.
+    pub fidelity: usize,
+
+    /// The value of radix currently used by the decoder.
+    pub radix: usize,
 }
 
-impl<'a, const FIDELITY: usize, const RADIX: usize, H, M> ANSDecoder<'a, FIDELITY, RADIX, H, M>
-where
-    H: Quasi<RADIX>,
-    M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
+impl<'a> ANSDecoder<'a>
 {
     /// The lower bound of the interval.
     const LOWER_BOUND: State = 1 << 32;
 
-    pub fn new(prelude: &'a Prelude<RADIX>, model: &'a M) -> Self {
+    /// The number of bits reserved to represent the symbol in the quasi-folded value.
+    const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
+
+    pub fn new(prelude: &'a Prelude, model: &'a VecFrame, fidelity: usize, radix: usize) -> Self {
         Self {
-            normalized_pointer: prelude.normalized_bits.len(),
+            stream_pointer: prelude.normalized_bits.len(),
             model,
-            normalized_bits: &prelude.normalized_bits,
+            stream: &prelude.normalized_bits,
             state: prelude.state,
+            fidelity,
+            radix,
         }
     }
 
-    pub fn from_raw_parts (prelude: &'a Prelude<RADIX>, model: &'a M, phase: ANSCompressorPhase) -> Self {
+    /// Initialize a new ANSDecoder from its raw parts.
+    ///
+    /// Note: the next decoded symbol will be the last one encoded in the given [`phase`](ANSCompressorPhase)
+    pub fn from_raw_parts(
+        prelude: &'a Prelude,
+        model: &'a VecFrame,
+        phase: ANSCompressorPhase,
+        fidelity: usize,
+        radix: usize,
+    ) -> Self
+    {
         Self {
             model,
-            normalized_bits: &prelude.normalized_bits,
+            stream: &prelude.normalized_bits,
             state: phase.state,
-            normalized_pointer: phase.normalized,
+            stream_pointer: phase.stream_pointer,
+            fidelity,
+            radix,
         }
     }
 }
 
-impl<'a, const FIDELITY: usize, const RADIX: usize, H, M> ANSDecoder<'a, FIDELITY, RADIX, H, M>
-where
-    H: Quasi<RADIX>,
-    M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-{
-    pub fn decode(&mut self, model_index: usize) -> RawSymbol {
-        let slot = self.state & self.model.get_frame_mask(model_index);
-        let symbol_entry = self.model.symbol(slot, model_index);
+impl<'a> ANSDecoder<'a> {
 
-        self.state = (self.state >> self.model.get_log2_frame_size(model_index))
+    /// Decodes a single symbol of a specific [`Component`](BVGraphComponent).
+    pub fn decode(&mut self, component: BVGraphComponent) -> RawSymbol {
+        let slot = self.state & self.model.get_frame_mask(component);
+        let symbol_entry = self.model.symbol(slot, component);
+
+        self.state = (self.state >> self.model.get_log2_frame_size(component))
             * (symbol_entry.freq as State)
             + slot as State
             - (symbol_entry.cumul_freq as State);
@@ -68,88 +84,70 @@ where
             self.extend_state();
         }
 
-        let (quasi_unfolded, folds) = H::quasi_unfold(symbol_entry.quasi_folded);
+        let (quasi_unfolded, folds) = self.quasi_unfold(symbol_entry.quasi_folded);
         let mut fold = 0u64;
 
         for _ in 0..folds {
             if self.state < Self::LOWER_BOUND {
                 self.extend_state();
             }
-            fold = (fold << RADIX) | self.state & ((1 << RADIX) - 1);
-            self.state >>= RADIX;
+            fold = (fold << self.radix) | self.state & ((1 << self.radix) - 1);
+            self.state >>= self.radix;
 
             if self.state < Self::LOWER_BOUND {
                 self.extend_state();
             }
         }
-        quasi_unfolded.into() | fold
+        quasi_unfolded | fold
     }
 
     fn extend_state(&mut self) {
-        self.normalized_pointer -= 1;
-        let bits = self.normalized_bits[self.normalized_pointer];
+        self.stream_pointer -= 1;
+        let bits = self.stream[self.stream_pointer];
         self.state = (self.state << LOG2_B) | bits as State;
     }
 
-    /*
-    pub fn decode_from_phase(
-        &mut self,
-        phase: ANSCompressorPhase,
-        model_index: usize,
-    ) -> RawSymbol {
-        self.state = phase.state;
-        self.last_unfolded_pos = phase.folded;
-        self.normalized_pointer = phase.normalized;
-
-        Self::decode(self, model_index)
+    fn quasi_unfold(&self, quasi_folded: u64) -> (u64, u32) {
+        let symbol = quasi_folded & ((1 << Self::BIT_RESERVED_FOR_SYMBOL) - 1);
+        let folds = quasi_folded >> Self::BIT_RESERVED_FOR_SYMBOL;
+        (symbol, folds as u32)
     }
-
-    pub fn set_compressor_at_phase(&mut self, phase: &ANSCompressorPhase) {
-        self.state = phase.state;
-        self.last_unfolded_pos = phase.folded;
-        self.normalized_pointer = phase.normalized;
-    }
-    */
 }
 
-impl<'a, const FIDELITY: usize, const RADIX: usize, H, M> BVGraphCodesReader for ANSDecoder<'a, FIDELITY, RADIX, H, M>
-where
-    H: Quasi<RADIX>,
-    M: Decode + SymbolLookup<State, Output = DecoderModelEntry<RADIX, H>>,
-{
+impl<'a> BVGraphCodesReader for ANSDecoder<'a> {
     fn read_outdegree(&mut self) -> u64 {
-        self.decode(Component::Outdegree as usize)
+        self.decode(BVGraphComponent::Outdegree)
     }
 
     fn read_reference_offset(&mut self) -> u64 {
-        self.decode(Component::ReferenceOffset as usize)
+        self.decode(BVGraphComponent::ReferenceOffset)
     }
 
     fn read_block_count(&mut self) -> u64 {
-        self.decode(Component::BlockCount as usize)
+        self.decode(BVGraphComponent::BlockCount)
     }
 
     fn read_blocks(&mut self) -> u64 {
-        self.decode(Component::Blocks as usize)
+        self.decode(BVGraphComponent::Blocks)
     }
 
     fn read_interval_count(&mut self) -> u64 {
-        self.decode(Component::IntervalCount as usize)
+        self.decode(BVGraphComponent::IntervalCount)
     }
 
     fn read_interval_start(&mut self) -> u64 {
-        self.decode(Component::IntervalStart as usize)
+        self.decode(BVGraphComponent::IntervalStart)
     }
 
     fn read_interval_len(&mut self) -> u64 {
-        self.decode(Component::IntervalLen as usize)
+        self.decode(BVGraphComponent::IntervalLen)
     }
 
     fn read_first_residual(&mut self) -> u64 {
-        self.decode(Component::FirstResidual as usize)
+        self.decode(BVGraphComponent::FirstResidual)
     }
 
     fn read_residual(&mut self) -> u64 {
-        self.decode(Component::Residual as usize)
+        self.decode(BVGraphComponent::Residual)
     }
 }

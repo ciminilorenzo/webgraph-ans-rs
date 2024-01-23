@@ -1,8 +1,8 @@
-
 use anyhow::Result;
-use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 
+use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
+
 use webgraph::prelude::{BVGraph, EmptyDict, RandomAccessLabelling};
 use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
 use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter};
@@ -28,14 +28,9 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     // 1 -> 5
 
     // let's pass a dummy table since the Log2MockWriter it's not going to use it
-    let binary_costs_table = ANSymbolTable::<FIDELITY, RADIX>::initialize_with_binary_cost(9);
-    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, Log2MockWriter<FIDELITY, RADIX>>::new(binary_costs_table);
-
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<
-        FIDELITY,
-        RADIX,
-        Log2MockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    let binary_costs_table = ANSymbolTable::initialize_with_binary_cost(FIDELITY, RADIX);
+    let model_builder = BVGraphModelBuilder::new(binary_costs_table, FIDELITY, RADIX);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // first iteration -> build the model with log2 mock writer
     for node_index in 0..graph.num_nodes() {
@@ -46,23 +41,13 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let mut model4encoder =  bvcomp.flush()?.build();
+    let model4encoder =  bvcomp.flush()?.build();
     let symbol_freqs = model4encoder.get_symbol_freqs();
 
-    let entropic_costs_table = ANSymbolTable::<FIDELITY, RADIX>::new(
-        symbol_freqs,
-        model4encoder.frame_sizes.clone()
-    );
+    let entropic_costs_table = ANSymbolTable::new(symbol_freqs, model4encoder.frame_sizes, FIDELITY, RADIX);
+    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_costs_table.clone(), FIDELITY, RADIX);
 
-    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, EntropyMockWriter<FIDELITY, RADIX>>::new(
-        entropic_costs_table.clone(),
-    );
-
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<
-        FIDELITY,
-        RADIX,
-        EntropyMockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // second iteration -> build the model with entropic mock writer
     for node_index in 0..graph.num_nodes() {
@@ -74,16 +59,15 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     }
 
     let model4encoder = bvcomp.flush()?.build();
-
-    let mut bvcomp = BVComp::<BVGraphWriter<FIDELITY, RADIX>>::new(
-        BVGraphWriter::new(model4encoder, entropic_costs_table),
+    let mut bvcomp = BVComp::<BVGraphWriter>::new(
+        BVGraphWriter::new(model4encoder, entropic_costs_table, FIDELITY, RADIX),
         7,
         2,
         3,
         0
     );
 
-    // second iteration: encodes the graph
+    // now encode the graph
     for node_index in 0..graph.num_nodes() {
         let successors = graph
             .successors(node_index)
@@ -93,12 +77,12 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let (mut encoder, phases) = bvcomp.flush()?.into_inner();
+    let (encoder, phases) = bvcomp.flush()?.into_inner();
     let prelude = encoder.serialize();
 
-    let code_reader_builder = ANSBVGraphReaderBuilder::<FIDELITY, RADIX>::new(prelude, phases);
+    let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases, FIDELITY, RADIX);
 
-    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder<FIDELITY, RADIX>, EmptyDict<usize, usize>>::new(
+    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder, EmptyDict<usize, usize>>::new(
         code_reader_builder,
         2,
         7,
@@ -112,49 +96,32 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     Ok(())
 }
 
-
 #[test]
 fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000/cnr-2000")?;
     let num_nodes = graph.num_nodes();
     let num_arcs = graph.num_arcs_hint().unwrap();
 
-    let binary_costs_table = ANSymbolTable::<FIDELITY, RADIX>::initialize_with_binary_cost(9);
-    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, Log2MockWriter<FIDELITY, RADIX>>::new(binary_costs_table);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<
-        FIDELITY,
-        RADIX,
-        Log2MockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    let binary_costs_table = ANSymbolTable::initialize_with_binary_cost(FIDELITY, RADIX);
+    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(binary_costs_table, FIDELITY, RADIX);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // First iteration with Log2MockWriter
-    bvcomp.extend(graph.iter())?; // I SIMBOLI VANNO UNFOLDATI PRIMA DI CHIEDERE COSTO!!!!!
+    bvcomp.extend(graph.iter())?;
 
-    let mut model4encoder =  bvcomp.flush()?.build();
+    let model4encoder =  bvcomp.flush()?.build();
     let symbol_freqs = model4encoder.get_symbol_freqs();
-
-    let entropic_costs_table = ANSymbolTable::<FIDELITY, RADIX>::new(
-        symbol_freqs,
-        model4encoder.frame_sizes.clone()
-    );
-
-    let model_builder = BVGraphModelBuilder::<FIDELITY, RADIX, EntropyMockWriter<FIDELITY, RADIX>>::new(
-        entropic_costs_table.clone(),
-    );
-
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<
-        FIDELITY,
-        RADIX,
-        EntropyMockWriter<FIDELITY, RADIX>
-    >>::new(model_builder, 7, 2, 3, 0);
+    let entropic_costs_table = ANSymbolTable::new(symbol_freqs, model4encoder.frame_sizes, FIDELITY, RADIX);
+    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_costs_table.clone(), FIDELITY, RADIX);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // second iteration with EntropyMockWriter
     bvcomp.extend(graph.iter())?;
 
     let model4encoder = bvcomp.flush()?.build();
 
-    let mut bvcomp = BVComp::<BVGraphWriter<FIDELITY, RADIX>>::new(
-        BVGraphWriter::new(model4encoder, entropic_costs_table),
+    let mut bvcomp = BVComp::<BVGraphWriter>::new(
+        BVGraphWriter::new(model4encoder, entropic_costs_table, FIDELITY, RADIX),
         7,
         2,
         3,
@@ -164,12 +131,11 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (mut encoder, phases) = bvcomp.flush()?.into_inner();
+    let (encoder, phases) = bvcomp.flush()?.into_inner();
     let prelude = encoder.serialize();
+    let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases, FIDELITY, RADIX);
 
-    let code_reader_builder = ANSBVGraphReaderBuilder::<FIDELITY, RADIX>::new(prelude, phases);
-
-    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder<FIDELITY, RADIX>, EmptyDict<usize, usize>>::new(
+    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder, EmptyDict<usize, usize>>::new(
         code_reader_builder,
         2,
         7,
