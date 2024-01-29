@@ -4,7 +4,7 @@ pub mod mock_writers;
 
 /// An enumeration of the components getting a different model in the Rust
 /// implementation of the BV format.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BVGraphComponent {
     Outdegree,
     ReferenceOffset,

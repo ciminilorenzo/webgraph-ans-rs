@@ -5,7 +5,6 @@ use rstest::*;
 use folded_streaming_rans::{RawSymbol, State};
 use folded_streaming_rans::ans::model4decoder::*;
 use folded_streaming_rans::ans::model4encoder::SingleANSModel4Encoder;
-use folded_streaming_rans::multi_model_ans::model4encoder::SymbolLookup;
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;

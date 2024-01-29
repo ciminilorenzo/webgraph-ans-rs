@@ -2,7 +2,7 @@ use crate::ans::model4decoder::VecFrame;
 use crate::ans::{Prelude, K_LOG2, DecoderModelEntry};
 use crate::traits::folding::FoldRead;
 use crate::traits::quasi::Quasi;
-use crate::{RawSymbol, State, FASTER_RADIX, LOG2_B};
+use crate::{RawSymbol, State, FASTER_RADIX, B};
 use epserde::traits::ZeroCopy;
 use std::ops::Index;
 
@@ -144,7 +144,7 @@ where
 
         if *state < self.lower_bound {
             let bits = norm.next().unwrap();
-            *state = (*state << LOG2_B) | *bits as State;
+            *state = (*state << B) | *bits as State;
         }
 
         self.folded_bits

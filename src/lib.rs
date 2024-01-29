@@ -5,15 +5,25 @@
 pub mod ans;
 pub mod multi_model_ans;
 pub mod bvgraph;
-mod traits;
 pub mod utils;
 
-/// How many bits are extracted/added from/to the state during the encoding/decoding process.
-pub const LOG2_B: usize = 32;
+mod traits;
 
+/// The parameter with the same name in Duda's paper. In this case we store the logarithm of the parameter since,
+/// if b = 2^k, we extract/insert k bits from the state at once.
+///
+/// Having said that, in this project b is fixed to be 32 in order to extract/insert 32 bits from/to
+/// the state at once.
+pub const B: usize = 32;
+
+/// The maximum symbol that can be encoded/decoded.
 pub const MAX_RAW_SYMBOL: u64 = (1 << 48) - 1;
 
-/// The type representing the folded symbols.
+/// The lower end of the interval in which the state of the compressor can be. Since [b](B) is fixed to be 32, the
+/// upper bound is going to be 2^64 - 1.
+pub const INTERVAL_LOWER_BOUND: u64 = 1 << 32;
+
+/// The type representing an encoded symbols, that could have been either folded or not.
 ///
 /// # Note
 /// This implementation assumes that the maximum symbol is u16::MAX. If more symbols are present,
@@ -37,3 +47,6 @@ pub type Freq = u16;
 
 /// The default value for RADIX used by both the encoder and the decoder.
 pub const FASTER_RADIX: usize = 8;
+
+/// Used to extract the 32 LSB from a 64-bit state.
+pub const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;

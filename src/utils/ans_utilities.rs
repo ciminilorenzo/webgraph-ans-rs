@@ -1,7 +1,7 @@
 use crate::{RawSymbol, Symbol};
 
 /// Folds a symbol without streaming out the bits.
-pub fn folding_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
+pub fn fold_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: usize) -> Symbol {
     let mut offset = 0;
     let cuts = (((u64::ilog2(sym) as usize) + 1) - fidelity) / radix;
     let bit_to_cut = cuts * radix;

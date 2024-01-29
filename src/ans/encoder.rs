@@ -1,7 +1,7 @@
 use crate::ans::model4encoder::SingleANSModel4Encoder;
 use crate::ans::{Prelude, K_LOG2};
 use crate::traits::folding::{FoldRead, FoldWrite};
-use crate::{RawSymbol, State, Symbol, FASTER_RADIX, LOG2_B};
+use crate::{RawSymbol, State, Symbol, FASTER_RADIX, B};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
@@ -114,7 +114,7 @@ where
         if state >= sym_data.upperbound {
             let lsb = (state & NORMALIZATION_MASK) as u32;
             norm.push(lsb);
-            state >>= LOG2_B;
+            state >>= B;
         }
 
         let block = state / sym_data.fast_divisor;

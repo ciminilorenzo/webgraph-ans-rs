@@ -2,11 +2,11 @@ use std::cmp::max;
 use std::ops::Index;
 
 use crate::ans::{EncoderModelEntry, K_LOG2};
-use crate::{RawSymbol, Symbol,LOG2_B, MAX_RAW_SYMBOL};
+use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
 
 use strength_reduce::StrengthReducedU64;
-use crate::utils::ans_utilities::folding_without_streaming_out;
+use crate::utils::ans_utilities::fold_without_streaming_out;
 
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
@@ -26,7 +26,7 @@ pub struct SingleANSModel4Encoder {
 
 impl SingleANSModel4Encoder {
     pub fn new(input: &[RawSymbol], radix: usize, fidelity: usize) -> Self {
-        let presumed_max_bucket = folding_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
+        let presumed_max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, radix, fidelity);
         let mut frequencies = vec![0; presumed_max_bucket as usize];
         let mut max_sym = 0;
         let folding_threshold = (1 << (fidelity + radix - 1)) as RawSymbol;
@@ -35,7 +35,7 @@ impl SingleANSModel4Encoder {
             let folded_sym = if *sym < folding_threshold {
                 *sym as Symbol
             } else {
-                folding_without_streaming_out(*sym, radix, fidelity)
+                fold_without_streaming_out(*sym, radix, fidelity)
             };
 
             *frequencies.get_mut(folded_sym as usize).expect("Symbols from input must be at most 2^48 - 1") += 1;
@@ -51,7 +51,7 @@ impl SingleANSModel4Encoder {
         for freq in approx_freqs.iter() {
             table.push(EncoderModelEntry {
                 freq: *freq as u16,
-                upperbound: ((1 << (K_LOG2 + LOG2_B)) * *freq) as u64,
+                upperbound: ((1 << (K_LOG2 + B)) * *freq) as u64,
                 cumul_freq: last_covered_freq,
                 fast_divisor: match *freq > 0 {
                     true => StrengthReducedU64::new(*freq as u64),

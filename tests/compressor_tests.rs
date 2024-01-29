@@ -5,38 +5,34 @@ use folded_streaming_rans::bvgraph::BVGraphComponent;
 use folded_streaming_rans::RawSymbol;
 use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
-use folded_streaming_rans::multi_model_ans::model4decoder::VecFrame;
+use folded_streaming_rans::multi_model_ans::model4decoder::ANSModel4Decoder;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
 
 const FIDELITY: usize = 2;
 const RADIX: usize = 4;
 
+const COMPONENT_ARGS: [(usize, usize); 9] = [(FIDELITY, RADIX); BVGraphComponent::COMPONENTS];
+
 #[test]
 fn decoder_decodes_correctly_single_dummy_sequence() {
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(FIDELITY, RADIX);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
 
     for symbol in &source {
         model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
-    let mut encoder = ANSEncoder::new(encoder_model, FIDELITY, RADIX);
+    let mut encoder = ANSEncoder::new(encoder_model);
 
     for symbol in &source {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.serialize();
-    let model = VecFrame::new(
-        &prelude.tables,
-        &prelude.frame_sizes,
-        FIDELITY,
-        RADIX,
-    );
-
-    let mut decoder = ANSDecoder::new(&prelude, &model, FIDELITY, RADIX);
+    let prelude = encoder.into_prelude();
+    let model = ANSModel4Decoder::new(&prelude.tables);
+    let mut decoder = ANSDecoder::new(&prelude, &model);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -51,33 +47,28 @@ fn decoder_decodes_correctly_single_dummy_sequence() {
 fn decoder_decodes_correctly_dummy_sequence_with_folding() {
     let source = vec![1000, 1000, 2000];
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(FIDELITY, RADIX);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
 
     for symbol in &source {
         model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
-    let mut encoder = ANSEncoder::new(encoder_model, FIDELITY, RADIX);
+    let mut encoder = ANSEncoder::new(encoder_model);
 
     for symbol in &source {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.serialize();
-    let model = VecFrame::new(
-        &prelude.tables,
-        &prelude.frame_sizes,
-        FIDELITY,
-        RADIX,
-    );
-
-    let mut decoder = ANSDecoder::new(&prelude, &model, FIDELITY, RADIX);
+    let prelude = encoder.into_prelude();
+    let model = ANSModel4Decoder::new(&prelude.tables);
+    let mut decoder = ANSDecoder::new(&prelude, &model);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
         decoded_symbols.push(decoder.decode(BVGraphComponent::Outdegree));
     }
+
     decoded_symbols.reverse(); // since encodes as a LIFO
 
     assert_eq!(decoded_symbols, source);
@@ -87,28 +78,28 @@ fn decoder_decodes_correctly_dummy_sequence_with_folding() {
 fn decoder_decodes_correctly_real_sequence() {
     let source = get_zipfian_distr(0, 1.2).to_vec();
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(FIDELITY, RADIX);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
 
     for symbol in &source {
         model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
-    let mut encoder = ANSEncoder::new(encoder_model, FIDELITY, RADIX);
+    let mut encoder = ANSEncoder::new(encoder_model);
 
     for symbol in &source {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.serialize();
-    let model = VecFrame::new(&prelude.tables.clone(), &prelude.frame_sizes.clone(), FIDELITY, RADIX);
-
-    let mut decoder = ANSDecoder::new(&prelude, &model, FIDELITY, RADIX);
+    let prelude = encoder.into_prelude();
+    let model = ANSModel4Decoder::new(&prelude.tables);
+    let mut decoder = ANSDecoder::new(&prelude, &model);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
         decoded_symbols.push(decoder.decode(BVGraphComponent::Outdegree));
     }
+
     decoded_symbols.reverse(); // since encodes as a LIFO
 
     assert_eq!(decoded_symbols, source);
@@ -118,7 +109,7 @@ fn decoder_decodes_correctly_real_sequence() {
 fn decoder_decodes_correctly_dummy_sequences() {
     let first_source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let second_source = vec![1_u64, 3, 3, 3, 2, 2, 3, 3, 4, 5];
-    let mut encoder_model_builder = ANSModel4EncoderBuilder::new(FIDELITY, RADIX);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
 
     for index in 0..first_source.len() {
         encoder_model_builder.push_symbol(first_source[index], BVGraphComponent::Outdegree).unwrap();
@@ -126,16 +117,16 @@ fn decoder_decodes_correctly_dummy_sequences() {
     }
 
     let encoder_model = encoder_model_builder.build();
-    let mut encoder = ANSEncoder::new(encoder_model, FIDELITY, RADIX);
+    let mut encoder = ANSEncoder::new(encoder_model);
 
     for index in 0..first_source.len() {
         encoder.encode(first_source[index], BVGraphComponent::Outdegree);
         encoder.encode(second_source[index], BVGraphComponent::BlockCount);
     }
 
-    let prelude = encoder.serialize();
-    let model = VecFrame::new(&prelude.tables.clone(), &prelude.frame_sizes.clone(), FIDELITY, RADIX);
-    let mut decoder = ANSDecoder::new(&prelude, &model, FIDELITY, RADIX);
+    let prelude = encoder.into_prelude();
+    let model = ANSModel4Decoder::new(&prelude.tables);
+    let mut decoder = ANSDecoder::new(&prelude, &model);
 
     let mut first_decoded_sequence: Vec<RawSymbol> = Vec::new();
     let mut second_decoded_sequence: Vec<RawSymbol> = Vec::new();
@@ -176,14 +167,14 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     let mut source = vec![first_sequence, second_sequence, third_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
-    let mut encoder_model_builder = ANSModel4EncoderBuilder::new(FIDELITY, RADIX);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
 
     for (component, symbol) in &source {
-        encoder_model_builder.push_symbol(*symbol, *component).unwrap();
+        model4encoder_builder.push_symbol(*symbol, *component).unwrap();
     }
 
-    let encoder_model = encoder_model_builder.build();
-    let mut encoder = ANSEncoder::new(encoder_model, FIDELITY, RADIX);
+    let encoder_model = model4encoder_builder.build();
+    let mut encoder = ANSEncoder::new(encoder_model);
     let mut expected = vec![Vec::new(); BVGraphComponent::COMPONENTS];
 
     for (component, symbol) in &source {
@@ -195,9 +186,9 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
         encoder.encode(*symbol, *component);
     }
 
-    let prelude = encoder.serialize();
-    let model4decoder = VecFrame::new(&prelude.tables, &prelude.frame_sizes, FIDELITY, RADIX);
-    let mut decoder = ANSDecoder::new(&prelude, &model4decoder, FIDELITY, RADIX);
+    let prelude = encoder.into_prelude();
+    let model = ANSModel4Decoder::new(&prelude.tables);
+    let mut decoder = ANSDecoder::new(&prelude, &model);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(); BVGraphComponent::COMPONENTS];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse

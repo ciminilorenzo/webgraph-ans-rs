@@ -6,7 +6,6 @@ use sucds::bit_vectors::{Rank, Rank9Sel};
 use sux::prelude::*;
 use crate::ans::{DecoderModelEntry, EncoderModelEntry};
 
-#[derive(Epserde)]
 pub struct EliasFanoFrame<const RADIX: usize, T>
 where
     T: Quasi<RADIX> + ZeroCopy,

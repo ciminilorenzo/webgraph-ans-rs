@@ -1,46 +1,31 @@
 use crate::bvgraph::BVGraphComponent;
-use crate::multi_model_ans::model4encoder::{ANSModel4Encoder, SymbolLookup};
+use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
-use crate::{RawSymbol, State, Symbol, LOG2_B};
+use crate::{RawSymbol, State, Symbol, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
-/// Used to extract the 32 LSB from a 64-bit state.
-const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
 
 #[derive(Clone)]
 pub struct ANSEncoder {
+    /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).
     pub model: ANSModel4Encoder,
-
-    pub state: State,
 
     /// The normalized bits during the encoding process.
     pub stream: Vec<u32>,
 
-    /// Represent the threshold starting from which a symbol has to be folded.
-    pub folding_threshold: u64,
-
-    pub folding_offset: u64,
-
-    pub radix: usize,
-
-    pub fidelity: usize,
+    pub state: State,
 }
 
 impl ANSEncoder {
-
-    pub fn new(model: ANSModel4Encoder, fidelity: usize, radix: usize) -> Self {
+    pub fn new(model: ANSModel4Encoder) -> Self {
         Self {
-            state: 1_u64 << 32,
+            state: INTERVAL_LOWER_BOUND,
             model,
             stream: Vec::new(),
-            folding_threshold: (1 << (fidelity + radix - 1)) as u64,
-            folding_offset: ((1 << radix) - 1) * (1 << (fidelity - 1)),
-            radix,
-            fidelity,
         }
     }
 
-    fn get_folds_number(&self, symbol: RawSymbol) -> usize {
-        ((u64::ilog2(symbol) + 1) as usize - self.fidelity) / self.radix
+    fn get_folds_number(&self, symbol: RawSymbol, component: BVGraphComponent) -> usize {
+        ((u64::ilog2(symbol) + 1) as usize - self.model.get_fidelity(component)) / self.model.get_radix(component)
     }
 }
 
@@ -50,24 +35,24 @@ impl ANSEncoder {
     /// Note that the ANS decodes the sequence in reverse order.
     pub fn encode(&mut self, mut symbol: RawSymbol, component: BVGraphComponent) {
         // if symbol has to be folded, dump the bytes we have to fold
-        if symbol >= self.folding_threshold {
-            let folds = self.get_folds_number(symbol);
+        if symbol >= self.model.get_folding_threshold(component) {
+            let folds = self.get_folds_number(symbol, component);
 
             for _ in 0..folds {
-                let bits_to_push = symbol & ((1 << self.radix) - 1);
+                let bits_to_push = symbol & ((1 << self.model.get_radix(component)) - 1);
 
                 // dump in the state if there is enough space
-                if self.state.leading_zeros() >= self.radix as u32 {
-                    self.state <<= self.radix;
+                if self.state.leading_zeros() >= self.model.get_radix(component) as u32 {
+                    self.state <<= self.model.get_radix(component);
                     self.state += bits_to_push;
                 } else { // otherwise, normalize the state and push the bits in the normalized bits
                     self.state = Self::shrink_state(self.state, &mut self.stream);
-                    self.state <<= self.radix;
+                    self.state <<= self.model.get_radix(component);
                     self.state += bits_to_push;
                 }
-                symbol >>= self.radix;
+                symbol >>= self.model.get_radix(component);
             }
-            symbol += self.folding_offset * folds as RawSymbol;
+            symbol += self.model.get_folding_offset(component) * folds as RawSymbol;
         }
         let symbol = symbol as Symbol;
         let sym_data = self.model.symbol(symbol, component);
@@ -86,15 +71,14 @@ impl ANSEncoder {
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
         let lsb = (state & NORMALIZATION_MASK) as u32;
         out.push(lsb);
-        state >>= LOG2_B;
+        state >>= B;
         state
     }
 
-    pub fn serialize(self) -> Prelude {
+    pub fn into_prelude(self) -> Prelude {
         Prelude {
             tables: self.model.tables,
-            normalized_bits: self.stream,
-            frame_sizes: self.model.frame_sizes,
+            stream: self.stream,
             state: self.state,
         }
     }
