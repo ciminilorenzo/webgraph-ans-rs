@@ -12,9 +12,6 @@ use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
 use webgraph::prelude::*;
 
-// for highly-compressed compressions are: [16, 2, 2147483647,0]
-const BVGRAPH_COMPRESSION_PARAMS: [usize; 4] = [7, 2, 3, 0];
-
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
 struct Args {
@@ -23,12 +20,6 @@ struct Args {
 
     /// The basename for the newly compressed graph.
     new_basename: String,
-
-    #[clap(flatten)]
-    num_cpus: NumCpusArg,
-
-    #[clap(flatten)]
-    pa: PermutationArgs,
 
     #[clap(flatten)]
     ca: CompressArgs,
@@ -49,10 +40,10 @@ pub fn main() -> Result<()> {
 
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(
         model_builder,
-        BVGRAPH_COMPRESSION_PARAMS[0],
-        BVGRAPH_COMPRESSION_PARAMS[1],
-        BVGRAPH_COMPRESSION_PARAMS[2],
-        BVGRAPH_COMPRESSION_PARAMS[3],
+        args.ca.compression_window,
+        args.ca.min_interval_length,
+        args.ca.max_ref_count,
+        0,
     );
 
     let mut pl = ProgressLogger::default();
@@ -75,10 +66,10 @@ pub fn main() -> Result<()> {
     let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(
         model_builder,
-        BVGRAPH_COMPRESSION_PARAMS[0],
-        BVGRAPH_COMPRESSION_PARAMS[1],
-        BVGRAPH_COMPRESSION_PARAMS[2],
-        BVGRAPH_COMPRESSION_PARAMS[3],
+        args.ca.compression_window,
+        args.ca.min_interval_length,
+        args.ca.max_ref_count,
+        0,
     );
 
     pl.item_name("node")
@@ -95,10 +86,10 @@ pub fn main() -> Result<()> {
 
     let mut bvcomp = BVComp::<BVGraphWriter>::new(
         BVGraphWriter::new(model4encoder, entropy_costs),
-        BVGRAPH_COMPRESSION_PARAMS[0],
-        BVGRAPH_COMPRESSION_PARAMS[1],
-        BVGRAPH_COMPRESSION_PARAMS[2],
-        BVGRAPH_COMPRESSION_PARAMS[3],
+        args.ca.compression_window,
+        args.ca.min_interval_length,
+        args.ca.max_ref_count,
+        0,
     );
 
     // third iteration: encode with the entropy mock
