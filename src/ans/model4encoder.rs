@@ -3,7 +3,7 @@ use std::ops::Index;
 
 use crate::ans::{EncoderModelEntry, K_LOG2};
 use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
-use crate::utils::data_utilities::{cross_entropy, entropy, try_scale_freqs};
+use crate::utils::data_utilities::{cross_entropy, entropy, scale_freqs};
 
 use strength_reduce::StrengthReducedU64;
 use crate::utils::ans_utilities::fold_without_streaming_out;
@@ -108,7 +108,7 @@ impl SingleANSModel4Encoder {
         loop {
             assert!(frame_size <= (1 << 28), "frame_size must be at most 2^28");
 
-            let scaling_result = try_scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
+            let scaling_result = scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
 
             match scaling_result {
                 Ok(new_freqs) => {

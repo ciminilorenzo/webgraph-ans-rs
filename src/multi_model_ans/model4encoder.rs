@@ -39,6 +39,19 @@ impl ANSComponentModel4Encoder {
     }
 }
 
+impl Default for ANSComponentModel4Encoder {
+    fn default() -> Self {
+        Self {
+            table: Vec::new(),
+            frame_size: 0,
+            radix: 2,
+            fidelity: 2,
+            folding_threshold: 10,
+            folding_offset: 10,
+        }
+    }
+}
+
 impl Index<Symbol> for ANSComponentModel4Encoder {
     type Output = EncoderModelEntry;
 
@@ -58,6 +71,14 @@ pub struct ANSModel4Encoder {
 }
 
 impl ANSModel4Encoder {
+
+    pub fn get_folding_params(&self) -> Vec<(usize, usize)> {
+        self.tables
+            .iter()
+            .map(|table| (table.fidelity, table.radix))
+            .collect::<Vec<_>>()
+    }
+
     /// Returns the frame mask for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_frame_mask(&self, component: BVGraphComponent) -> u64 {

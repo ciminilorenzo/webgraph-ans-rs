@@ -2,6 +2,7 @@
     This bench prints the medium time (in terms of nanoseconds) need to decode each arc of the cnr-2000 graph.
  */
 
+/*
 use epserde::prelude::{Deserialize, Serialize};
 use anyhow::Result;
 use webgraph::prelude::{BVComp, BVGraph, EmptyDict, RandomAccessLabelling, SequentialLabelling};
@@ -79,6 +80,10 @@ fn main() -> Result<()> {
 
     dbg!(now.elapsed());
     dbg!(now.elapsed().as_nanos() / arcs as u128);
-
     Ok(())
+}
+*/
+
+fn main() {
+
 }

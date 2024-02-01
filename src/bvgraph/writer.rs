@@ -1,33 +1,25 @@
 use std::{convert::Infallible};
-use std::marker::PhantomData;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
 use crate::bvgraph::BVGraphComponent;
-
 use crate::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, MockWriter};
 use crate::multi_model_ans::ANSCompressorPhase;
 use crate::multi_model_ans::encoder::ANSEncoder;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
-use crate::utils::ans_utilities::fold_without_streaming_out;
-
 
 pub struct BVGraphModelBuilder<MW: BVGraphCodesWriter + MockWriter> {
     model_builder: ANSModel4EncoderBuilder,
 
-    costs_table: ANSymbolTable,
-
     /// The type of the mock writer.
-    _marker: PhantomData<MW>,
+    mock: MW,
 }
 
 impl<MW: BVGraphCodesWriter + MockWriter> BVGraphModelBuilder<MW> {
-
-    pub fn new(symbol_costs: ANSymbolTable, component_args: [(usize, usize); 9]) -> Self {
+    pub fn new(mock: MW) -> Self {
         Self {
-            model_builder: ANSModel4EncoderBuilder::new(component_args),
-            costs_table: symbol_costs,
-            _marker: PhantomData,
+            model_builder: ANSModel4EncoderBuilder::new(),
+            mock,
         }
     }
 
@@ -45,142 +37,52 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBui
 
     fn mock(&self) -> Self::MockWriter {
         // !!!!! now it's a clone since it's &Self. Otherwise i would give ownership !!!!!
-        MW::build(self.costs_table.clone())
+        self.mock.clone()
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::Outdegree);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::Outdegree) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::Outdegree))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::Outdegree),
-            self.costs_table.get_component_fidelity(BVGraphComponent::Outdegree),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::Outdegree))
+        Ok(self.mock.write_outdegree(value).unwrap())
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::ReferenceOffset);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::ReferenceOffset) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::ReferenceOffset))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::ReferenceOffset),
-            self.costs_table.get_component_fidelity(BVGraphComponent::ReferenceOffset),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::ReferenceOffset))
+        Ok(self.mock.write_reference_offset(value).unwrap())
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::BlockCount);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::BlockCount) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::BlockCount))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::BlockCount),
-            self.costs_table.get_component_fidelity(BVGraphComponent::BlockCount),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::BlockCount))
+        Ok(self.mock.write_block_count(value).unwrap())
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::Blocks);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::Blocks) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::Blocks))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::Blocks),
-            self.costs_table.get_component_fidelity(BVGraphComponent::Blocks),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::Blocks))
+        Ok(self.mock.write_blocks(value).unwrap())
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::IntervalCount);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::IntervalCount) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::IntervalCount))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::IntervalCount),
-            self.costs_table.get_component_fidelity(BVGraphComponent::IntervalCount),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::IntervalCount))
+        Ok(self.mock.write_interval_count(value).unwrap())
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::IntervalStart);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::IntervalStart) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::IntervalStart))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::IntervalStart),
-            self.costs_table.get_component_fidelity(BVGraphComponent::IntervalStart),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::IntervalStart))
+        Ok(self.mock.write_interval_start(value).unwrap())
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::IntervalLen);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::IntervalLen) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::IntervalLen))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::IntervalLen),
-            self.costs_table.get_component_fidelity(BVGraphComponent::IntervalLen),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::IntervalLen))
+        Ok(self.mock.write_interval_len(value).unwrap())
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::FirstResidual);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::FirstResidual) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::FirstResidual))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::FirstResidual),
-            self.costs_table.get_component_fidelity(BVGraphComponent::FirstResidual),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::FirstResidual))
+        Ok(self.mock.write_first_residual(value).unwrap())
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder.push_symbol(value, BVGraphComponent::Residual);
-
-        if value < self.costs_table.get_component_threshold(BVGraphComponent::Residual) {
-            return Ok(self.costs_table.get_symbol_cost(value as usize, BVGraphComponent::Residual))
-        }
-
-        let folded_sym = fold_without_streaming_out(
-            value,
-            self.costs_table.get_component_radix(BVGraphComponent::Residual),
-            self.costs_table.get_component_fidelity(BVGraphComponent::Residual),
-        );
-        Ok(self.costs_table.get_symbol_cost(folded_sym as usize, BVGraphComponent::Residual))
+        Ok(self.mock.write_residual(value).unwrap())
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {

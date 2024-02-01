@@ -4,23 +4,8 @@ use clap::{Parser};
 use epserde::prelude::Serialize;
 use mem_dbg::{DbgFlags, MemDbg};
 use webgraph::prelude::*;
-use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter};
+use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter};
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
-
-const FIDELITY: usize = 2;
-const RADIX: usize = 6;
-
-const COMPONENT_ARGS: [(usize, usize); 9] = [
-    (FIDELITY, RADIX), // Outdegree
-    (FIDELITY, RADIX), // ReferenceOffset
-    (FIDELITY, RADIX), // BlockCount
-    (FIDELITY, RADIX), // Blocks
-    (FIDELITY, RADIX), // IntervalCount
-    (FIDELITY, RADIX), // IntervalStart
-    (FIDELITY, RADIX), // IntervalLen
-    (FIDELITY, RADIX), // FirstResidual
-    (FIDELITY, RADIX), // Residual
-];
 
 // for highly-compressed compressions are: [16, 2, 2147483647,0]
 const BVGRAPH_COMPRESSION_PARAMS: [usize; 4] = [7, 2, 3, 0];
@@ -54,8 +39,8 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let seq_graph = load_seq(&args.basename)?;
-    let costs_table = ANSymbolTable::initialize_with_binary_cost(COMPONENT_ARGS);
-    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(costs_table, COMPONENT_ARGS);
+    let log2_mock = Log2MockWriter::build(ANSymbolTable::default());
+    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(log2_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(
         model_builder,
         BVGRAPH_COMPRESSION_PARAMS[0],
@@ -67,8 +52,10 @@ pub fn main() -> Result<()> {
     bvcomp.extend(seq_graph.iter())?;
 
     let model4encoder = bvcomp.flush()?.build();
-    let entropy_costs = ANSymbolTable::new(&model4encoder, COMPONENT_ARGS);
-    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_costs.clone(), COMPONENT_ARGS);
+    let folding_params = model4encoder.get_folding_params();
+    let entropy_costs = ANSymbolTable::new(&model4encoder, folding_params);
+    let entropy_mock = EntropyMockWriter::build(entropy_costs.clone());
+    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(
         model_builder,
         BVGRAPH_COMPRESSION_PARAMS[0],

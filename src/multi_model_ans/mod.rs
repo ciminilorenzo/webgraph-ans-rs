@@ -9,6 +9,7 @@ use mem_dbg::{MemDbg, MemSize};
 use crate::{Freq, State};
 use crate::multi_model_ans::model4encoder::ANSComponentModel4Encoder;
 
+
 #[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
 pub struct Prelude {
     /// Contains, for each index, the data associated to the symbol equal to that index.

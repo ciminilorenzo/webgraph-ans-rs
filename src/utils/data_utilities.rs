@@ -4,15 +4,21 @@ use anyhow::{bail, Result};
 
 
 /// Tries to scale frequencies in `freqs` by using the new common denominator `new_frame`. This algorithm
-/// gives priority to low frequency symbols in order to be sure that the extra space the new frame size
-/// is supplying is firstly given to symbols with approximated frequency lower than 0.
+/// gives priority to low frequency symbols in order to be sure that the space available is firstly given to symbols
+/// with approximated frequency lower than 0. This happens when we are trying to approximate a distribution with a
+/// frame size that is smaller compared to the original one.
 ///
 /// # Returns
 /// The approximated frequencies if is possibile to approximate with the given `new_frame` else, if too
 /// many symbols have frequency lower than 1 - meaning that M is not big enough to handle the whole
 /// set of symbols - an error is returned.
-pub fn try_scale_freqs(freqs: &[usize], sorted_indices: &[usize], n: usize, mut m: usize, mut new_m: isize)
-    -> Result<Vec<usize>>
+pub fn scale_freqs(
+    freqs: &[usize],
+    sorted_indices: &[usize],
+    n: usize,
+    mut m: usize,
+    mut new_m: isize
+) -> Result<Vec<usize>>
 {
     let mut approx_freqs = freqs.to_vec();
     let ratio = new_m as f64 / m as f64;
@@ -21,7 +27,6 @@ pub fn try_scale_freqs(freqs: &[usize], sorted_indices: &[usize], n: usize, mut 
         let sym_freq = freqs[*sym_index];
         let second_ratio = new_m as f64 / m as f64;
         let scale = (n - index) as f64 * ratio / n as f64 + index as f64 * second_ratio / n as f64;
-
         approx_freqs[*sym_index] = max(1, (0.5 + scale * sym_freq as f64).floor() as usize);
 
         new_m -= approx_freqs[*sym_index] as isize;
