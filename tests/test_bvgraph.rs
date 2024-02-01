@@ -5,6 +5,7 @@ use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
 
 use webgraph::prelude::{BVGraph, EmptyDict, RandomAccessLabelling};
 use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
+use folded_streaming_rans::bvgraph::BVGraphComponent;
 use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter};
 
 
@@ -105,6 +106,16 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let model4encoder =  bvcomp.flush()?.build();
     let folding_params = model4encoder.get_folding_params();
     let entropic_costs_table = ANSymbolTable::new(&model4encoder, folding_params);
+
+    let mut component_costs = vec![0usize; 9];
+    for index in  0..9 {
+        for (symbol, freq) in model4encoder.tables[index].table.iter().enumerate() {
+            component_costs[index] += (entropic_costs_table.get_symbol_cost(symbol, BVGraphComponent::from(index)) >> 16) * freq.freq as usize;
+        }
+    }
+
+    println!("Component costs: {:?}", component_costs);
+
     let entropic_mock = EntropyMockWriter::build(entropic_costs_table.clone());
     let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);

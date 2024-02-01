@@ -166,6 +166,7 @@ impl ANSModel4EncoderBuilder {
                                 );
 
                                 if divergence <= self_information[component] * theta {
+                                    // println!("divergence: {}", divergence);
                                     // let's accept the current distribution if either it has a lower
                                     // divergence or has an equal divergence but a smaller frame size.
                                     if divergence < lower_divergence ||
@@ -191,7 +192,9 @@ impl ANSModel4EncoderBuilder {
             }
 
             let new_distribution = best_distribution.unwrap();
+            println!("new_distribution: {:?}", new_distribution);
             let frame_size = best_distribution_frame_size.unwrap();
+
             let radix = best_radix.unwrap();
             let fidelity = best_fidelity.unwrap();
             let folding_threshold = 1u64 << (fidelity + radix - 1);
@@ -212,8 +215,8 @@ impl ANSModel4EncoderBuilder {
 
             models.push(ANSComponentModel4Encoder {
                 table,
-                fidelity: best_fidelity.unwrap(),
-                radix: best_radix.unwrap(),
+                fidelity,
+                radix,
                 folding_threshold,
                 folding_offset,
                 frame_size: log_m,

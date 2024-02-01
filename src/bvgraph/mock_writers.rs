@@ -1,4 +1,5 @@
 use std::convert::Infallible;
+use std::ops::Neg;
 use webgraph::prelude::BVGraphCodesWriter;
 
 use crate::bvgraph::BVGraphComponent;
@@ -68,8 +69,7 @@ impl ANSymbolTable {
         };
 
         let probability = freq as f64 / (1u64 << frame_size) as f64;
-        let inverse = 1.0 / probability;
-        let shifted = (inverse * ((1 << 16) as f64)).round() as usize;
+        let shifted = (probability.log2().neg() * ((1 << 16) as f64)).round() as usize;
 
         shifted + ((bytes_to_unfold as usize * radix) * (1 << 16))
     }
