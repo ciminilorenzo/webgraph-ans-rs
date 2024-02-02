@@ -1,5 +1,6 @@
 use std::cmp::max;
 use std::collections::HashMap;
+use std::ops::Neg;
 use anyhow::{bail, Result};
 use itertools::Itertools;
 
@@ -88,6 +89,7 @@ impl ANSModel4EncoderBuilder {
                     let max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, *radix, *fidelity);
                     let mut folded_sym_freqs = vec![0_usize; max_bucket as usize];
                     let folding_threshold = 1u64 << (fidelity + radix - 1);
+                    let folding_offset = ((1 << radix) - 1) * (1 << (fidelity - 1));
                     let mut biggest_symbol = 0u16;
 
                     // create the table containing, for each folded symbol, its frequency.
@@ -104,6 +106,25 @@ impl ANSModel4EncoderBuilder {
                         folded_sym_freqs[folded_sym as usize] += freq;
                         biggest_symbol = max(biggest_symbol, folded_sym);
                     }
+
+                    let mut entropy = 0.0;
+
+                    folded_sym_freqs
+                        .iter()
+                        .enumerate()
+                        .for_each(|(symbol, freq)| {
+                            if *freq > 0 {
+                                let bytes_to_unfold = match symbol < folding_threshold as usize {
+                                    true => 0_usize,
+                                    false => (symbol - folding_threshold as usize) / folding_offset as usize + 1usize,
+                                };
+
+                                let p = *freq as f64 / self.total_freqs[component] as f64;
+                                entropy += (f64::log2(p).neg() + (bytes_to_unfold as f64 * *radix as f64)) * *freq as f64;
+                            }
+                        });
+
+                    println!("component: {} -> entropy: {}", component, entropy);
 
                     let divergence = self.calculate_divergence(
                         self.total_freqs[component] as f64,
