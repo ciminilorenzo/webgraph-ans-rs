@@ -93,6 +93,12 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
 #[test]
 fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
+    stderrlog::new()
+        .verbosity(2)
+        .timestamp(stderrlog::Timestamp::Second)
+        .init()
+        .unwrap();
+
     let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000/cnr-2000")?;
     let num_nodes = graph.num_nodes();
     let num_arcs = graph.num_arcs_hint().unwrap();
