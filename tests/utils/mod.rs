@@ -1,8 +1,7 @@
+use folded_streaming_rans::RawSymbol;
 use rand::prelude::{Distribution, SmallRng};
 use rand::SeedableRng;
 use rand_distr::Zipf;
-use folded_streaming_rans::RawSymbol;
-
 
 pub const SYMBOL_LIST_LENGTH: usize = 1_000_000;
 /// Maximum value that the zipfian distribution can output.

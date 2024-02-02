@@ -1,11 +1,10 @@
 use std::error::Error;
 
-use webgraph::prelude::{BVGraphCodesReaderBuilder};
+use webgraph::prelude::BVGraphCodesReaderBuilder;
 
 use crate::multi_model_ans::decoder::ANSDecoder;
-use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
-
+use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 
 pub struct ANSBVGraphReaderBuilder<'a> {
     /// The vec of ANSCompressorPhase, one for each node of the graph.
@@ -17,7 +16,7 @@ pub struct ANSBVGraphReaderBuilder<'a> {
     model: ANSModel4Decoder,
 }
 
-impl <'a> ANSBVGraphReaderBuilder<'a> {
+impl<'a> ANSBVGraphReaderBuilder<'a> {
     pub fn new(prelude: &'a Prelude, phases: Vec<ANSCompressorPhase>) -> Self {
         Self {
             prelude,
@@ -27,7 +26,7 @@ impl <'a> ANSBVGraphReaderBuilder<'a> {
     }
 }
 
-impl <'a> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<'a> {
+impl<'a> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<'a> {
     type Reader<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn get_reader(&self, node: usize) -> Result<Self::Reader<'_>, Box<dyn Error>> {

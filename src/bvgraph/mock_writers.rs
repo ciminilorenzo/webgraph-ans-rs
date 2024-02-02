@@ -3,10 +3,9 @@ use std::ops::Neg;
 use webgraph::prelude::BVGraphCodesWriter;
 
 use crate::bvgraph::BVGraphComponent;
-use crate::{Freq, MAX_RAW_SYMBOL, Symbol};
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
-use crate::utils::ans_utilities::{fold_without_streaming_out};
-
+use crate::utils::ans_utilities::fold_without_streaming_out;
+use crate::{Freq, Symbol, MAX_RAW_SYMBOL};
 
 #[derive(Clone, Default)]
 pub struct ANSymbolTable {
@@ -20,46 +19,53 @@ pub struct ANSymbolTable {
     folding_thresholds: Vec<u64>,
 
     /// The offset used to fold the symbols, one for each [component](BVGraphComponent).
-    folding_offsets: Vec<u64>
+    folding_offsets: Vec<u64>,
 }
 
 impl ANSymbolTable {
     /// Returns a new ANSymbolTable, that is a table containing for each component, the cost of every symbol calculated
     /// as follows:
     /// ```text
-    /// C(x) = ((1 / p) * 2^16) + ((bytes_to_unfold * radix) * 2^16)
+    /// C(x) = (-log(p) * 2^16) + ((bytes_to_unfold * radix) * 2^16)
     /// ```
     pub fn new(model: &ANSModel4Encoder, component_args: Vec<(usize, usize)>) -> Self {
         let mut table = Self::initialize(component_args);
 
-        table.table
+        table
+            .table
             .iter_mut()
             .enumerate()
             .for_each(|(component, current_table)| {
-                (0..current_table.len())
-                    .for_each(|symbol| {
-                        let symbol_freq = match model.tables[component].table.get(symbol) {
-                            Some(entry) => match entry.freq {
-                                0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
-                                _ => entry.freq,
-                            },
-                            None => 1,
-                        };
+                (0..current_table.len()).for_each(|symbol| {
+                    let symbol_freq = match model.tables[component].table.get(symbol) {
+                        Some(entry) => match entry.freq {
+                            0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
+                            _ => entry.freq,
+                        },
+                        None => 1,
+                    };
 
-                        current_table[symbol] = Self::calculate_symbol_cost(
-                            symbol as Symbol,
-                            symbol_freq,
-                            model.get_log2_frame_size(BVGraphComponent::from(component)),
-                            model.get_folding_offset(BVGraphComponent::from(component)) as u16,
-                            model.get_folding_threshold(BVGraphComponent::from(component)) as u16,
-                            model.get_radix(BVGraphComponent::from(component)),
-                        );
-                    });
+                    current_table[symbol] = Self::calculate_symbol_cost(
+                        symbol as Symbol,
+                        symbol_freq,
+                        model.get_log2_frame_size(BVGraphComponent::from(component)),
+                        model.get_folding_offset(BVGraphComponent::from(component)) as u16,
+                        model.get_folding_threshold(BVGraphComponent::from(component)) as u16,
+                        model.get_radix(BVGraphComponent::from(component)),
+                    );
+                });
             });
         table
     }
 
-    fn calculate_symbol_cost(symbol: Symbol, freq: Freq, frame_size: usize, folding_offset: u16, folding_threshold:u16, radix: usize) -> usize {
+    fn calculate_symbol_cost(
+        symbol: Symbol,
+        freq: Freq,
+        frame_size: usize,
+        folding_offset: u16,
+        folding_threshold: u16,
+        radix: usize,
+    ) -> usize {
         // we shouldn't have a symbol with frequency 0 since we want to have the cost for each symbol
         debug_assert!(freq != 0);
 
@@ -92,9 +98,7 @@ impl ANSymbolTable {
                 folding_thresholds.push(folding_threshold);
                 folding_offsets.push(folding_offset);
 
-                (0..max_folded_sym + 1)
-                    .map(|_symbol| 1)
-                    .collect::<Vec<_>>()
+                (0..max_folded_sym + 1).map(|_symbol| 1).collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
 
@@ -127,7 +131,6 @@ impl ANSymbolTable {
     }
 }
 
-
 /// A trait for those mock writers that can be buildable.
 pub trait MockWriter: Clone {
     /// Builds a mock writer from a given costs table.
@@ -135,7 +138,6 @@ pub trait MockWriter: Clone {
 
     fn get_symbol_cost(&self, value: u64, component: BVGraphComponent) -> usize;
 }
-
 
 #[derive(Clone)]
 pub struct EntropyMockWriter {
@@ -151,13 +153,11 @@ impl MockWriter for EntropyMockWriter {
     fn get_symbol_cost(&self, value: u64, component: BVGraphComponent) -> usize {
         let symbol = match value < self.costs_table.get_component_threshold(component) {
             true => value as usize,
-            false => {
-                fold_without_streaming_out(
-                    value,
-                    self.costs_table.get_component_radix(component),
-                    self.costs_table.get_component_fidelity(component)
-                ) as usize
-            }
+            false => fold_without_streaming_out(
+                value,
+                self.costs_table.get_component_radix(component),
+                self.costs_table.get_component_fidelity(component),
+            ) as usize,
         };
         self.costs_table.get_symbol_cost(symbol, component)
     }
@@ -171,7 +171,7 @@ impl BVGraphCodesWriter for EntropyMockWriter {
     fn mock(&self) -> Self::MockWriter {
         Self {
             costs_table: ANSymbolTable::default(),
-         } // thus we can return a fake one
+        } // thus we can return a fake one
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -215,13 +215,12 @@ impl BVGraphCodesWriter for EntropyMockWriter {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Log2MockWriter {}
 
 impl MockWriter for Log2MockWriter {
     fn build(_costs_table: ANSymbolTable) -> Self {
-        Self{}
+        Self {}
     }
 
     fn get_symbol_cost(&self, value: u64, _component: BVGraphComponent) -> usize {

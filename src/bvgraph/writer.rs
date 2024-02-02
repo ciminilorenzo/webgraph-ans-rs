@@ -1,12 +1,12 @@
-use std::{convert::Infallible};
+use std::convert::Infallible;
 use webgraph::graph::bvgraph::BVGraphCodesWriter;
 
-use crate::bvgraph::BVGraphComponent;
 use crate::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, MockWriter};
-use crate::multi_model_ans::ANSCompressorPhase;
+use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::encoder::ANSEncoder;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
+use crate::multi_model_ans::ANSCompressorPhase;
 
 pub struct BVGraphModelBuilder<MW: BVGraphCodesWriter + MockWriter> {
     model_builder: ANSModel4EncoderBuilder,
@@ -41,47 +41,56 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBui
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::Outdegree);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::Outdegree);
         Ok(self.mock.write_outdegree(value).unwrap())
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::ReferenceOffset);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::ReferenceOffset);
         Ok(self.mock.write_reference_offset(value).unwrap())
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::BlockCount);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::BlockCount);
         Ok(self.mock.write_block_count(value).unwrap())
     }
 
     fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::Blocks);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::Blocks);
         Ok(self.mock.write_blocks(value).unwrap())
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::IntervalCount);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::IntervalCount);
         Ok(self.mock.write_interval_count(value).unwrap())
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::IntervalStart);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::IntervalStart);
         Ok(self.mock.write_interval_start(value).unwrap())
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::IntervalLen);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::IntervalLen);
         Ok(self.mock.write_interval_len(value).unwrap())
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::FirstResidual);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::FirstResidual);
         Ok(self.mock.write_first_residual(value).unwrap())
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.model_builder.push_symbol(value, BVGraphComponent::Residual);
+        self.model_builder
+            .push_symbol(value, BVGraphComponent::Residual);
         Ok(self.mock.write_residual(value).unwrap())
     }
 
@@ -89,7 +98,6 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBui
         Ok(())
     }
 }
-
 
 /// A [`BVGraphCodesWriter`] that writes to an [`ANSEncoder`].
 ///
@@ -113,7 +121,6 @@ pub struct BVGraphWriter {
 }
 
 impl BVGraphWriter {
-
     pub fn new(model: ANSModel4Encoder, costs_table: ANSymbolTable) -> Self {
         Self {
             curr_node: usize::MAX,
@@ -158,8 +165,12 @@ impl BVGraphCodesWriter for BVGraphWriter {
                 .rev()
             {
                 for &symbol in symbols.iter().rev() {
-                    self.encoder
-                        .encode(symbol as u64, BVGraphComponent::from(component + BVGraphComponent::FirstResidual as usize));
+                    self.encoder.encode(
+                        symbol as u64,
+                        BVGraphComponent::from(
+                            component + BVGraphComponent::FirstResidual as usize,
+                        ),
+                    );
                 }
             }
 
@@ -186,7 +197,8 @@ impl BVGraphCodesWriter for BVGraphWriter {
                 .rev()
             {
                 for &symbol in symbols.iter().rev() {
-                    self.encoder.encode(symbol as u64, BVGraphComponent::from(component));
+                    self.encoder
+                        .encode(symbol as u64, BVGraphComponent::from(component));
                 }
             }
             // save state of the encoder as soon as it finishes encoding the node
@@ -248,7 +260,8 @@ impl BVGraphCodesWriter for BVGraphWriter {
     fn flush(&mut self) -> Result<(), Self::Error> {
         for (component, symbols) in self.data.iter().enumerate().rev() {
             for &symbol in symbols.iter().rev() {
-                self.encoder.encode(symbol as u64, BVGraphComponent::from(component));
+                self.encoder
+                    .encode(symbol as u64, BVGraphComponent::from(component));
             }
         }
         self.phases

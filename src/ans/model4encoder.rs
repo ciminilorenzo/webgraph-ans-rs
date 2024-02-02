@@ -2,19 +2,17 @@ use std::cmp::max;
 use std::ops::Index;
 
 use crate::ans::{EncoderModelEntry, K_LOG2};
-use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 use crate::utils::data_utilities::{cross_entropy, entropy, scale_freqs};
+use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 
-use strength_reduce::StrengthReducedU64;
 use crate::utils::ans_utilities::fold_without_streaming_out;
-
+use strength_reduce::StrengthReducedU64;
 
 /// Multiplicative factor used to set the maximum cross entropy allowed for the new approximated
 /// distribution of frequencies.
 /// The bigger this factor is, the more approximated the new distribution will be. It means smaller frame
 /// sizes and, consequently, less memory usage + faster encoding/decoding.
 const TETA: f64 = 1.001;
-
 
 #[derive(Clone)]
 pub struct SingleANSModel4Encoder {
@@ -38,7 +36,9 @@ impl SingleANSModel4Encoder {
                 fold_without_streaming_out(*sym, radix, fidelity)
             };
 
-            *frequencies.get_mut(folded_sym as usize).expect("Symbols from input must be at most 2^48 - 1") += 1;
+            *frequencies
+                .get_mut(folded_sym as usize)
+                .expect("Symbols from input must be at most 2^48 - 1") += 1;
             max_sym = max(max_sym, folded_sym);
         }
 
@@ -108,11 +108,13 @@ impl SingleANSModel4Encoder {
         loop {
             assert!(frame_size <= (1 << 28), "frame_size must be at most 2^28");
 
-            let scaling_result = scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
+            let scaling_result =
+                scale_freqs(freqs, &sorted_indices, n, total_freq, frame_size as isize);
 
             match scaling_result {
                 Ok(new_freqs) => {
-                    let cross_entropy = cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
+                    let cross_entropy =
+                        cross_entropy(freqs, total_freq as f64, &new_freqs, frame_size as f64);
 
                     // we are done if the cross entropy of the new distr is lower than the entropy of
                     // the original distribution times a multiplicative factor TETA.

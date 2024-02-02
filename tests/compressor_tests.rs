@@ -1,12 +1,11 @@
 mod utils;
 
 use folded_streaming_rans::bvgraph::BVGraphComponent;
-use folded_streaming_rans::RawSymbol;
 use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
 use folded_streaming_rans::multi_model_ans::model4decoder::ANSModel4Decoder;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
-
+use folded_streaming_rans::RawSymbol;
 
 #[test]
 fn decoder_decodes_correctly_single_dummy_sequence() {
@@ -14,7 +13,9 @@ fn decoder_decodes_correctly_single_dummy_sequence() {
     let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
     for symbol in &source {
-        model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
+        model4encoder_builder
+            .push_symbol(*symbol, BVGraphComponent::Outdegree)
+            .unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();

@@ -1,9 +1,9 @@
 use webgraph::prelude::BVGraphCodesReader;
 
-use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
-use crate::{RawSymbol, State, B, Symbol};
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
+use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
+use crate::{RawSymbol, State, Symbol, B};
 
 #[derive(Clone)]
 pub struct ANSDecoder<'a> {
@@ -39,7 +39,11 @@ impl<'a> ANSDecoder<'a> {
     /// Initialize a new ANSDecoder from its raw parts.
     ///
     /// Note: the next decoded symbol will be the last one encoded in the given [`phase`](ANSCompressorPhase)
-    pub fn from_raw_parts(prelude: &'a Prelude, model: &'a ANSModel4Decoder, phase: ANSCompressorPhase) -> Self {
+    pub fn from_raw_parts(
+        prelude: &'a Prelude,
+        model: &'a ANSModel4Decoder,
+        phase: ANSCompressorPhase,
+    ) -> Self {
         Self {
             model,
             stream: &prelude.stream,
@@ -71,7 +75,8 @@ impl<'a> ANSDecoder<'a> {
             if self.state < Self::LOWER_BOUND {
                 self.extend_state();
             }
-            fold = (fold << self.model.get_radix(component)) | self.state & ((1 << self.model.get_radix(component)) - 1);
+            fold = (fold << self.model.get_radix(component))
+                | self.state & ((1 << self.model.get_radix(component)) - 1);
             self.state >>= self.model.get_radix(component);
 
             if self.state < Self::LOWER_BOUND {

@@ -1,8 +1,8 @@
 use crate::ans::model4decoder::VecFrame;
-use crate::ans::{Prelude, K_LOG2, DecoderModelEntry};
+use crate::ans::{DecoderModelEntry, Prelude, K_LOG2};
 use crate::traits::folding::FoldRead;
 use crate::traits::quasi::Quasi;
-use crate::{RawSymbol, State, FASTER_RADIX, B};
+use crate::{RawSymbol, State, B, FASTER_RADIX};
 use epserde::traits::ZeroCopy;
 use std::ops::Index;
 

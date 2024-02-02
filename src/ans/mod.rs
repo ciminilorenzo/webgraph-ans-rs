@@ -1,7 +1,7 @@
 use crate::traits::folding::FoldRead;
+use crate::traits::quasi::Quasi;
 use crate::{Freq, State};
 use strength_reduce::StrengthReducedU64;
-use crate::traits::quasi::Quasi;
 
 pub mod decoder;
 pub mod encoder;

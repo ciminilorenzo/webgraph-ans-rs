@@ -16,7 +16,6 @@ const FOLDING_OFFSET: u64 = (1 << (FIDELITY - 1)) * ((1 << FASTER_RADIX) - 1);
 
 const FOLDING_THRESHOLD: u64 = 1 << (FIDELITY + FASTER_RADIX - 1);
 
-
 //                BENCH THE DIFFERENT WAYS OF IMPLEMENTING THE SYMBOL PRIMITIVE
 // ---------------------- ---------------------- ---------------------- ---------------------- --- //
 // Two strategies are benched:
@@ -63,7 +62,7 @@ fn decode_with_rank_as_frame(c: &mut Criterion) {
         FIDELITY,
         FASTER_RADIX,
         u64,
-        Rank9SelFrame<FASTER_RADIX, u64>
+        Rank9SelFrame<FASTER_RADIX, u64>,
     >::with_parameters(prelude, table);
 
     group.bench_function("with rank9sel as frame", |b| {
@@ -177,7 +176,7 @@ fn decode_with_32bit_quasi_folded(c: &mut Criterion) {
         FASTER_RADIX,
         u32,
         VecFrame<FASTER_RADIX, u32>,
-        Vec<u8>
+        Vec<u8>,
     >::with_parameters(prelude, frame);
 
     group.bench_function("with 32bit", |b| {

@@ -1,12 +1,13 @@
 use anyhow::Result;
 
-use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
+use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 
+use folded_streaming_rans::bvgraph::mock_writers::{
+    ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter,
+};
 use webgraph::prelude::{BVGraph, EmptyDict, RandomAccessLabelling};
 use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
-use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter};
-
 
 #[test]
 fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
@@ -16,9 +17,9 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         graph.add_node(i);
     }
 
-    graph.add_arc(4, 0);    // 4 -> 0 -> 2
-    graph.add_arc(0, 2);    //       `-> 3
-    graph.add_arc(0, 3);    // 1 -> 5
+    graph.add_arc(4, 0); // 4 -> 0 -> 2
+    graph.add_arc(0, 2); //       `-> 3
+    graph.add_arc(0, 3); // 1 -> 5
     graph.add_arc(1, 5);
 
     let log_mock = Log2MockWriter::build(ANSymbolTable::default());
@@ -34,13 +35,14 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let model4encoder =  bvcomp.flush()?.build();
+    let model4encoder = bvcomp.flush()?.build();
     let folding_params = model4encoder.get_folding_params();
 
     let entropic_costs_table = ANSymbolTable::new(&model4encoder, folding_params);
     let entropic_mock = EntropyMockWriter::build(entropic_costs_table.clone());
     let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp =
+        BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // second iteration -> build the model with entropic mock writer
     for node_index in 0..graph.num_nodes() {
@@ -57,7 +59,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         7,
         2,
         3,
-        0
+        0,
     );
 
     // now encode the graph
@@ -102,12 +104,13 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     // First iteration with Log2MockWriter
     bvcomp.extend(graph.iter())?;
 
-    let model4encoder =  bvcomp.flush()?.build();
+    let model4encoder = bvcomp.flush()?.build();
     let folding_params = model4encoder.get_folding_params();
     let entropic_costs_table = ANSymbolTable::new(&model4encoder, folding_params);
     let entropic_mock = EntropyMockWriter::build(entropic_costs_table.clone());
     let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp =
+        BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     // second iteration with EntropyMockWriter
     bvcomp.extend(graph.iter())?;
@@ -119,7 +122,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
         7,
         2,
         3,
-        0
+        0,
     );
 
     // Encoding the graph

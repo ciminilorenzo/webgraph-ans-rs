@@ -4,11 +4,10 @@ pub mod model4decoder;
 pub mod model4encoder;
 pub mod model4encoder_builder;
 
+use crate::multi_model_ans::model4encoder::ANSComponentModel4Encoder;
+use crate::{Freq, State};
 use epserde::Epserde;
 use mem_dbg::{MemDbg, MemSize};
-use crate::{Freq, State};
-use crate::multi_model_ans::model4encoder::ANSComponentModel4Encoder;
-
 
 #[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
 pub struct Prelude {
@@ -47,7 +46,9 @@ pub struct EncoderModelEntry {
 
 impl PartialEq for EncoderModelEntry {
     fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq && self.upperbound == other.upperbound && self.cumul_freq == other.cumul_freq
+        self.freq == other.freq
+            && self.upperbound == other.upperbound
+            && self.cumul_freq == other.cumul_freq
     }
 }
 

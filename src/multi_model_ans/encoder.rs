@@ -3,7 +3,6 @@ use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 use crate::{RawSymbol, State, Symbol, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
-
 #[derive(Clone)]
 pub struct ANSEncoder {
     /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).
@@ -25,7 +24,8 @@ impl ANSEncoder {
     }
 
     fn get_folds_number(&self, symbol: RawSymbol, component: BVGraphComponent) -> usize {
-        ((u64::ilog2(symbol) + 1) as usize - self.model.get_fidelity(component)) / self.model.get_radix(component)
+        ((u64::ilog2(symbol) + 1) as usize - self.model.get_fidelity(component))
+            / self.model.get_radix(component)
     }
 }
 
@@ -45,7 +45,8 @@ impl ANSEncoder {
                 if self.state.leading_zeros() >= self.model.get_radix(component) as u32 {
                     self.state <<= self.model.get_radix(component);
                     self.state += bits_to_push;
-                } else { // otherwise, normalize the state and push the bits in the normalized bits
+                } else {
+                    // otherwise, normalize the state and push the bits in the normalized bits
                     self.state = Self::shrink_state(self.state, &mut self.stream);
                     self.state <<= self.model.get_radix(component);
                     self.state += bits_to_push;

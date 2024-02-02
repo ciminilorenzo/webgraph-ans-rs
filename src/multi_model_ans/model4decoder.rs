@@ -1,10 +1,9 @@
 use std::ops::Index;
 
-use crate::{RawSymbol, Symbol};
 use crate::bvgraph::BVGraphComponent;
-use crate::multi_model_ans::DecoderModelEntry;
 use crate::multi_model_ans::model4encoder::ANSComponentModel4Encoder;
-
+use crate::multi_model_ans::DecoderModelEntry;
+use crate::{RawSymbol, Symbol};
 
 /// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode one of its [symbols](Symbol).
 pub struct ANSComponentModel4Decoder {

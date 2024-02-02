@@ -1,7 +1,7 @@
 use crate::ans::model4encoder::SingleANSModel4Encoder;
 use crate::ans::{Prelude, K_LOG2};
 use crate::traits::folding::{FoldRead, FoldWrite};
-use crate::{RawSymbol, State, Symbol, FASTER_RADIX, B};
+use crate::{RawSymbol, State, Symbol, B, FASTER_RADIX};
 
 /// Used to extract the 32 LSB from a 64-bit state.
 const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;

@@ -2,9 +2,9 @@ mod utils;
 
 use rstest::*;
 
-use folded_streaming_rans::{RawSymbol, State};
 use folded_streaming_rans::ans::model4decoder::*;
 use folded_streaming_rans::ans::model4encoder::SingleANSModel4Encoder;
+use folded_streaming_rans::{RawSymbol, State};
 
 const RADIX: usize = 4;
 const FIDELITY: usize = 2;
@@ -49,7 +49,10 @@ fn probe_works_for_all_types_of_frames(
     for i in 0..slots.len() {
         let slot_to_probe = slots[i] as State;
 
-        assert_eq!(expected_symbols[i], bitvec_frame[slot_to_probe].quasi_folded);
+        assert_eq!(
+            expected_symbols[i],
+            bitvec_frame[slot_to_probe].quasi_folded
+        );
         assert_eq!(expected_symbols[i], elias_frame[slot_to_probe].quasi_folded);
         assert_eq!(expected_symbols[i], vec_frame[slot_to_probe].quasi_folded);
     }

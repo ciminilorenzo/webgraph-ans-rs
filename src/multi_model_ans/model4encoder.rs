@@ -1,11 +1,10 @@
-use std::ops::Index;
 use epserde::Epserde;
 use mem_dbg::{MemDbg, MemSize};
+use std::ops::Index;
 
-use crate::multi_model_ans::{EncoderModelEntry};
-use crate::{Freq, Symbol};
 use crate::bvgraph::BVGraphComponent;
-
+use crate::multi_model_ans::EncoderModelEntry;
+use crate::{Freq, Symbol};
 
 #[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
 /// The ANS model of a specific [component](BVGraphComponent) used by the encoder to encode its symbols.
@@ -31,8 +30,7 @@ pub struct ANSComponentModel4Encoder {
 impl ANSComponentModel4Encoder {
     /// Returns the frequencies of each symbol in the [model](ANSComponentModel4Encoder).
     pub fn get_freqs(&self) -> Vec<Freq> {
-        self
-            .table
+        self.table
             .iter()
             .map(|symbol| symbol.freq)
             .collect::<Vec<_>>()
@@ -71,7 +69,6 @@ pub struct ANSModel4Encoder {
 }
 
 impl ANSModel4Encoder {
-
     pub fn get_folding_params(&self) -> Vec<(usize, usize)> {
         self.tables
             .iter()
@@ -123,8 +120,7 @@ impl ANSModel4Encoder {
 
     /// Returns a list of tuples containing the fidelity and radix of each [component](BVGraphComponent).
     pub fn get_component_args(&self) -> Vec<(usize, usize)> {
-        self
-            .tables
+        self.tables
             .iter()
             .map(|table| (table.fidelity, table.radix))
             .collect::<Vec<_>>()
