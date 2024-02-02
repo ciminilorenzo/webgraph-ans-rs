@@ -54,6 +54,7 @@ impl ANSModel4EncoderBuilder {
     }
 
     pub fn build(self) -> ANSModel4Encoder {
+        println!("\n\nStarting building the model");
         let mut models: Vec<ANSComponentModel4Encoder> = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
         // let's calculate the self-information of each component
@@ -82,6 +83,7 @@ impl ANSModel4EncoderBuilder {
             let mut best_distribution = None;
             let mut best_distribution_frame_size = None;
             let mut lower_divergence = f64::MAX;
+            let mut component_entropy_cost = 0.0;
 
             for theta in THETA.iter() {
                 'main_loop: for (fidelity, radix) in Self::get_folding_params().iter() {
@@ -107,24 +109,17 @@ impl ANSModel4EncoderBuilder {
                         biggest_symbol = max(biggest_symbol, folded_sym);
                     }
 
-                    let mut entropy = 0.0;
-
-                    folded_sym_freqs
-                        .iter()
-                        .enumerate()
-                        .for_each(|(symbol, freq)| {
-                            if *freq > 0 {
-                                let bytes_to_unfold = match symbol < folding_threshold as usize {
-                                    true => 0_usize,
-                                    false => (symbol - folding_threshold as usize) / folding_offset as usize + 1usize,
-                                };
-
-                                let p = *freq as f64 / self.total_freqs[component] as f64;
-                                entropy += (f64::log2(p).neg() + (bytes_to_unfold as f64 * *radix as f64)) * *freq as f64;
-                            }
-                        });
-
-                    println!("component: {} -> entropy: {}", component, entropy);
+                    println!("Component: {} | Fidelity: {} & Radix: {} | entropic cost: {}",
+                        component,
+                        fidelity,
+                        radix,
+                        Self::calculate_entropic_cost(
+                            &folded_sym_freqs,
+                            self.total_freqs[component],
+                            *fidelity,
+                            *radix,
+                        )
+                    );
 
                     let divergence = self.calculate_divergence(
                         self.total_freqs[component] as f64,
@@ -187,7 +182,6 @@ impl ANSModel4EncoderBuilder {
                                 );
 
                                 if divergence <= self_information[component] * theta {
-                                    // println!("divergence: {}", divergence);
                                     // let's accept the current distribution if either it has a lower
                                     // divergence or has an equal divergence but a smaller frame size.
                                     if divergence < lower_divergence ||
@@ -200,6 +194,12 @@ impl ANSModel4EncoderBuilder {
                                         best_distribution_frame_size = Some(frame_size);
                                         best_radix = Some(*radix);
                                         best_fidelity = Some(*fidelity);
+                                        component_entropy_cost = Self::calculate_entropic_cost(
+                                            &folded_sym_freqs,
+                                            self.total_freqs[component],
+                                            *fidelity,
+                                            *radix,
+                                        );
                                     }
                                 }
                                 frame_size *= 2;
@@ -213,9 +213,7 @@ impl ANSModel4EncoderBuilder {
             }
 
             let new_distribution = best_distribution.unwrap();
-            println!("new_distribution: {:?}", new_distribution);
             let frame_size = best_distribution_frame_size.unwrap();
-
             let radix = best_radix.unwrap();
             let fidelity = best_fidelity.unwrap();
             let folding_threshold = 1u64 << (fidelity + radix - 1);
@@ -224,6 +222,13 @@ impl ANSModel4EncoderBuilder {
             let mut last_covered_freq = 0;
             let log_m = frame_size.ilog2() as usize;
             let k =  if log_m > 0 {32 - log_m} else {31};
+
+            println!("\n ->>> Component: {} | best fidelity: {} & best radix: {} | best entropic cost: {}\n",
+                     component,
+                     fidelity,
+                     radix,
+                     component_entropy_cost
+            );
 
             for freq in new_distribution.iter() {
                 table.push(EncoderModelEntry {
@@ -244,6 +249,25 @@ impl ANSModel4EncoderBuilder {
             });
         }
         ANSModel4Encoder { tables: models }
+    }
+
+    fn calculate_entropic_cost(freqs: &[usize], total_freq: usize, fidelity: usize, radix: usize) -> f64 {
+        let mut entropic_cost = 0.0;
+        let folding_threshold = 1u64 << (fidelity + radix - 1);
+        let folding_offset = ((1 << radix) - 1) * (1 << (fidelity - 1));
+
+        for (symbol, freq) in freqs.iter().enumerate() {
+            if *freq > 0 {
+                let bytes_to_unfold = match symbol < folding_threshold as usize {
+                    true => 0_usize,
+                    false => (symbol - folding_threshold as usize) / folding_offset as usize + 1usize,
+                };
+
+                let p = *freq as f64 / total_freq as f64;
+                entropic_cost += (f64::log2(p).neg() + (bytes_to_unfold as f64 * radix as f64)) * *freq as f64;
+            }
+        }
+        entropic_cost
     }
 
     fn calculate_divergence(
