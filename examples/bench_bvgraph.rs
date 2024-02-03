@@ -1,5 +1,5 @@
 /*
-   This bench prints the medium time (in terms of nanoseconds) need to decode each arc of the cnr-2000 graph.
+   This bench prints the medium time (in terms of nanoseconds) needed to decode each arc of the cnr-2000 graph.
 */
 
 use anyhow::Result;
