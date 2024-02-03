@@ -2,52 +2,47 @@
    This bench prints the medium time (in terms of nanoseconds) need to decode each arc of the cnr-2000 graph.
 */
 
-/*
-use epserde::prelude::{Deserialize, Serialize};
 use anyhow::Result;
+use epserde::prelude::{Deserialize, Serialize};
 use webgraph::prelude::{BVComp, BVGraph, EmptyDict, RandomAccessLabelling, SequentialLabelling};
-use folded_streaming_rans::bvgraph::BVGraphComponent;
 
+use folded_streaming_rans::bvgraph::mock_writers::{
+    ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter,
+};
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use folded_streaming_rans::multi_model_ans::{ANSCompressorPhase, Prelude};
-use folded_streaming_rans::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, Log2MockWriter};
 
 const NODES: usize = 325557;
 const ARCS: usize = 3216152;
-const FIDELITY: usize = 2;
-const RADIX: usize = 8;
-
-const COMPONENT_ARGS: [(usize, usize); 9] = [(FIDELITY, RADIX); BVGraphComponent::COMPONENTS];
-
 
 fn main() -> Result<()> {
     let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000/cnr-2000")?;
 
-    let binary_costs_table = ANSymbolTable::initialize_with_binary_cost(COMPONENT_ARGS);
-    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(binary_costs_table, COMPONENT_ARGS);
-
-    // first iteration: build the model with log2mock
+    let log2_mock = Log2MockWriter::build(ANSymbolTable::default());
+    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(log2_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     bvcomp.extend(graph.iter())?;
 
     let model4encoder = bvcomp.flush()?.build();
-    let entropy_costs = ANSymbolTable::new(&model4encoder, COMPONENT_ARGS);
-    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_costs.clone(), COMPONENT_ARGS);
-
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
+    let folding_params = model4encoder.get_folding_params();
+    let entropic_costs_table = ANSymbolTable::new(&model4encoder, folding_params);
+    let entropic_mock = EntropyMockWriter::build(entropic_costs_table.clone());
+    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropic_mock);
+    let mut bvcomp =
+        BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(model_builder, 7, 2, 3, 0);
 
     bvcomp.extend(graph.iter())?;
 
     let model4encoder = bvcomp.flush()?.build();
 
     let mut bvcomp = BVComp::<BVGraphWriter>::new(
-        BVGraphWriter::new(model4encoder, entropy_costs),
+        BVGraphWriter::new(model4encoder, entropic_costs_table),
         7,
         2,
         3,
-        0
+        0,
     );
 
     // third iteration: encode with the entropy mock
@@ -82,6 +77,3 @@ fn main() -> Result<()> {
     dbg!(now.elapsed().as_nanos() / arcs as u128);
     Ok(())
 }
-*/
-
-fn main() {}

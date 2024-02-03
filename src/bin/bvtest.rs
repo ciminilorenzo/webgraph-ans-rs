@@ -1,20 +1,15 @@
-/*
-use std::{
-    hint::black_box,
-    path::{PathBuf},
-};
+use std::{hint::black_box, path::PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
 use epserde::prelude::*;
+use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
+use folded_streaming_rans::multi_model_ans::{ANSCompressorPhase, Prelude};
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
 use webgraph::prelude::*;
-
-const FIDELITY: usize = 2;
-const RADIX: usize = 4;
 
 #[derive(Parser, Debug)]
 #[command(about = "Tests the speed of an ANS graph", long_about = None)]
@@ -38,12 +33,12 @@ pub fn main() -> Result<()> {
     let seq_graph = load_seq(&args.basename)?;
     let mut buf = PathBuf::from(&args.basename);
     buf.set_extension("ans");
-    let prelude = Prelude::<RADIX>::load_full(buf.as_path())?;
+    let prelude = Prelude::load_full(buf.as_path())?;
     buf.set_extension("phases");
     let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
-    let code_reader_builder = ANSBVGraphReaderBuilder::<FIDELITY, RADIX>::new(prelude, phases);
+    let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases);
 
-    let graph = BVGraph::<ANSBVGraphReaderBuilder<FIDELITY, RADIX>, EmptyDict<usize, usize>>::new(
+    let graph = BVGraph::<ANSBVGraphReaderBuilder, EmptyDict<usize, usize>>::new(
         code_reader_builder,
         2,
         7,
@@ -52,8 +47,8 @@ pub fn main() -> Result<()> {
     );
 
     let mut pl = ProgressLogger::default();
-
     let mut rng = SmallRng::seed_from_u64(0);
+
     pl.start("Testing successors...");
     for _ in 0..args.n {
         let mut d = 0;
@@ -69,6 +64,3 @@ pub fn main() -> Result<()> {
 
     Ok(())
 }
-*/
-
-fn main() {}
