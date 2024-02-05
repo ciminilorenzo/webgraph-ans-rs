@@ -3,7 +3,6 @@ use itertools::Itertools;
 use log::info;
 use std::cmp::max;
 use std::collections::HashMap;
-use std::ops::Neg;
 
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4encoder::ANSComponentModel4Encoder;
@@ -13,18 +12,20 @@ use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::utils::data_utilities::scale_freqs;
 use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 
-/// Multiplicative factor used to define the maximum distance that a distribution can have from the
-/// original one.
-/// The bigger this factor is, the more approximated the new distribution can be. It means smaller
-/// frame sizes and, consequently, less memory usage + faster encoding/decoding.
-const THETA: [f64; 7] = [1.001, 1.003, 1.005, 1.01, 1.02, 1.05, 1.10];
-
+// todo: elimino theta ma stampo quanto sto spendendo in più rispetto all'originale
 pub struct ANSModel4EncoderBuilder {
     /// The frequencies of the raw symbols for each component.
     real_freqs: Vec<HashMap<RawSymbol, usize>>,
 
     /// The sum of all symbols' frequencies for each component.
     total_freqs: Vec<usize>,
+
+    /// The cost, expressed as the expected number of bits we have to spend to encode the whole sequence, of the original
+    /// distribution of each component.
+    component_costs: Vec<f64>,
+
+    /// The cost of the whole graph, calculated by summing the cost of each component.
+    graph_cost: f64,
 }
 
 impl ANSModel4EncoderBuilder {
@@ -38,182 +39,152 @@ impl ANSModel4EncoderBuilder {
         Self {
             real_freqs: vec![HashMap::new(); BVGraphComponent::COMPONENTS],
             total_freqs: vec![0; BVGraphComponent::COMPONENTS],
+            component_costs: vec![0.0; BVGraphComponent::COMPONENTS],
+            graph_cost: 0.0,
         }
     }
 
     /// Pushes a new symbol for the given [component](BVGraphComponent) into the builder.
+    ///
+    /// Note: it panics if the symbol is bigger than [MAX_RAW_SYMBOL].
     pub fn push_symbol(&mut self, symbol: RawSymbol, component: BVGraphComponent) -> Result<()> {
         if symbol > MAX_RAW_SYMBOL {
             bail!("Symbol can't be bigger than u48::MAX");
         }
 
+        self.total_freqs[component as usize] += 1;
         *self.real_freqs[component as usize]
             .entry(symbol)
             .or_insert(0) += 1;
-        self.total_freqs[component as usize] += 1;
+
         Ok(())
     }
 
-    pub fn build(self) -> ANSModel4Encoder {
+    pub fn build(mut self) -> ANSModel4Encoder {
+        self.calculate_cost();
         let mut models = Vec::with_capacity(BVGraphComponent::COMPONENTS);
-
-        let original_entropy = self
-            .real_freqs
-            .iter()
-            .map(|freqs| {
-                Self::get_information_content(
-                    freqs.values().collect::<Vec<_>>(),
-                    self.total_freqs[0],
-                )
-            })
-            .collect::<Vec<f64>>();
+        let mut folded_component_costs = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
         info!(
-            "Original cost of every component: {:?} B",
-            original_entropy
-                .iter()
-                .map(|x| (x / 8f64).round() as usize)
-                .collect::<Vec<usize>>()
-        );
-        info!(
-            "Total cost of every component: {:?} B",
-            original_entropy
-                .iter()
-                .map(|x| x / 8f64)
-                .sum::<f64>()
-                .round() as usize
+            "{:<15} | {:<10} | {:<10} | {:<10} | {:<12} | {:<10} | {:<10}",
+            "Component",
+            "log(frame)",
+            "radix",
+            "fidelity",
+            "Cost(bytes)",
+            "Cost difference(%)",
+            "Of total(%)"
         );
 
         for component in 0..BVGraphComponent::COMPONENTS {
             if self.real_freqs[component].is_empty() {
                 // this component has no symbols to encode. it should happen only with dummy graphs
                 models.push(ANSComponentModel4Encoder::default());
+                folded_component_costs.push(0.0);
                 continue;
             }
 
-            let mut best_radix = None;
-            let mut best_fidelity = None;
-            let mut best_distribution = None;
-            let mut best_distribution_frame_size = None;
+            let mut radix = 0;
+            let mut fidelity = 0;
+            let mut approximated_distr = Vec::new();
+            let mut frame_size = 0;
             let mut best_cost = f64::MAX;
 
-            for theta in THETA.iter() {
-                let threshold = theta * original_entropy[component];
+            'main_loop: for (fid, rad) in Self::get_folding_params().iter() {
+                let max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, *rad, *fid);
+                let mut folded_sym_freqs = vec![0_usize; max_bucket as usize];
+                let folding_threshold = 1u64 << (fid + rad - 1);
+                let mut biggest_symbol = 0u16;
 
-                'main_loop: for (fidelity, radix) in Self::get_folding_params().iter() {
-                    let max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, *radix, *fidelity);
-                    let mut folded_sym_freqs = vec![0_usize; max_bucket as usize];
-                    let folding_threshold = 1u64 << (fidelity + radix - 1);
-                    let mut biggest_symbol = 0u16;
-
-                    // create the table containing, for each folded symbol, its frequency.
-                    for (raw_symbol, freq) in self.real_freqs[component].iter() {
-                        let folded_sym = match *raw_symbol < folding_threshold {
-                            true => *raw_symbol as Symbol,
-                            false => fold_without_streaming_out(*raw_symbol, *radix, *fidelity),
-                        };
-                        // update the frequency of the folded symbol
-                        folded_sym_freqs[folded_sym as usize] += freq;
-                        biggest_symbol = max(biggest_symbol, folded_sym);
-                    }
-
-                    let folded_component_cost = Self::get_folded_distr_information_content(
-                        &folded_sym_freqs,
-                        self.total_freqs[component],
-                        *fidelity,
-                        *radix,
-                    );
-
-                    // stop if the cost of the not-approximated distribution is already higher
-                    // than the one we got from one of the previous combination of fidelity and radix.
-                    if folded_component_cost > best_cost {
-                        continue;
-                    }
-
-                    // let's count the number of actual symbols we have in the folded distribution
-                    let n = folded_sym_freqs.iter().filter(|freq| **freq > 0).count();
-
-                    let mut frame_size = match n.is_power_of_two() {
-                        true => n,
-                        false => n.next_power_of_two(),
+                // create the table containing, for each folded symbol, its frequency.
+                for (raw_symbol, freq) in self.real_freqs[component].iter() {
+                    let folded_sym = match *raw_symbol < folding_threshold {
+                        true => *raw_symbol as Symbol,
+                        false => fold_without_streaming_out(*raw_symbol, *rad, *fid),
                     };
+                    // update the frequency of the folded symbol
+                    folded_sym_freqs[folded_sym as usize] += freq;
+                    biggest_symbol = max(biggest_symbol, folded_sym);
+                }
 
-                    // We need the list of symbols' indexes sorted by the frequency of the related
-                    // symbol, in ascending order.
-                    let sorted_indexes = folded_sym_freqs
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, freq)| **freq > 0)
-                        .sorted_unstable_by(|(_, freq_1), (_, freq_2)| freq_1.cmp(freq_2))
-                        .map(|(symbol_index, _)| symbol_index)
-                        .collect::<Vec<usize>>();
+                let folded_component_cost = Self::get_folded_distribution_cost(
+                    &folded_sym_freqs,
+                    self.total_freqs[component],
+                    *fid,
+                    *rad,
+                );
 
-                    loop {
-                        if frame_size > Self::MAXIMUM_FRAME_SIZE {
-                            continue 'main_loop;
+                // we would just spend even more
+                if folded_component_cost > best_cost {
+                    continue;
+                }
+
+                // let's count the number of actual symbols we have in the folded distribution
+                let n = folded_sym_freqs.iter().filter(|freq| **freq > 0).count();
+
+                let mut m = match n.is_power_of_two() {
+                    true => n,
+                    false => n.next_power_of_two(),
+                };
+
+                // We need the list of symbols' indexes sorted by the frequency of the related
+                // symbol, in ascending order.
+                let sorted_indexes = folded_sym_freqs
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, freq)| **freq > 0)
+                    .sorted_unstable_by(|(_, freq_1), (_, freq_2)| freq_1.cmp(freq_2))
+                    .map(|(symbol_index, _)| symbol_index)
+                    .collect::<Vec<usize>>();
+
+                loop {
+                    if m > Self::MAXIMUM_FRAME_SIZE {
+                        continue 'main_loop;
+                    }
+
+                    match scale_freqs(
+                        &folded_sym_freqs,
+                        &sorted_indexes,
+                        n,
+                        self.total_freqs[component],
+                        m as isize,
+                    ) {
+                        Ok(mut new_distribution) => {
+                            let new_cost = Self::get_approx_folded_distribution_cost(
+                                &folded_sym_freqs,
+                                &new_distribution,
+                                m as f64,
+                                *fid,
+                                *rad,
+                            );
+
+                            // accept if either it has a lower cost or has an equal cost but a smaller frame size.
+                            if new_cost < best_cost || (new_cost == best_cost && m < frame_size) {
+                                best_cost = new_cost;
+                                new_distribution.drain(biggest_symbol as usize + 1..);
+                                approximated_distr = new_distribution;
+                                frame_size = m;
+                                radix = *rad;
+                                fidelity = *fid;
+                            }
+                            m *= 2;
                         }
-
-                        match scale_freqs(
-                            &folded_sym_freqs,
-                            &sorted_indexes,
-                            n,
-                            self.total_freqs[component],
-                            frame_size as isize,
-                        ) {
-                            Ok(mut new_distribution) => {
-                                let new_cost = Self::get_approx_folded_distr_information_content(
-                                    &folded_sym_freqs,
-                                    &new_distribution,
-                                    frame_size as f64,
-                                    *fidelity,
-                                    *radix,
-                                );
-
-                                // accept if either it has a lower cost or has an equal cost but a smaller frame size.
-                                if new_cost <= threshold && new_cost < best_cost
-                                    || (new_cost == best_cost
-                                        && frame_size < best_distribution_frame_size.unwrap())
-                                {
-                                    best_cost = new_cost;
-                                    new_distribution.drain(biggest_symbol as usize + 1..);
-                                    best_distribution = Some(new_distribution);
-                                    best_distribution_frame_size = Some(frame_size);
-                                    best_radix = Some(*radix);
-                                    best_fidelity = Some(*fidelity);
-                                }
-                                frame_size *= 2;
-                            }
-                            Err(_) => {
-                                frame_size *= 2;
-                            }
+                        Err(_) => {
+                            m *= 2;
                         }
                     }
                 }
             }
 
-            let new_distribution = best_distribution
-                .expect("Given the available thresholds, no distribution has been found for one of the components");
-            let frame_size = best_distribution_frame_size.unwrap();
-            let radix = best_radix.unwrap();
-            let fidelity = best_fidelity.unwrap();
-
-            info!(
-                "{:?} folded with frame: {}, radix: {} & fidelity: {}. Cost is {:?} B.",
-                BVGraphComponent::from(component),
-                frame_size,
-                radix,
-                fidelity,
-                (best_cost / 8f64).round() as usize,
-            );
-
+            folded_component_costs.push(best_cost);
             let folding_threshold = 1u64 << (fidelity + radix - 1);
             let folding_offset = ((1 << radix) - 1) * (1 << (fidelity - 1));
-            let mut table = Vec::with_capacity(new_distribution.len());
+            let mut table = Vec::with_capacity(approximated_distr.len());
             let mut last_covered_freq = 0;
             let log_m = frame_size.ilog2() as usize;
             let k = if log_m > 0 { 32 - log_m } else { 31 };
 
-            for freq in new_distribution.iter() {
+            for freq in approximated_distr.iter() {
                 table.push(EncoderModelEntry {
                     freq: *freq as u16,
                     upperbound: (1_u64 << (k + B)) * *freq as u64,
@@ -231,12 +202,56 @@ impl ANSModel4EncoderBuilder {
                 frame_size: log_m,
             });
         }
-        ANSModel4Encoder { models: models }
+
+        let folded_graph_cost = folded_component_costs.iter().sum::<f64>();
+        for component in 0..BVGraphComponent::COMPONENTS {
+            info!(
+                "{} | {:<10} | {:<10} | {:<10} | {:<12} | {:<18.2} | {:<10.2}",
+                BVGraphComponent::from(component),
+                models[component].frame_size,
+                models[component].radix,
+                models[component].fidelity,
+                (folded_component_costs[component] / 8f64).round() as usize,
+                (folded_component_costs[component] - self.component_costs[component])
+                    / self.component_costs[component]
+                    * 100.0,
+                folded_component_costs[component] / folded_graph_cost * 100.0
+            );
+        }
+
+        info!(
+            "Original graph cost: {:?} B | Folded graph cost: {} B (+{:.2}%)\n",
+            (self.graph_cost / 8f64).round() as usize,
+            (folded_graph_cost / 8f64).round() as usize,
+            (folded_graph_cost - self.graph_cost) / self.graph_cost * 100.0
+        );
+
+        ANSModel4Encoder { models }
+    }
+
+    /// Stores in `Self` the cost of every component and the total cost of the graph.
+    fn calculate_cost(&mut self) {
+        self.component_costs = self
+            .real_freqs
+            .iter()
+            .enumerate()
+            .map(|(component, freqs)| {
+                freqs
+                    .values()
+                    .map(|freq| {
+                        let prob = *freq as f64 / self.total_freqs[component] as f64;
+                        -prob.log2() * *freq as f64
+                    })
+                    .sum::<f64>()
+            })
+            .collect::<Vec<f64>>();
+
+        self.graph_cost = self.component_costs.iter().sum();
     }
 
     /// Calculate the information content of an approximated folded distribution, performed with the given fidelity
     /// and radix, by using the original frequencies of the original folded distribution before the approximation.
-    fn get_approx_folded_distr_information_content(
+    fn get_approx_folded_distribution_cost(
         folded_distr: &[usize],
         folded_approximated_distr: &[usize],
         new_frame_size: f64,
@@ -269,7 +284,7 @@ impl ANSModel4EncoderBuilder {
 
     /// Calculate the information content of a folded distribution that uses the given fidelity and
     /// radix.
-    fn get_folded_distr_information_content(
+    fn get_folded_distribution_cost(
         freqs: &[usize],
         total_freq: usize,
         fidelity: usize,
@@ -293,20 +308,10 @@ impl ANSModel4EncoderBuilder {
             };
 
             let freq = *freq as f64;
-            let prob = *freq as f64 / total_freq as f64;
+            let prob = freq / total_freq as f64;
             information_content += (-prob.log2() + (folds * radix as f64)) * freq;
         }
         information_content
-    }
-
-    fn get_information_content(freqs: &[usize], total_freq: usize) -> f64 {
-        freqs
-            .iter()
-            .map(|freq| {
-                let p = *freq as f64 / total_freq as f64;
-                f64::log2(p).neg() * *freq as f64
-            })
-            .sum()
     }
 
     /// Returns all possibile combinations of radix and fidelity which sum is at least 4 and at most 11.

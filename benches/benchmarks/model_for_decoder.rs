@@ -1,3 +1,4 @@
+/*
 use criterion::{black_box, criterion_group, Criterion};
 
 use pprof::criterion::{Output, PProfProfiler};
@@ -69,3 +70,4 @@ criterion_group! {
     config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
     targets = probing_benchmark
 }
+*/

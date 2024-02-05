@@ -1,3 +1,4 @@
+/*
 use criterion::{criterion_group, Criterion};
 
 use pprof::criterion::{Output, PProfProfiler};
@@ -194,3 +195,4 @@ criterion_group! {
         decode_with_64bit_quasi_folded,
         decode_with_32bit_quasi_folded
 }
+*/

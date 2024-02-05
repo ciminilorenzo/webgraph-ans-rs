@@ -7,7 +7,6 @@ use folded_streaming_rans::bvgraph::mock_writers::{
 };
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 use lender::*;
-use log::info;
 use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
 use webgraph::prelude::*;
@@ -27,6 +26,8 @@ struct Args {
 
 pub fn main() -> Result<()> {
     let args = Args::parse();
+    let mut pl = ProgressLogger::default();
+    let seq_graph = load_seq(&args.basename)?;
 
     stderrlog::new()
         .verbosity(2)
@@ -34,9 +35,7 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let seq_graph = load_seq(&args.basename)?;
-
-    // crete a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
+    // create a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
     let log2_mock = Log2MockWriter::build(ANSymbolTable::default());
     // create a builder that uses the log2 mock writer
     let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(log2_mock);
@@ -48,10 +47,9 @@ pub fn main() -> Result<()> {
         0,
     );
 
-    let mut pl = ProgressLogger::default();
     pl.item_name("node")
         .expected_updates(Some(seq_graph.num_nodes()));
-    pl.start("Computing data distribution...");
+    pl.start("Pushing input into the model builder with log2 mock...");
 
     // first iteration: build a model with the log2 mock writer
     for_![ (_, succ) in seq_graph {
@@ -60,14 +58,14 @@ pub fn main() -> Result<()> {
     }];
     pl.done();
 
-    info!("Building encoder...");
+    pl.start("Building the model with log2 mock...");
     // get the ANSModel4Encoder obtained from the first iteration
     let model4encoder = bvcomp.flush()?.build();
+    pl.done();
     // get the folding parameters from the model, that is the best combination of radix and fidelity
     let folding_params = model4encoder.get_folding_params();
     // create a new table of costs based on params obtained from the previous step
     let entropy_costs = ANSymbolTable::new(&model4encoder, folding_params);
-    info!("Building entropy writer...");
     // create an entropy mock that uses the entropic costs table
     let entropy_mock = EntropyMockWriter::build(entropy_costs.clone());
     let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_mock);
@@ -81,7 +79,7 @@ pub fn main() -> Result<()> {
 
     pl.item_name("node")
         .expected_updates(Some(seq_graph.num_nodes()));
-    pl.start("Computing models...");
+    pl.start("Pushing input into the model builder with entropy mock...");
 
     // second iteration: build a model with the entropy mock writer
     for_![ (_, succ) in seq_graph {
@@ -90,8 +88,10 @@ pub fn main() -> Result<()> {
     }];
     pl.done();
 
+    pl.start("Building the model with entropy mock...");
     // get the final ANSModel4Encoder from the second iteration
     let model4encoder = bvcomp.flush()?.build();
+    pl.done();
     let mut bvcomp = BVComp::<BVGraphWriter>::new(
         BVGraphWriter::new(model4encoder, entropy_costs),
         args.ca.compression_window,

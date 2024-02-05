@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 pub mod mock_writers;
 pub mod reader;
 pub mod writer;
@@ -15,6 +17,22 @@ pub enum BVGraphComponent {
     IntervalLen,
     FirstResidual,
     Residual,
+}
+
+impl Display for BVGraphComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BVGraphComponent::Outdegree => write!(f, "{:<15}", "Outdegree"),
+            BVGraphComponent::ReferenceOffset => write!(f, "{:<15}", "ReferenceOffset"),
+            BVGraphComponent::BlockCount => write!(f, "{:<15}", "BlockCount"),
+            BVGraphComponent::Blocks => write!(f, "{:<15}", "Blocks"),
+            BVGraphComponent::IntervalCount => write!(f, "{:<15}", "IntervalCount"),
+            BVGraphComponent::IntervalStart => write!(f, "{:<15}", "IntervalStart"),
+            BVGraphComponent::IntervalLen => write!(f, "{:<15}", "IntervalLen"),
+            BVGraphComponent::FirstResidual => write!(f, "{:<15}", "FirstResidual"),
+            BVGraphComponent::Residual => write!(f, "{:<15}", "Residual"),
+        }
+    }
 }
 
 impl From<usize> for BVGraphComponent {

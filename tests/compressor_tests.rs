@@ -1,14 +1,16 @@
 mod utils;
 
+use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
 use folded_streaming_rans::bvgraph::BVGraphComponent;
 use folded_streaming_rans::multi_model_ans::decoder::ANSDecoder;
 use folded_streaming_rans::multi_model_ans::encoder::ANSEncoder;
 use folded_streaming_rans::multi_model_ans::model4decoder::ANSModel4Decoder;
 use folded_streaming_rans::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use folded_streaming_rans::RawSymbol;
+use rand::prelude::SliceRandom;
 
 #[test]
-fn decoder_decodes_correctly_single_dummy_sequence() {
+fn decodes_correctly_single_dummy_sequence() {
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
@@ -38,15 +40,16 @@ fn decoder_decodes_correctly_single_dummy_sequence() {
     assert_eq!(decoded_symbols, source);
 }
 
-/*
 #[test]
-fn decoder_decodes_correctly_dummy_sequence_with_folding() {
+fn decodes_correctly_dummy_sequence_with_folding() {
     let source = vec![1000, 1000, 2000];
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
     for symbol in &source {
-        model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
+        model4encoder_builder
+            .push_symbol(*symbol, BVGraphComponent::Outdegree)
+            .unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
@@ -74,10 +77,12 @@ fn decoder_decodes_correctly_dummy_sequence_with_folding() {
 fn decoder_decodes_correctly_real_sequence() {
     let source = get_zipfian_distr(0, 1.2).to_vec();
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
     for symbol in &source {
-        model4encoder_builder.push_symbol(*symbol, BVGraphComponent::Outdegree).unwrap();
+        model4encoder_builder
+            .push_symbol(*symbol, BVGraphComponent::Outdegree)
+            .unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
@@ -102,14 +107,18 @@ fn decoder_decodes_correctly_real_sequence() {
 }
 
 #[test]
-fn decoder_decodes_correctly_dummy_sequences() {
+fn decodes_correctly_dummy_sequences() {
     let first_source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let second_source = vec![1_u64, 3, 3, 3, 2, 2, 3, 3, 4, 5];
-    let mut encoder_model_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
+    let mut encoder_model_builder = ANSModel4EncoderBuilder::new();
 
     for index in 0..first_source.len() {
-        encoder_model_builder.push_symbol(first_source[index], BVGraphComponent::Outdegree).unwrap();
-        encoder_model_builder.push_symbol(second_source[index], BVGraphComponent::BlockCount).unwrap();
+        encoder_model_builder
+            .push_symbol(first_source[index], BVGraphComponent::Outdegree)
+            .unwrap();
+        encoder_model_builder
+            .push_symbol(second_source[index], BVGraphComponent::BlockCount)
+            .unwrap();
     }
 
     let encoder_model = encoder_model_builder.build();
@@ -141,12 +150,12 @@ fn decoder_decodes_correctly_dummy_sequences() {
 
 #[test]
 // Frame sizes: [9, 14, 13, 10] (note that these are actually log_2 of the frame sizes)
-fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
+fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     // let's get a random sequence of symbols to encode and map them to have this shape: (component, symbol)
     let first_sequence = get_zipfian_distr(0, 1.3)
         .iter()
         .map(|symbol| (BVGraphComponent::Outdegree, *symbol))
-        .collect::<Vec<(BVGraphComponent, RawSymbol)>>()[..SYMBOL_LIST_LENGTH/2000]
+        .collect::<Vec<(BVGraphComponent, RawSymbol)>>()[..SYMBOL_LIST_LENGTH / 2000]
         .to_vec();
 
     let second_sequence = get_zipfian_distr(1, 1.2)
@@ -163,10 +172,12 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     let mut source = vec![first_sequence, second_sequence, third_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new(COMPONENT_ARGS);
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
     for (component, symbol) in &source {
-        model4encoder_builder.push_symbol(*symbol, *component).unwrap();
+        model4encoder_builder
+            .push_symbol(*symbol, *component)
+            .unwrap();
     }
 
     let encoder_model = model4encoder_builder.build();
@@ -200,4 +211,5 @@ fn decoder_decodes_correctly_real_interleaved_sequences_with_different_frame_siz
     assert_eq!(expected[2], decoded[2]);
     assert_eq!(expected[3], decoded[3]);
 }
-*/
+
+// a test that fails
