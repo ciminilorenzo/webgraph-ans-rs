@@ -37,7 +37,7 @@ impl ANSymbolTable {
             .enumerate()
             .for_each(|(component, current_table)| {
                 (0..current_table.len()).for_each(|symbol| {
-                    let symbol_freq = match model.tables[component].table.get(symbol) {
+                    let symbol_freq = match model.models[component].table.get(symbol) {
                         Some(entry) => match entry.freq {
                             0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
                             _ => entry.freq,

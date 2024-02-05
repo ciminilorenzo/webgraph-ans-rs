@@ -63,14 +63,14 @@ impl Index<Symbol> for ANSComponentModel4Encoder {
 /// [component](BVGraphComponent) has its own [model](ANSComponentModel4Encoder) that is used to encode its symbols.
 #[derive(Clone)]
 pub struct ANSModel4Encoder {
-    /// A table containing the whole set of [models](ANSComponentModel4Encoder) used by the ANS encoder, one for each
+    /// The whole set of [models](ANSComponentModel4Encoder) used by the ANS encoder, one for each
     /// [component](BVGraphComponent).
-    pub tables: Vec<ANSComponentModel4Encoder>,
+    pub models: Vec<ANSComponentModel4Encoder>,
 }
 
 impl ANSModel4Encoder {
     pub fn get_folding_params(&self) -> Vec<(usize, usize)> {
-        self.tables
+        self.models
             .iter()
             .map(|table| (table.fidelity, table.radix))
             .collect::<Vec<_>>()
@@ -79,48 +79,48 @@ impl ANSModel4Encoder {
     /// Returns the frame mask for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_frame_mask(&self, component: BVGraphComponent) -> u64 {
-        (1 << self.tables[component as usize].frame_size) - 1
+        (1 << self.models[component as usize].frame_size) - 1
     }
 
     /// Returns the log2 of the frame size for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_log2_frame_size(&self, component: BVGraphComponent) -> usize {
-        self.tables[component as usize].frame_size
+        self.models[component as usize].frame_size
     }
 
     /// Returns the radix for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_radix(&self, component: BVGraphComponent) -> usize {
-        self.tables[component as usize].radix
+        self.models[component as usize].radix
     }
 
     /// Returns the fidelity for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_fidelity(&self, component: BVGraphComponent) -> usize {
-        self.tables[component as usize].fidelity
+        self.models[component as usize].fidelity
     }
 
     /// Returns a reference to the [entry](EncoderModelEntry) of the symbol
     #[inline(always)]
     pub fn symbol(&self, symbol: Symbol, component: BVGraphComponent) -> &EncoderModelEntry {
-        &self.tables[component as usize][symbol]
+        &self.models[component as usize][symbol]
     }
 
     /// Returns the folding offset for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_folding_offset(&self, component: BVGraphComponent) -> u64 {
-        self.tables[component as usize].folding_offset
+        self.models[component as usize].folding_offset
     }
 
     /// Returns the folding threshold for the given [component](BVGraphComponent).
     #[inline(always)]
     pub fn get_folding_threshold(&self, component: BVGraphComponent) -> u64 {
-        self.tables[component as usize].folding_threshold
+        self.models[component as usize].folding_threshold
     }
 
     /// Returns a list of tuples containing the fidelity and radix of each [component](BVGraphComponent).
     pub fn get_component_args(&self) -> Vec<(usize, usize)> {
-        self.tables
+        self.models
             .iter()
             .map(|table| (table.fidelity, table.radix))
             .collect::<Vec<_>>()
