@@ -12,7 +12,6 @@ use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::utils::data_utilities::scale_freqs;
 use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 
-// todo: elimino theta ma stampo quanto sto spendendo in più rispetto all'originale
 pub struct ANSModel4EncoderBuilder {
     /// The frequencies of the raw symbols for each component.
     real_freqs: Vec<HashMap<RawSymbol, usize>>,
@@ -61,10 +60,6 @@ impl ANSModel4EncoderBuilder {
     }
 
     pub fn build(mut self) -> ANSModel4Encoder {
-        self.calculate_cost();
-        let mut models = Vec::with_capacity(BVGraphComponent::COMPONENTS);
-        let mut folded_component_costs = Vec::with_capacity(BVGraphComponent::COMPONENTS);
-
         info!(
             "{:<15} | {:<10} | {:<10} | {:<10} | {:<12} | {:<10} | {:<10}",
             "Component",
@@ -75,6 +70,10 @@ impl ANSModel4EncoderBuilder {
             "Cost difference(%)",
             "Of total(%)"
         );
+
+        self.calculate_cost();
+        let mut models = Vec::with_capacity(BVGraphComponent::COMPONENTS);
+        let mut folded_component_costs = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
         for component in 0..BVGraphComponent::COMPONENTS {
             if self.real_freqs[component].is_empty() {
@@ -215,7 +214,7 @@ impl ANSModel4EncoderBuilder {
                 (folded_component_costs[component] - self.component_costs[component])
                     / self.component_costs[component]
                     * 100.0,
-                folded_component_costs[component] / folded_graph_cost * 100.0
+                (folded_component_costs[component] / folded_graph_cost) * 100.0
             );
         }
 

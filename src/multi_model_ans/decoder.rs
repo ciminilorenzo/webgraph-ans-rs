@@ -1,9 +1,8 @@
-use webgraph::prelude::BVGraphCodesReader;
-
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 use crate::{RawSymbol, State, Symbol, B};
+use webgraph::graphs::Decoder;
 
 #[derive(Clone)]
 pub struct ANSDecoder<'a> {
@@ -99,7 +98,7 @@ impl<'a> ANSDecoder<'a> {
     }
 }
 
-impl<'a> BVGraphCodesReader for ANSDecoder<'a> {
+impl<'a> Decoder for ANSDecoder<'a> {
     fn read_outdegree(&mut self) -> u64 {
         self.decode(BVGraphComponent::Outdegree)
     }
@@ -112,7 +111,7 @@ impl<'a> BVGraphCodesReader for ANSDecoder<'a> {
         self.decode(BVGraphComponent::BlockCount)
     }
 
-    fn read_blocks(&mut self) -> u64 {
+    fn read_block(&mut self) -> u64 {
         self.decode(BVGraphComponent::Blocks)
     }
 

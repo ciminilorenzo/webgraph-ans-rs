@@ -1,6 +1,4 @@
-use std::error::Error;
-
-use webgraph::prelude::BVGraphCodesReaderBuilder;
+use webgraph::graphs::{RandomAccessDecoderFactory, SequentialDecoderFactory};
 
 use crate::multi_model_ans::decoder::ANSDecoder;
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
@@ -26,13 +24,30 @@ impl<'a> ANSBVGraphReaderBuilder<'a> {
     }
 }
 
-impl<'a> BVGraphCodesReaderBuilder for ANSBVGraphReaderBuilder<'a> {
-    type Reader<'b> = ANSDecoder<'b> where Self: 'b;
+impl<'a> RandomAccessDecoderFactory for ANSBVGraphReaderBuilder<'a> {
+    type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
-    fn get_reader(&self, node: usize) -> Result<Self::Reader<'_>, Box<dyn Error>> {
+    fn new_decoder(&self, node: usize) -> anyhow::Result<Self::Decoder<'_>> {
         let phase = self
             .phases
             .get(node)
+            .expect("The node must have a phase associated to it.");
+
+        Ok(ANSDecoder::from_raw_parts(
+            self.prelude,
+            &self.model,
+            *phase,
+        ))
+    }
+}
+
+impl<'a> SequentialDecoderFactory for ANSBVGraphReaderBuilder<'a> {
+    type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
+
+    fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
+        let phase = self
+            .phases
+            .get(0)
             .expect("The node must have a phase associated to it.");
 
         Ok(ANSDecoder::from_raw_parts(

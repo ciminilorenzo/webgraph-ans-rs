@@ -27,7 +27,7 @@ struct Args {
 pub fn main() -> Result<()> {
     let args = Args::parse();
     let mut pl = ProgressLogger::default();
-    let seq_graph = load_seq(&args.basename)?;
+    let seq_graph = BVGraph::with_basename(&args.basename).load()?;
 
     stderrlog::new()
         .verbosity(2)

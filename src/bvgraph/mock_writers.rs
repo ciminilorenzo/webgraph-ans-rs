@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use std::ops::Neg;
-use webgraph::prelude::BVGraphCodesWriter;
+use webgraph::graphs::Encoder;
 
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
@@ -163,15 +163,11 @@ impl MockWriter for EntropyMockWriter {
     }
 }
 
-impl BVGraphCodesWriter for EntropyMockWriter {
+impl Encoder for EntropyMockWriter {
     type Error = Infallible;
 
-    type MockWriter = Self; // it's essentially a marker
-
-    fn mock(&self) -> Self::MockWriter {
-        Self {
-            costs_table: ANSymbolTable::default(),
-        } // thus we can return a fake one
+    fn start_node(_node: usize) -> Result<(), Self::Error> {
+        Ok(())
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -186,7 +182,7 @@ impl BVGraphCodesWriter for EntropyMockWriter {
         Ok(self.get_symbol_cost(value, BVGraphComponent::BlockCount))
     }
 
-    fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
+    fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         Ok(self.get_symbol_cost(value, BVGraphComponent::Blocks))
     }
 
@@ -213,6 +209,10 @@ impl BVGraphCodesWriter for EntropyMockWriter {
     fn flush(&mut self) -> Result<(), Self::Error> {
         Ok(())
     }
+
+    fn end_node(_node: usize) -> Result<(), Self::Error> {
+        Ok(())
+    }
 }
 
 #[derive(Clone)]
@@ -228,14 +228,8 @@ impl MockWriter for Log2MockWriter {
     }
 }
 
-impl BVGraphCodesWriter for Log2MockWriter {
+impl Encoder for Log2MockWriter {
     type Error = Infallible;
-
-    type MockWriter = Self; // it's essentially a marker
-
-    fn mock(&self) -> Self::MockWriter {
-        Log2MockWriter {}
-    }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         Ok(self.get_symbol_cost(value, BVGraphComponent::Outdegree))
@@ -247,10 +241,6 @@ impl BVGraphCodesWriter for Log2MockWriter {
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         Ok(self.get_symbol_cost(value, BVGraphComponent::BlockCount))
-    }
-
-    fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::Blocks))
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -274,6 +264,18 @@ impl BVGraphCodesWriter for Log2MockWriter {
     }
 
     fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn start_node(_node: usize) -> Result<(), Self::Error> {
+        Ok(())
+    }
+
+    fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
+        Ok(self.get_symbol_cost(value, BVGraphComponent::Blocks))
+    }
+
+    fn end_node(_node: usize) -> Result<(), Self::Error> {
         Ok(())
     }
 }

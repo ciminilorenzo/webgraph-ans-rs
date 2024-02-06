@@ -1,5 +1,5 @@
 use std::convert::Infallible;
-use webgraph::graph::bvgraph::BVGraphCodesWriter;
+use webgraph::graphs::{Encoder, MeasurableEncoder};
 
 use crate::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, MockWriter};
 use crate::bvgraph::BVGraphComponent;
@@ -8,14 +8,14 @@ use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use crate::multi_model_ans::ANSCompressorPhase;
 
-pub struct BVGraphModelBuilder<MW: BVGraphCodesWriter + MockWriter> {
+pub struct BVGraphModelBuilder<MW: Encoder + MockWriter> {
     model_builder: ANSModel4EncoderBuilder,
 
     /// The type of the mock writer.
     mock: MW,
 }
 
-impl<MW: BVGraphCodesWriter + MockWriter> BVGraphModelBuilder<MW> {
+impl<MW: Encoder + MockWriter> BVGraphModelBuilder<MW> {
     pub fn new(mock: MW) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::new(),
@@ -30,14 +30,11 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBuilder<MW> {
+impl<MW: Encoder + MockWriter> Encoder for BVGraphModelBuilder<MW> {
     type Error = Infallible;
 
-    type MockWriter = MW;
-
-    fn mock(&self) -> Self::MockWriter {
-        // !!!!! now it's a clone since it's &Self. Otherwise i would give ownership !!!!!
-        self.mock.clone()
+    fn start_node(node: usize) -> Result<(), Self::Error> {
+        Ok(())
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -58,10 +55,10 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBui
         Ok(self.mock.write_block_count(value).unwrap())
     }
 
-    fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
+    fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.model_builder
             .push_symbol(value, BVGraphComponent::Blocks);
-        Ok(self.mock.write_blocks(value).unwrap())
+        Ok(self.mock.write_block(value).unwrap())
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -96,6 +93,18 @@ impl<MW: BVGraphCodesWriter + MockWriter> BVGraphCodesWriter for BVGraphModelBui
 
     fn flush(&mut self) -> Result<(), Self::Error> {
         Ok(())
+    }
+
+    fn end_node(node: usize) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl<MW: Encoder + MockWriter> MeasurableEncoder for BVGraphModelBuilder<MW> {
+    type Estimator = MW;
+
+    fn estimator(&self) -> Self::Estimator {
+        self.mock.clone()
     }
 }
 
@@ -147,13 +156,11 @@ impl BVGraphWriter {
     }
 }
 
-impl BVGraphCodesWriter for BVGraphWriter {
+impl Encoder for BVGraphWriter {
     type Error = Infallible;
 
-    type MockWriter = EntropyMockWriter;
-
-    fn mock(&self) -> Self::MockWriter {
-        self.mock_writer.clone() // i must return costs even below so i have to keep an instance of the mock
+    fn start_node(node: usize) -> Result<(), Self::Error> {
+        Ok(())
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -226,9 +233,9 @@ impl BVGraphCodesWriter for BVGraphWriter {
         self.mock_writer.write_block_count(value)
     }
 
-    fn write_blocks(&mut self, value: u64) -> Result<usize, Self::Error> {
+    fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::Blocks as usize].push(value as usize);
-        self.mock_writer.write_blocks(value)
+        self.mock_writer.write_block(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -267,5 +274,17 @@ impl BVGraphCodesWriter for BVGraphWriter {
         self.phases
             .push(self.encoder.get_current_compressor_phase());
         Ok(())
+    }
+
+    fn end_node(node: usize) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl MeasurableEncoder for BVGraphWriter {
+    type Estimator = EntropyMockWriter;
+
+    fn estimator(&self) -> Self::Estimator {
+        self.mock_writer.clone()
     }
 }

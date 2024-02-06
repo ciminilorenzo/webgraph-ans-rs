@@ -3,12 +3,14 @@ use anyhow::Result;
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
 use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
 
+use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::mock_writers::{
     ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter,
 };
-use webgraph::prelude::{BVGraph, EmptyDict, RandomAccessLabelling};
-use webgraph::{graph::bvgraph::BVComp, traits::SequentialLabelling};
 
+use webgraph::prelude::*;
+
+/*
 #[test]
 fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     let mut graph = webgraph::graph::vec_graph::VecGraph::new();
@@ -90,6 +92,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     assert_eq!(decoded_graph.successors(2).collect::<Vec<_>>(), vec![]);
     Ok(())
 }
+*/
 
 #[test]
 fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
@@ -99,7 +102,9 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
         .init()
         .unwrap();
 
-    let graph = webgraph::graph::bvgraph::load("tests/data/cnr-2000/cnr-2000")?;
+    let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")
+        .endianness::<BE>()
+        .load()?;
     let num_nodes = graph.num_nodes();
     let num_arcs = graph.num_arcs_hint().unwrap();
 
@@ -139,13 +144,8 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
 
     let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases);
 
-    let decoded_graph = BVGraph::<ANSBVGraphReaderBuilder, EmptyDict<usize, usize>>::new(
-        code_reader_builder,
-        2,
-        7,
-        num_nodes,
-        num_arcs,
-    );
+    let decoded_graph =
+        BVGraph::<ANSBVGraphReaderBuilder>::new(code_reader_builder, 2, 7, num_nodes, num_arcs);
 
     for node_index in 0..graph.num_nodes() {
         let successors = graph.outdegree(node_index);

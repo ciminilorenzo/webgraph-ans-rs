@@ -30,7 +30,7 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let seq_graph = load_seq(&args.basename)?;
+    let seq_graph = BVGraph::with_basename(&args.basename).load()?;
     let mut buf = PathBuf::from(&args.basename);
     buf.set_extension("ans");
     let prelude = Prelude::load_full(buf.as_path())?;
@@ -38,7 +38,7 @@ pub fn main() -> Result<()> {
     let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
     let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases);
 
-    let graph = BVGraph::<ANSBVGraphReaderBuilder, EmptyDict<usize, usize>>::new(
+    let graph = BVGraph::<ANSBVGraphReaderBuilder>::new(
         code_reader_builder,
         2,
         7,
