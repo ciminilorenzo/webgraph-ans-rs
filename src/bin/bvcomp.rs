@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use dsi_bitstream::prelude::*;
 use dsi_progress_logger::*;
 use epserde::prelude::Serialize;
 use folded_streaming_rans::bvgraph::mock_writers::{
@@ -27,7 +28,9 @@ struct Args {
 pub fn main() -> Result<()> {
     let args = Args::parse();
     let mut pl = ProgressLogger::default();
-    let seq_graph = BVGraph::with_basename(&args.basename).load()?;
+    let seq_graph = BVGraph::with_basename(&args.basename)
+        .endianness::<BE>()
+        .load()?;
 
     stderrlog::new()
         .verbosity(2)
