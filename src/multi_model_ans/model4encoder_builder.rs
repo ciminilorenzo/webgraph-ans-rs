@@ -225,7 +225,9 @@ impl ANSModel4EncoderBuilder {
             (folded_graph_cost - self.graph_cost) / self.graph_cost * 100.0
         );
 
-        ANSModel4Encoder { models }
+        ANSModel4Encoder {
+            components_model: models,
+        }
     }
 
     /// Stores in `Self` the cost of every component and the total cost of the graph.

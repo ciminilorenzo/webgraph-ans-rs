@@ -2,10 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
 use epserde::prelude::Serialize;
-use folded_streaming_rans::bvgraph::mock_writers::{
-    ANSymbolTable, EntropyMockWriter, Log2MockWriter, MockWriter,
-};
-use folded_streaming_rans::bvgraph::writer::{BVGraphModelBuilder, BVGraphWriter};
+use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
+use folded_streaming_rans::bvgraph::writer::{BVGraphMeasurableEncoder, BVGraphModelBuilder};
 use lender::*;
 use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
@@ -36,10 +34,10 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     // create a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
-    let log2_mock = Log2MockWriter::build(ANSymbolTable::default());
+    let log2_mock = Log2Estimator::build();
     // create a builder that uses the log2 mock writer
-    let model_builder = BVGraphModelBuilder::<Log2MockWriter>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2MockWriter>>::new(
+    let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(
         model_builder,
         args.ca.compression_window,
         args.ca.min_interval_length,
@@ -65,11 +63,9 @@ pub fn main() -> Result<()> {
     // get the folding parameters from the model, that is the best combination of radix and fidelity
     let folding_params = model4encoder.get_folding_params();
     // create a new table of costs based on params obtained from the previous step
-    let entropy_costs = ANSymbolTable::new(&model4encoder, folding_params);
-    // create an entropy mock that uses the entropic costs table
-    let entropy_mock = EntropyMockWriter::build(entropy_costs.clone());
-    let model_builder = BVGraphModelBuilder::<EntropyMockWriter>::new(entropy_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyMockWriter>>::new(
+    let entropy_estimator = EntropyEstimator::new(&model4encoder, folding_params);
+    let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(
         model_builder,
         args.ca.compression_window,
         args.ca.min_interval_length,
@@ -92,8 +88,8 @@ pub fn main() -> Result<()> {
     // get the final ANSModel4Encoder from the second iteration
     let model4encoder = bvcomp.flush()?.build();
     pl.done();
-    let mut bvcomp = BVComp::<BVGraphWriter>::new(
-        BVGraphWriter::new(model4encoder, entropy_costs),
+    let mut bvcomp = BVComp::<BVGraphMeasurableEncoder>::new(
+        BVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
         args.ca.compression_window,
         args.ca.min_interval_length,
         args.ca.max_ref_count,

@@ -4,7 +4,7 @@ use crate::multi_model_ans::decoder::ANSDecoder;
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 
-pub struct ANSBVGraphReaderBuilder<'a> {
+pub struct ANSBVGraphDecoderFactory<'a> {
     /// The vec of ANSCompressorPhase, one for each node of the graph.
     phases: Vec<ANSCompressorPhase>,
 
@@ -14,7 +14,7 @@ pub struct ANSBVGraphReaderBuilder<'a> {
     model: ANSModel4Decoder,
 }
 
-impl<'a> ANSBVGraphReaderBuilder<'a> {
+impl<'a> ANSBVGraphDecoderFactory<'a> {
     pub fn new(prelude: &'a Prelude, phases: Vec<ANSCompressorPhase>) -> Self {
         Self {
             prelude,
@@ -24,7 +24,7 @@ impl<'a> ANSBVGraphReaderBuilder<'a> {
     }
 }
 
-impl<'a> RandomAccessDecoderFactory for ANSBVGraphReaderBuilder<'a> {
+impl<'a> RandomAccessDecoderFactory for ANSBVGraphDecoderFactory<'a> {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self, node: usize) -> anyhow::Result<Self::Decoder<'_>> {
@@ -41,7 +41,7 @@ impl<'a> RandomAccessDecoderFactory for ANSBVGraphReaderBuilder<'a> {
     }
 }
 
-impl<'a> SequentialDecoderFactory for ANSBVGraphReaderBuilder<'a> {
+impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {

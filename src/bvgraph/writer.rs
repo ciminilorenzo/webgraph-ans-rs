@@ -1,21 +1,25 @@
 use std::convert::Infallible;
 use webgraph::graphs::{Encoder, MeasurableEncoder};
 
-use crate::bvgraph::mock_writers::{ANSymbolTable, EntropyMockWriter, MockWriter};
+use crate::bvgraph::mock_writers::EntropyEstimator;
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::encoder::ANSEncoder;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use crate::multi_model_ans::ANSCompressorPhase;
 
-pub struct BVGraphModelBuilder<MW: Encoder + MockWriter> {
+/// An [`Encoder`] that writes to an [`ANSModel4EncoderBuilder`]. to collect data for each
+///
+/// Data for each [component](BVGraphComponent) is pushed into the [`ANSModel4EncoderBuilder`]. The [`ANSModel4Encoder`]
+/// is then built from the collected data.
+pub struct BVGraphModelBuilder<MW: Encoder + Clone> {
     model_builder: ANSModel4EncoderBuilder,
 
-    /// The type of the mock writer.
+    /// The type of the mock writer used by this builder. It may either be a `Log2Estimator` or an `EntropyEstimator`.
     mock: MW,
 }
 
-impl<MW: Encoder + MockWriter> BVGraphModelBuilder<MW> {
+impl<MW: Encoder + Clone> BVGraphModelBuilder<MW> {
     pub fn new(mock: MW) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::new(),
@@ -30,10 +34,18 @@ impl<MW: Encoder + MockWriter> BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: Encoder + MockWriter> Encoder for BVGraphModelBuilder<MW> {
+impl<MW: Encoder + Clone> MeasurableEncoder for BVGraphModelBuilder<MW> {
+    type Estimator = MW;
+
+    fn estimator(&self) -> Self::Estimator {
+        self.mock.clone()
+    }
+}
+
+impl<MW: Encoder + Clone> Encoder for BVGraphModelBuilder<MW> {
     type Error = Infallible;
 
-    fn start_node(node: usize) -> Result<(), Self::Error> {
+    fn start_node(_node: usize) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -95,25 +107,17 @@ impl<MW: Encoder + MockWriter> Encoder for BVGraphModelBuilder<MW> {
         Ok(())
     }
 
-    fn end_node(node: usize) -> Result<(), Self::Error> {
+    fn end_node(_node: usize) -> Result<(), Self::Error> {
         Ok(())
     }
 }
 
-impl<MW: Encoder + MockWriter> MeasurableEncoder for BVGraphModelBuilder<MW> {
-    type Estimator = MW;
-
-    fn estimator(&self) -> Self::Estimator {
-        self.mock.clone()
-    }
-}
-
-/// A [`BVGraphCodesWriter`] that writes to an [`ANSEncoder`].
+/// An [`Encoder`] that writes to an [`ANSEncoder`].
 ///
 /// Data is gathered in a number of buffers, one for each [component](`Component`).
 /// At the next node (i.e. when `write_outdegree` is called again), the buffers
 /// are emptied in reverse order.
-pub struct BVGraphWriter {
+pub struct BVGraphMeasurableEncoder {
     /// The container containing the buffers (one for each [component](`Component`)) where symbols are collected.
     data: [Vec<usize>; 9],
 
@@ -126,11 +130,11 @@ pub struct BVGraphWriter {
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
 
-    mock_writer: EntropyMockWriter,
+    estimator: EntropyEstimator,
 }
 
-impl BVGraphWriter {
-    pub fn new(model: ANSModel4Encoder, costs_table: ANSymbolTable) -> Self {
+impl BVGraphMeasurableEncoder {
+    pub fn new(model: ANSModel4Encoder, estimator: EntropyEstimator) -> Self {
         Self {
             curr_node: usize::MAX,
             data: [
@@ -144,7 +148,7 @@ impl BVGraphWriter {
                 Vec::new(),
                 Vec::new(),
             ],
-            mock_writer: EntropyMockWriter::build(costs_table),
+            estimator,
             encoder: ANSEncoder::new(model),
             phases: Vec::new(),
         }
@@ -156,10 +160,10 @@ impl BVGraphWriter {
     }
 }
 
-impl Encoder for BVGraphWriter {
+impl Encoder for BVGraphMeasurableEncoder {
     type Error = Infallible;
 
-    fn start_node(node: usize) -> Result<(), Self::Error> {
+    fn start_node(_node: usize) -> Result<(), Self::Error> {
         Ok(())
     }
 
@@ -220,47 +224,47 @@ impl Encoder for BVGraphWriter {
         }
 
         self.data[BVGraphComponent::Outdegree as usize].push(value as usize);
-        self.mock_writer.write_outdegree(value)
+        self.estimator.write_outdegree(value)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::ReferenceOffset as usize].push(value as usize);
-        self.mock_writer.write_reference_offset(value)
+        self.estimator.write_reference_offset(value)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::BlockCount as usize].push(value as usize);
-        self.mock_writer.write_block_count(value)
+        self.estimator.write_block_count(value)
     }
 
     fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::Blocks as usize].push(value as usize);
-        self.mock_writer.write_block(value)
+        self.estimator.write_block(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::IntervalCount as usize].push(value as usize);
-        self.mock_writer.write_interval_count(value)
+        self.estimator.write_interval_count(value)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::IntervalStart as usize].push(value as usize);
-        self.mock_writer.write_interval_start(value)
+        self.estimator.write_interval_start(value)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::IntervalLen as usize].push(value as usize);
-        self.mock_writer.write_interval_len(value)
+        self.estimator.write_interval_len(value)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::FirstResidual as usize].push(value as usize);
-        self.mock_writer.write_first_residual(value)
+        self.estimator.write_first_residual(value)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data[BVGraphComponent::Residual as usize].push(value as usize);
-        self.mock_writer.write_residual(value)
+        self.estimator.write_residual(value)
     }
 
     // Dump last node
@@ -276,15 +280,15 @@ impl Encoder for BVGraphWriter {
         Ok(())
     }
 
-    fn end_node(node: usize) -> Result<(), Self::Error> {
+    fn end_node(_node: usize) -> Result<(), Self::Error> {
         Ok(())
     }
 }
 
-impl MeasurableEncoder for BVGraphWriter {
-    type Estimator = EntropyMockWriter;
+impl MeasurableEncoder for BVGraphMeasurableEncoder {
+    type Estimator = EntropyEstimator;
 
     fn estimator(&self) -> Self::Estimator {
-        self.mock_writer.clone()
+        self.estimator.clone()
     }
 }

@@ -4,7 +4,7 @@ use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
 use epserde::prelude::*;
-use folded_streaming_rans::bvgraph::reader::ANSBVGraphReaderBuilder;
+use folded_streaming_rans::bvgraph::reader::ANSBVGraphDecoderFactory;
 use folded_streaming_rans::multi_model_ans::{ANSCompressorPhase, Prelude};
 use rand::rngs::SmallRng;
 use rand::Rng;
@@ -36,9 +36,9 @@ pub fn main() -> Result<()> {
     let prelude = Prelude::load_full(buf.as_path())?;
     buf.set_extension("phases");
     let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
-    let code_reader_builder = ANSBVGraphReaderBuilder::new(&prelude, phases);
+    let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
-    let graph = BVGraph::<ANSBVGraphReaderBuilder>::new(
+    let graph = BVGraph::<ANSBVGraphDecoderFactory>::new(
         code_reader_builder,
         2,
         7,

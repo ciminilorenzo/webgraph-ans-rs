@@ -78,7 +78,7 @@ impl ANSEncoder {
 
     pub fn into_prelude(self) -> Prelude {
         Prelude {
-            tables: self.model.models,
+            tables: self.model.components_model,
             stream: self.stream,
             state: self.state,
         }
