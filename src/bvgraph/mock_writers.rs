@@ -168,7 +168,7 @@ impl Log2Estimator {
     }
 
     fn get_symbol_cost(&self, value: u64, _component: BVGraphComponent) -> usize {
-        u64::checked_ilog(value, 2).unwrap_or(0) as usize + 1
+        u64::ilog2(value + 2) as usize
     }
 }
 
