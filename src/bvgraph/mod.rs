@@ -53,5 +53,6 @@ impl From<usize> for BVGraphComponent {
 }
 
 impl BVGraphComponent {
+    /// The number of components in the BVGraph format.
     pub const COMPONENTS: usize = 9;
 }

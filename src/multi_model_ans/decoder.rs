@@ -2,6 +2,7 @@ use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4decoder::ANSModel4Decoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 use crate::{RawSymbol, State, Symbol, B};
+
 use webgraph::graphs::Decoder;
 
 #[derive(Clone)]

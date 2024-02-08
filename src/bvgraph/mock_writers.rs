@@ -39,7 +39,7 @@ impl EntropyEstimator {
 
                 (0_usize..(max_folded_sym as usize) + 1)
                     .map(|sym| {
-                        let sym_freq = match model.components_model[component].table.get(sym) {
+                        let sym_freq = match model.component_models[component].table.get(sym) {
                             Some(entry) => match entry.freq {
                                 0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
                                 freq => freq,
@@ -159,11 +159,12 @@ impl Encoder for EntropyEstimator {
     }
 }
 
+/// An estimator that simply returns the cost of each symbol calculated as the log2 of the value plus 2.
 #[derive(Clone)]
 pub struct Log2Estimator {}
 
 impl Log2Estimator {
-    pub fn build() -> Self {
+    pub fn new() -> Self {
         Self {}
     }
 

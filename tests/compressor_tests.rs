@@ -11,6 +11,12 @@ use rand::prelude::SliceRandom;
 
 #[test]
 fn decodes_correctly_single_dummy_sequence() {
+    stderrlog::new()
+        .verbosity(2)
+        .timestamp(stderrlog::Timestamp::Second)
+        .init()
+        .unwrap();
+
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 

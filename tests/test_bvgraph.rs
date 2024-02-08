@@ -22,7 +22,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     graph.add_arc(0, 3); // 1 -> 5
     graph.add_arc(1, 5);
 
-    let log_mock = Log2Estimator::build();
+    let log_mock = Log2Estimator::new();
     let model_builder = BVGraphModelBuilder::new(log_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
 
@@ -106,7 +106,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let num_nodes = graph.num_nodes();
     let num_arcs = graph.num_arcs_hint().unwrap();
 
-    let log2_mock = Log2Estimator::build();
+    let log2_mock = Log2Estimator::new();
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
 
