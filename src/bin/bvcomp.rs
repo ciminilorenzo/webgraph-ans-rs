@@ -9,7 +9,8 @@ use lender::*;
 use log::info;
 use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
-use webgraph::prelude::*;
+use webgraph::cli::utils::CompressArgs;
+use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -19,6 +20,10 @@ struct Args {
 
     /// The basename for the newly compressed graph.
     new_basename: String,
+
+    /// Args for compressing the graph.
+    #[clap(flatten)]
+    compressions_args: CompressArgs,
 }
 
 pub fn main() -> Result<()> {
@@ -32,7 +37,7 @@ pub fn main() -> Result<()> {
     let mut pl = ProgressLogger::default();
 
     info!("Loading graph...");
-    let seq_graph = BVGraph::with_basename(&args.basename)
+    let seq_graph = BVGraphSeq::with_basename(&args.basename)
         .endianness::<BE>()
         .load()?;
 
@@ -40,7 +45,13 @@ pub fn main() -> Result<()> {
     let log2_mock = Log2Estimator::new();
     // create a builder that uses the log2 mock writer
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(
+        model_builder,
+        args.compressions_args.compression_window,
+        args.compressions_args.min_interval_length,
+        args.compressions_args.max_ref_count,
+        0,
+    );
 
     pl.item_name("node")
         .expected_updates(Some(seq_graph.num_nodes()));
@@ -62,8 +73,13 @@ pub fn main() -> Result<()> {
     // create a new table of costs based on params obtained from the previous step
     let entropy_estimator = EntropyEstimator::new(&model4encoder, folding_params);
     let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
-    let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(
+        model_builder,
+        args.compressions_args.compression_window,
+        args.compressions_args.min_interval_length,
+        args.compressions_args.max_ref_count,
+        0,
+    );
 
     pl.item_name("node")
         .expected_updates(Some(seq_graph.num_nodes()));
@@ -82,9 +98,9 @@ pub fn main() -> Result<()> {
     pl.done();
     let mut bvcomp = BVComp::<BVGraphMeasurableEncoder>::new(
         BVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
-        7,
-        2,
-        3,
+        args.compressions_args.compression_window,
+        args.compressions_args.min_interval_length,
+        args.compressions_args.max_ref_count,
         0,
     );
 

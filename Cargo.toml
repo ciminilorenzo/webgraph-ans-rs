@@ -15,7 +15,7 @@ bitvec = "1.0.1"
 sucds = { version = "0.8.1", features = ["intrinsics"] }
 strength_reduce = "0.2.4"
 rand = { version = "0.8.5", features = [] }
-webgraph = { git = "https://github.com/vigna/webgraph-rs" }
+webgraph = { git = "https://github.com/vigna/webgraph-rs"}
 clap = "4.4.16"
 stderrlog = "0.5.4"
 env_logger = "0.10.1"
