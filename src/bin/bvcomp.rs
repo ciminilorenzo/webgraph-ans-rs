@@ -6,6 +6,7 @@ use epserde::prelude::Serialize;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use folded_streaming_rans::bvgraph::writer::{BVGraphMeasurableEncoder, BVGraphModelBuilder};
 use lender::*;
+use log::info;
 use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
 use webgraph::prelude::*;
@@ -21,17 +22,19 @@ struct Args {
 }
 
 pub fn main() -> Result<()> {
-    let args = Args::parse();
-    let mut pl = ProgressLogger::default();
-    let seq_graph = BVGraph::with_basename(&args.basename)
-        .endianness::<BE>()
-        .load()?;
-
     stderrlog::new()
         .verbosity(2)
         .timestamp(stderrlog::Timestamp::Second)
         .init()
         .unwrap();
+
+    let args = Args::parse();
+    let mut pl = ProgressLogger::default();
+
+    info!("Loading graph...");
+    let seq_graph = BVGraph::with_basename(&args.basename)
+        .endianness::<BE>()
+        .load()?;
 
     // create a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
     let log2_mock = Log2Estimator::new();
