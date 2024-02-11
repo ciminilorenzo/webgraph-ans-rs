@@ -12,14 +12,14 @@ use crate::multi_model_ans::ANSCompressorPhase;
 ///
 /// Data for each [component](BVGraphComponent) is pushed into the [`ANSModel4EncoderBuilder`]. The [`ANSModel4Encoder`]
 /// is then built from the collected data.
-pub struct BVGraphModelBuilder<MW: Encoder + Clone> {
+pub struct BVGraphModelBuilder<MW: Encoder> {
     model_builder: ANSModel4EncoderBuilder,
 
     /// The type of the mock writer used by this builder. It may either be a `Log2Estimator` or an `EntropyEstimator`.
     mock: MW,
 }
 
-impl<MW: Encoder + Clone> BVGraphModelBuilder<MW> {
+impl<MW: Encoder> BVGraphModelBuilder<MW> {
     pub fn new(mock: MW) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::new(),
@@ -34,15 +34,15 @@ impl<MW: Encoder + Clone> BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: Encoder + Clone> MeasurableEncoder for BVGraphModelBuilder<MW> {
-    type Estimator = MW;
+impl<MW: Encoder> MeasurableEncoder for BVGraphModelBuilder<MW> {
+    type Estimator<'a> = &'a mut MW where Self: 'a;
 
-    fn estimator(&self) -> Self::Estimator {
-        self.mock.clone()
+    fn estimator(&mut self) -> Self::Estimator<'_> {
+        &mut self.mock
     }
 }
 
-impl<MW: Encoder + Clone> Encoder for BVGraphModelBuilder<MW> {
+impl<MW: Encoder> Encoder for BVGraphModelBuilder<MW> {
     type Error = Infallible;
 
     fn start_node(_node: usize) -> Result<(), Self::Error> {
@@ -286,9 +286,9 @@ impl Encoder for BVGraphMeasurableEncoder {
 }
 
 impl MeasurableEncoder for BVGraphMeasurableEncoder {
-    type Estimator = EntropyEstimator;
+    type Estimator<'a> = &'a mut EntropyEstimator where Self: 'a;
 
-    fn estimator(&self) -> Self::Estimator {
-        self.estimator.clone()
+    fn estimator(&mut self) -> Self::Estimator<'_> {
+        &mut self.estimator
     }
 }

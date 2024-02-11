@@ -74,7 +74,7 @@ impl ANSModel4EncoderBuilder {
         let original_comp_costs = self.calculate_cost();
         let graph_cost: f64 = original_comp_costs.iter().sum(); // todo: do we want to store it inside the model?
 
-        let mut folded_graph_cost = 0.0;
+        let folded_graph_cost;
         let mut folded_comp_costs = Vec::with_capacity(BVGraphComponent::COMPONENTS);
         let mut folded_distributions = Vec::with_capacity(BVGraphComponent::COMPONENTS);
         let mut params = Vec::with_capacity(BVGraphComponent::COMPONENTS);
@@ -128,7 +128,7 @@ impl ANSModel4EncoderBuilder {
         }
         folded_graph_cost = folded_comp_costs.iter().sum::<f64>();
 
-        let mut folded_approx_graph_cost = 0.0;
+        let mut folded_approx_graph_cost: f64 = 0.0;
         let mut folded_approx_comp_cost = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
         for (component, folded_distribution) in folded_distributions.iter().enumerate() {
@@ -169,9 +169,9 @@ impl ANSModel4EncoderBuilder {
                 .collect::<Vec<usize>>();
 
             // data related to the final approximated folded distribution
-            let mut approx_distribution = vec![];
-            let mut frame_size = 0;
-            let mut cost = 0.0;
+            let approx_distribution;
+            let frame_size;
+            let cost;
 
             loop {
                 let scaling_attempt = scale_freqs(

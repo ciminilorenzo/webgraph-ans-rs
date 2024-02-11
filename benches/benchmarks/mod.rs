@@ -5,9 +5,8 @@ use rand::rngs::SmallRng;
 use rand::SeedableRng;
 use rand_distr::Zipf;
 
-pub mod decoder;
-pub mod encoder;
-pub mod model_for_decoder;
+pub mod graph_encoding;
+pub mod model4encoder_building;
 
 /// Size of the list of symbols used to bench.
 const SYMBOL_LIST_LENGTH: usize = 1_000_000;
