@@ -33,15 +33,17 @@ pub struct ANSCompressorPhase {
 #[repr(C)]
 #[zero_copy]
 pub struct EncoderModelEntry {
-    /// The frequency of the symbol.
-    pub freq: Freq,
+    /// The upperbound of the symbol, that is the maximum value starting from which we can safely encode this specific
+    /// symbol without overflowing the interval in which the state of the compressor can be.
+    pub upperbound: u64,
+
+    pub comp_freq: Freq,
 
     /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
 
-    /// The upperbound of the symbol, that is the maximum value starting from which we can safely encode this specific
-    /// symbol without overflowing the interval in which the state of the compressor can be.
-    pub upperbound: u64,
+    /// The frequency of the symbol.
+    pub freq: Freq,
 }
 
 impl PartialEq for EncoderModelEntry {
@@ -49,16 +51,6 @@ impl PartialEq for EncoderModelEntry {
         self.freq == other.freq
             && self.upperbound == other.upperbound
             && self.cumul_freq == other.cumul_freq
-    }
-}
-
-impl From<(Freq, u64, Freq)> for EncoderModelEntry {
-    fn from(tuple: (Freq, u64, Freq)) -> Self {
-        Self {
-            freq: tuple.0,
-            upperbound: tuple.1,
-            cumul_freq: tuple.2,
-        }
     }
 }
 

@@ -223,6 +223,7 @@ impl ANSModel4EncoderBuilder {
                     freq: *freq as u16,
                     upperbound: (1_u64 << (k + B)) * *freq as u64,
                     cumul_freq: last_covered_freq,
+                    comp_freq: (frame_size - *freq) as u16,
                 });
                 last_covered_freq += *freq as u16;
             }
@@ -376,82 +377,3 @@ impl ANSModel4EncoderBuilder {
             .collect()
     }
 }
-/*
-
-                       let difference = new_cost - folded_comp_costs[component];
-                       let ratio = (difference / folded_graph_cost) * 100.0;
-
-                       if m == Self::MAXIMUM_FRAME_SIZE {
-                           folded_approx_comp_cost.push(new_cost);
-                           new_distribution.drain(max_sym + 1..);
-                           approx_distribution = new_distribution;
-                           frame_size = m;
-                           cost = new_cost;
-                           break;
-                       }
-
-                       if ratio < 0.01 {
-                           // todo: is this threshold what we want?
-                           folded_approx_comp_cost.push(new_cost);
-                           new_distribution.drain(max_sym + 1..);
-                           approx_distribution = new_distribution;
-                           frame_size = m;
-                           cost = new_cost;
-                           break;
-                       }
-                       m *= 2;
-                   }
-                   Err(_) => {
-                       m *= 2;
-                   }
-               }
-           }
-
-           folded_approx_graph_cost += cost;
-           let log_m = frame_size.ilog2() as usize;
-           let k = if log_m > 0 { 32 - log_m } else { 31 };
-           let mut table = Vec::with_capacity(approx_distribution.len());
-           let mut last_covered_freq = 0;
-
-           for freq in approx_distribution.iter() {
-               table.push(EncoderModelEntry {
-                   freq: *freq as u16,
-                   upperbound: (1_u64 << (k + B)) * *freq as u64,
-                   cumul_freq: last_covered_freq,
-               });
-               last_covered_freq += *freq as u16;
-           }
-
-           models.push(ANSComponentModel4Encoder {
-               table,
-               fidelity,
-               radix,
-               folding_threshold,
-               folding_offset,
-               frame_size: log_m,
-           });
-
-           info!(
-               "{} | {:<10} | {:<10} | {:<10} | {:<12} | {:<18.2}",
-               BVGraphComponent::from(component),
-               log_m,
-               radix,
-               fidelity,
-               // cost in bytes of the folded approximated distribution for this component
-               (cost / 8f64).round() as usize,
-               // how much is increased the cost of the approximated folded distr w.r.t the original cost
-               (cost - original_comp_costs[component]) / original_comp_costs[component] * 100.0,
-           );
-       }
-
-       info!(
-           "Original graph cost: {:?} B | Folded graph cost: {} B (+{:.2}%)\n",
-           (graph_cost / 8f64).round() as usize,
-           (folded_graph_cost / 8f64).round() as usize,
-           ((folded_graph_cost - graph_cost) / graph_cost) * 100.0
-       );
-
-       ANSModel4Encoder {
-           component_models: models,
-       }
-*/
