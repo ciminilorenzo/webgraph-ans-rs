@@ -12,6 +12,13 @@ use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::utils::data_utilities::scale_freqs;
 use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
 
+/// Multiplicative constant used to fix a maximum increase, in terms of cost, that we can accept
+/// when scaling a folded distribution.
+///
+/// Example: with THETA = 1.0001, if the original cost of the graph is 1000 bytes, we will accept
+/// approximated distributions that lead to a cost of at most 1000,1 bytes.
+const THETA: f64 = 1.0001;
+
 pub struct ANSModel4EncoderBuilder {
     /// The frequencies of the raw symbols for each component.
     real_freqs: Vec<HashMap<RawSymbol, usize>>,
@@ -63,7 +70,8 @@ impl ANSModel4EncoderBuilder {
         let mut components_final_cost = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
         for component in 0..BVGraphComponent::COMPONENTS {
-            // if the component has no symbols to encode, we can skip it by filling vars with dummy data.
+            // if the component has no symbols to encode, we can skip it by filling vars with dummy data
+            // since we won't use them.
             if self.real_freqs[component].is_empty() {
                 models.push(ANSComponentModel4Encoder::default());
                 components_final_cost.push(0.0);
@@ -80,7 +88,7 @@ impl ANSModel4EncoderBuilder {
 
             let params_combinations = Self::get_folding_params();
 
-            'main_loop: for (fid, rad) in params_combinations.iter() {
+            for (fid, rad) in params_combinations.iter() {
                 let max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, *rad, *fid);
                 let folding_threshold = 1u64 << (fid + rad - 1);
                 let mut folded_sym_freqs = vec![0_usize; max_bucket as usize];
@@ -117,6 +125,8 @@ impl ANSModel4EncoderBuilder {
 
                 loop {
                     if m > Self::MAXIMUM_FRAME_SIZE {
+                        // if we have reached the maximum frame size, we can't go further with
+                        // the next fidelity and radix combination.
                         break;
                     }
 
@@ -141,10 +151,10 @@ impl ANSModel4EncoderBuilder {
                             let difference = new_cost - original_comp_costs[component];
                             let ratio = (original_graph_cost + difference) / original_graph_cost;
 
-                            // if accepting this distribution would make the graph just 1.001 times
-                            // bigger than the original graph
-                            if ratio <= 1.001 {
-                                // if this distribution has a frame size smaller than the current one
+                            // if accepting this distribution would make the graph just THETA times
+                            // bigger than the original graph and the frame size is smaller than the
+                            // current best frame size, we can accept it.
+                            if ratio <= THETA {
                                 if m < frame_size {
                                     // the cost associated to this folded distribution with current fidelity and radix,
                                     // not approximated yet.
@@ -163,10 +173,17 @@ impl ANSModel4EncoderBuilder {
                                     radix = *rad;
                                 }
                             } else if m == Self::MAXIMUM_FRAME_SIZE {
-                                if new_cost > lowest_cost {
-                                    continue 'main_loop;
+                                // if we reach the maximum frame size and the cost is higher
+                                // than the current lowest cost, it means that we previously
+                                // found the best distribution with a smaller frame size.
+                                if new_cost >= lowest_cost {
+                                    break;
                                 }
 
+                                // we reach this point only when we have not been able to find a scaled
+                                // distribution that we could have accepted. This should happen only
+                                // with components with which the folding process don't work properly,
+                                // such as Residuals.
                                 folded_cost = Self::calculate_folded_distribution_cost(
                                     &folded_sym_freqs,
                                     self.total_freqs[component],
@@ -181,7 +198,7 @@ impl ANSModel4EncoderBuilder {
                                 fidelity = *fid;
                                 radix = *rad;
 
-                                continue 'main_loop;
+                                break;
                             }
                             m *= 2;
                         }
