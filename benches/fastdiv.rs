@@ -114,8 +114,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("double_add", |b| {
         b.iter(|| {
             black_box(
-                ((reciprocal.a as u128 * dividend as u128 + reciprocal.b as u128) >> 64) as u64
-                    >> reciprocal.shift,
+                ((black_box(reciprocal.a) as u128 * black_box(dividend) as u128
+                    + reciprocal.b as u128)
+                    >> 64) as u64
+                    >> black_box(reciprocal.shift),
             )
         });
     });
@@ -124,18 +126,22 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("arithmetized", |b| {
         b.iter(|| {
             black_box(
-                (reciprocal.a as u128 * (dividend as u128 + reciprocal.mul as u128) >> 64) as u64
-                    >> reciprocal.shift,
+                (black_box(reciprocal.a) as u128
+                    * (black_box(dividend) as u128 + black_box(reciprocal.mul) as u128)
+                    >> 64) as u64
+                    >> black_box(reciprocal.shift),
             )
         });
     });
 
     c.bench_function("test", |b| {
         b.iter(|| {
-            black_box(if reciprocal.mul == 0 {
-                (reciprocal.a as u128 * dividend as u128 >> 64) as u64 >> reciprocal.shift
+            black_box(if black_box(reciprocal.mul) == 0 {
+                (black_box(reciprocal.a) as u128 * black_box(dividend) as u128 >> 64) as u64
+                    >> black_box(reciprocal.shift)
             } else {
-                (reciprocal.a as u128 * (dividend as u128 + 1) >> 64) as u64 >> reciprocal.shift
+                (black_box(reciprocal.a) as u128 * (black_box(dividend) as u128 + 1) >> 64) as u64
+                    >> black_box(reciprocal.shift)
             })
         });
     });
