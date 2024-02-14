@@ -107,11 +107,12 @@ fn get_multiplication_parameters2(divisor: u16) -> Reciprocal2 {
 }
 
 pub fn criterion_benchmark(c: &mut Criterion) {
+    let mut group = c.benchmark_group("div");
     let dividend = 0xdeadbeefdeadf00d_u64;
 
     let reciprocal = get_multiplication_parameters(4242);
 
-    c.bench_function("double_add", |b| {
+    group.bench_function("double_add", |b| {
         b.iter(|| {
             black_box(
                 ((black_box(reciprocal.a) as u128 * black_box(dividend) as u128
@@ -123,7 +124,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     });
 
     let reciprocal = get_multiplication_parameters2(4242);
-    c.bench_function("arithmetized", |b| {
+    group.bench_function("arithmetized", |b| {
         b.iter(|| {
             black_box(
                 (black_box(reciprocal.a) as u128
@@ -134,7 +135,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         });
     });
 
-    c.bench_function("test", |b| {
+    group.bench_function("test", |b| {
         b.iter(|| {
             black_box(if black_box(reciprocal.mul) == 0 {
                 (black_box(reciprocal.a) as u128 * black_box(dividend) as u128 >> 64) as u64
