@@ -38,6 +38,10 @@ rstest = "0.18.2"
 name = "bench_main"
 harness = false
 
+[[bench]]
+name = "fastdiv"
+harness = false
+
 [profile.bench]
 debug = true
 
