@@ -69,6 +69,36 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_division() {
+        for _ in 0..1000000 {
+            let dividend = thread_rng().gen_range(1..=u64::MAX);
+            let divisor = thread_rng().gen_range(1..=u16::MAX);
+            let reciprocal = get_multiplication_parameters(divisor);
+
+            // floor(x / d) = ((ax + b) / 2^n) / 2^m
+            let result = ((reciprocal.a as u128 * dividend as u128 + reciprocal.b as u128) >> 64)
+                as u64
+                >> reciprocal.shift;
+
+            assert_eq!(dividend / divisor as u64, result)
+        }
+    }
+
+    #[test]
+    fn test_max() {
+        let dividend = u64::MAX;
+        let divisor = u16::MAX;
+        let reciprocal = get_multiplication_parameters(divisor);
+
+        // floor(x / d) = ((ax + b) / 2^n) / 2^m
+        let result = ((reciprocal.a as u128 * dividend as u128 + reciprocal.b as u128) >> 64)
+            as u64
+            >> reciprocal.shift;
+
+        assert_eq!(dividend / divisor as u64, result)
+    }
+
     struct Reciprocal2 {
         a: u64,
         shift: u8,
@@ -124,8 +154,8 @@ mod tests {
     #[test]
     fn test_division2() {
         for _ in 0..1000000 {
-            let dividend = thread_rng().gen_range(1..u64::MAX);
-            let divisor = thread_rng().gen_range(1..u16::MAX);
+            let dividend = thread_rng().gen_range(1..=u64::MAX);
+            let divisor = thread_rng().gen_range(1..=u16::MAX);
             let reciprocal = get_multiplication_parameters2(divisor);
 
             // floor(x / d) = ((ax + b) / 2^n) / 2^m
@@ -135,5 +165,18 @@ mod tests {
 
             assert_eq!(dividend / divisor as u64, result,)
         }
+    }
+
+    #[test]
+    fn test_max2() {
+        let dividend = u64::MAX;
+        let divisor = u16::MAX;
+        let reciprocal = get_multiplication_parameters2(divisor);
+
+        // floor(x / d) = ((ax + b) / 2^n) / 2^m
+        let result = (reciprocal.a as u128 * (dividend as u128 + reciprocal.mul as u128) >> 64)
+            as u64
+            >> reciprocal.shift;
+        assert_eq!(dividend / divisor as u64, result)
     }
 }
