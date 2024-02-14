@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, Criterion};
+use pprof::criterion::{Output, PProfProfiler};
 use std::hint::black_box;
-use std::time::Duration;
 
 struct Reciprocal {
     a: u64,
@@ -148,8 +148,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 }
 
 criterion_group! {
-    name = benches;
-    config = Criterion::default().warm_up_time(Duration::from_secs(1)).measurement_time(Duration::from_secs(3));
+    name = div_benches;
+    config = Criterion::default().with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));
     targets = criterion_benchmark
 }
-criterion_main!(benches);
