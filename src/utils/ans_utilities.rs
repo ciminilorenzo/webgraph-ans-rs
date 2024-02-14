@@ -69,15 +69,67 @@ mod tests {
         }
     }
 
+    struct Reciprocal2 {
+        a: u64,
+        shift: u8,
+        mul: u8,
+    }
+
+    /// This function returns the parameters a, b and m, that is the value used to get the same result
+    /// we would get by dividing any number by the divisor if a multiplication is performed.
+    fn get_multiplication_parameters2(divisor: u16) -> Reciprocal2 {
+        let m = divisor.ilog2();
+
+        match divisor.is_power_of_two() {
+            // If the divisor (d) is power of two, then:
+            // a := 2^n - 1 = 2^64 - 1;
+            // b := 2^n - 1 = 2^64 - 1;
+            // m := log_{2}(d)
+            // finally:
+            // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
+            true => Reciprocal2 {
+                a: u64::MAX,
+                shift: m as u8,
+                mul: 1,
+            },
+            // else:
+            // t := floor(2^m+n / d);
+            // r := (d * (t - 1)) - 2^m+n;
+            // if r <= 2^m then:
+            // a := t + 1; -> rounding up the reciprocal
+            // b := 0;
+            // else:
+            // a := t; -> rounding down the reciprocal
+            // b := t;
+            false => {
+                let t = ((1u128 << m + 64) / divisor as u128) as u64;
+                let r = (divisor as u128 * (t as u128 + 1) - (1u128 << (m + 64))) as u64;
+
+                match r <= (1u64 << m) {
+                    true => Reciprocal2 {
+                        a: t + 1,
+                        shift: m as u8,
+                        mul: 0,
+                    },
+                    false => Reciprocal2 {
+                        a: t,
+                        shift: m as u8,
+                        mul: 1,
+                    },
+                }
+            }
+        }
+    }
+
     #[test]
-    fn test_division() {
+    fn test_division2() {
         for _ in 0..1000000 {
             let dividend = thread_rng().gen_range(1..u64::MAX);
             let divisor = thread_rng().gen_range(1..u16::MAX);
-            let reciprocal = get_multiplication_parameters(divisor);
+            let reciprocal = get_multiplication_parameters2(divisor);
 
             // floor(x / d) = ((ax + b) / 2^n) / 2^m
-            let result = ((reciprocal.a as u128 * dividend as u128 + reciprocal.b as u128) >> 64)
+            let result = (reciprocal.a as u128 * (dividend as u128 + reciprocal.mul as u128) >> 64)
                 as u64
                 >> reciprocal.shift;
 
