@@ -115,7 +115,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             black_box(
                 ((black_box(reciprocal.a) as u128 * black_box(dividend) as u128
-                    + reciprocal.b as u128)
+                    + blac_box(reciprocal.b) as u128)
                     >> 64) as u64
                     >> black_box(reciprocal.shift),
             )
