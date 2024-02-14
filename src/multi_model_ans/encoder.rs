@@ -64,7 +64,7 @@ impl ANSEncoder {
 
         let block = self.state / sym_data.freq as u64;
 
-        self.state = block * sym_data.comp_freq as u64 + sym_data.cumul_freq as u64 + (self.state);
+        self.state = block * sym_data.comp_freq as u64 + sym_data.cumul_freq as u64 + self.state;
     }
 
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {

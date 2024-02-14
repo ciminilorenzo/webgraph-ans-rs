@@ -224,6 +224,7 @@ impl ANSModel4EncoderBuilder {
                     upperbound: (1_u64 << (k + B)) * *freq as u64,
                     cumul_freq: last_covered_freq,
                     comp_freq: (frame_size - *freq) as u16,
+                    inv_freq: (0xffff_ffff_ffff_ffff / (*freq).max(1) as u64).wrapping_add(1),
                 });
                 last_covered_freq += *freq as u16;
             }

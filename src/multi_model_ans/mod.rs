@@ -37,6 +37,8 @@ pub struct EncoderModelEntry {
     /// symbol without overflowing the interval in which the state of the compressor can be.
     pub upperbound: u64,
 
+    pub inv_freq: u64,
+
     pub comp_freq: Freq,
 
     /// The cumulative frequency of the symbol.
