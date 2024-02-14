@@ -1,6 +1,5 @@
-use criterion::{criterion_group, Criterion};
+use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
-use std::hint::black_box;
 
 struct Reciprocal {
     a: u64,
@@ -206,6 +205,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                     >> black_box(reciprocal3.magic >> 1),
             )
         });
+    });
+
+    group.bench_function("division", |b| {
+        b.iter(|| black_box(black_box(dividend) / black_box(4242_u64)));
     });
 }
 
