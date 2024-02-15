@@ -1,6 +1,5 @@
 use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
-use rand::{thread_rng, Rng};
 
 struct Reciprocal {
     a: u64,

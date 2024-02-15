@@ -92,6 +92,7 @@ impl<'a> ANSDecoder<'a> {
         self.state = (self.state << B) | bits as State;
     }
 
+    #[inline(always)]
     fn quasi_unfold(&self, quasi_folded: u64) -> (u64, u32) {
         let symbol = quasi_folded & ((1 << Self::BIT_RESERVED_FOR_SYMBOL) - 1);
         let folds = quasi_folded >> Self::BIT_RESERVED_FOR_SYMBOL;

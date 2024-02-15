@@ -4,7 +4,7 @@ use std::ops::Index;
 
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::EncoderModelEntry;
-use crate::{Freq, Symbol};
+use crate::{Freq, RawSymbol};
 
 #[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
 /// The ANS model of a specific [component](BVGraphComponent) used by the encoder to encode its symbols.
@@ -50,11 +50,11 @@ impl Default for ANSComponentModel4Encoder {
     }
 }
 
-impl Index<Symbol> for ANSComponentModel4Encoder {
+impl Index<RawSymbol> for ANSComponentModel4Encoder {
     type Output = EncoderModelEntry;
 
     #[inline(always)]
-    fn index(&self, symbol: Symbol) -> &Self::Output {
+    fn index(&self, symbol: RawSymbol) -> &Self::Output {
         &self.table[symbol as usize]
     }
 }
@@ -69,6 +69,7 @@ pub struct ANSModel4Encoder {
 }
 
 impl ANSModel4Encoder {
+    /// Returns a list of tuples, each containing the fidelity and radix of each [component](BVGraphComponent).
     pub fn get_folding_params(&self) -> Vec<(usize, usize)> {
         self.component_models
             .iter()
@@ -100,9 +101,10 @@ impl ANSModel4Encoder {
         self.component_models[component as usize].fidelity
     }
 
-    /// Returns a reference to the [entry](EncoderModelEntry) of the symbol
+    /// Returns a reference to the [entry](EncoderModelEntry) of the symbol of the
+    /// given [component](BVGraphComponent).
     #[inline(always)]
-    pub fn symbol(&self, symbol: Symbol, component: BVGraphComponent) -> &EncoderModelEntry {
+    pub fn symbol(&self, symbol: RawSymbol, component: BVGraphComponent) -> &EncoderModelEntry {
         &self.component_models[component as usize][symbol]
     }
 
@@ -116,13 +118,5 @@ impl ANSModel4Encoder {
     #[inline(always)]
     pub fn get_folding_threshold(&self, component: BVGraphComponent) -> u64 {
         self.component_models[component as usize].folding_threshold
-    }
-
-    /// Returns a list of tuples containing the fidelity and radix of each [component](BVGraphComponent).
-    pub fn get_component_args(&self) -> Vec<(usize, usize)> {
-        self.component_models
-            .iter()
-            .map(|table| (table.fidelity, table.radix))
-            .collect::<Vec<_>>()
     }
 }

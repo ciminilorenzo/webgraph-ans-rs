@@ -1,7 +1,7 @@
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
-use crate::{RawSymbol, State, Symbol, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
+use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
 #[derive(Clone)]
 pub struct ANSEncoder {
@@ -11,6 +11,7 @@ pub struct ANSEncoder {
     /// The normalized bits during the encoding process.
     pub stream: Vec<u32>,
 
+    /// The state of the encoder.
     pub state: State,
 }
 
@@ -55,7 +56,6 @@ impl ANSEncoder {
             }
             symbol += self.model.get_folding_offset(component) * folds as RawSymbol;
         }
-        let symbol = symbol as Symbol;
         let sym_data = self.model.symbol(symbol, component);
 
         if self.state >= sym_data.upperbound {

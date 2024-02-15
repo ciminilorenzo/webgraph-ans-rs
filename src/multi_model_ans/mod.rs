@@ -43,15 +43,15 @@ pub struct EncoderModelEntry {
     #[cfg(not(feature = "arm"))]
     pub reciprocal: u64,
 
-    #[cfg(not(feature = "arm"))]
-    pub magic: u8,
-
     // todo: do we need it? it seems like not since we can calculate it from freqs in the decoder side
     /// The frequency of the symbol.
     pub freq: Freq,
 
     /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
+
+    #[cfg(not(feature = "arm"))]
+    pub magic: u8,
 }
 
 impl EncoderModelEntry {
@@ -60,6 +60,8 @@ impl EncoderModelEntry {
         let (reciprocal, magic) = if freq > 0 {
             get_reciprocal_data(freq)
         } else {
+            // we may have entries for symbols that doesn't exist. fill with dummy data
+            // since we won't be looking for it.
             (0, 0)
         };
 
