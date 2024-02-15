@@ -1,5 +1,6 @@
 use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
+use rand::{thread_rng, Rng};
 
 struct Reciprocal {
     a: u64,
@@ -200,7 +201,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         b.iter(|| {
             black_box(
                 (black_box(reciprocal3.a) as u128
-                    * (black_box(dividend) as u128 + black_box(black_box(reciprocal3.magic) & 1_u8) as u128)
+                    * (black_box(dividend) as u128
+                        + black_box(black_box(reciprocal3.magic) & 1_u8) as u128)
                     >> 64) as u64
                     >> black_box(black_box(reciprocal3.magic) >> 1),
             )

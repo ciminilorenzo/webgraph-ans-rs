@@ -7,6 +7,9 @@ edition = "2021"
 debug = true
 opt-level = 3
 
+[features]
+arm = []
+
 [dependencies]
 anyhow = "1.0.75"
 sux = "0.1.1"

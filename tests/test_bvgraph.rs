@@ -11,7 +11,7 @@ use webgraph::prelude::*;
 
 #[test]
 fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
-    let mut graph = webgraph::graphs::vec_graph::VecGraph::new();
+    let mut graph = VecGraph::new();
 
     for i in 0..=5 {
         graph.add_node(i);

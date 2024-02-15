@@ -10,7 +10,7 @@ use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::EncoderModelEntry;
 use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::utils::data_utilities::scale_freqs;
-use crate::{RawSymbol, Symbol, B, MAX_RAW_SYMBOL};
+use crate::{RawSymbol, Symbol, MAX_RAW_SYMBOL};
 
 /// Multiplicative constant used to fix a maximum increase, in terms of cost, that we can accept
 /// when scaling a folded distribution.
@@ -219,13 +219,7 @@ impl ANSModel4EncoderBuilder {
             let mut last_covered_freq = 0;
 
             for freq in scaled_distribution.iter() {
-                table.push(EncoderModelEntry {
-                    freq: *freq as u16,
-                    upperbound: (1_u64 << (k + B)) * *freq as u64,
-                    cumul_freq: last_covered_freq,
-                    comp_freq: (frame_size - *freq) as u16,
-                    inv_freq: (0xffff_ffff_ffff_ffff / (*freq).max(1) as u64).wrapping_add(1),
-                });
+                table.push(EncoderModelEntry::new(*freq as u16, k, last_covered_freq));
                 last_covered_freq += *freq as u16;
             }
 

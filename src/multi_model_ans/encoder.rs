@@ -62,9 +62,18 @@ impl ANSEncoder {
             self.state = Self::shrink_state(self.state, &mut self.stream);
         }
 
+        #[cfg(feature = "arm")]
         let block = self.state / sym_data.freq as u64;
 
-        self.state = block * sym_data.comp_freq as u64 + sym_data.cumul_freq as u64 + self.state;
+        #[cfg(not(feature = "arm"))]
+        let block = ((sym_data.reciprocal as u128
+            * (self.state as u128 + (sym_data.magic & 1) as u128))
+            >> 64) as u64
+            >> (sym_data.magic >> 1);
+
+        self.state = (block << self.model.get_log2_frame_size(component))
+            + sym_data.cumul_freq as u64
+            + (self.state - (block * sym_data.freq as u64));
     }
 
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {

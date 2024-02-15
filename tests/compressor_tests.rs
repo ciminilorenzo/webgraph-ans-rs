@@ -11,12 +11,6 @@ use rand::prelude::SliceRandom;
 
 #[test]
 fn decodes_correctly_single_dummy_sequence() {
-    stderrlog::new()
-        .verbosity(2)
-        .timestamp(stderrlog::Timestamp::Second)
-        .init()
-        .unwrap();
-
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
 
@@ -217,5 +211,3 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     assert_eq!(expected[2], decoded[2]);
     assert_eq!(expected[3], decoded[3]);
 }
-
-// a test that fails
