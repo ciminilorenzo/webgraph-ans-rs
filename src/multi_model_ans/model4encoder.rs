@@ -4,7 +4,7 @@ use std::ops::Index;
 
 use crate::bvgraph::BVGraphComponent;
 use crate::multi_model_ans::EncoderModelEntry;
-use crate::{Freq, RawSymbol};
+use crate::RawSymbol;
 
 #[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
 /// The ANS model of a specific [component](BVGraphComponent) used by the encoder to encode its symbols.
@@ -25,16 +25,6 @@ pub struct ANSComponentModel4Encoder {
     pub folding_threshold: u64,
 
     pub folding_offset: u64,
-}
-
-impl ANSComponentModel4Encoder {
-    /// Returns the frequencies of each symbol in the [model](ANSComponentModel4Encoder).
-    pub fn get_freqs(&self) -> Vec<Freq> {
-        self.table
-            .iter()
-            .map(|symbol| symbol.freq)
-            .collect::<Vec<_>>()
-    }
 }
 
 impl Default for ANSComponentModel4Encoder {

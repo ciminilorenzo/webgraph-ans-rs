@@ -43,19 +43,23 @@ pub struct EncoderModelEntry {
     #[cfg(not(feature = "arm"))]
     pub reciprocal: u64,
 
-    // todo: do we need it? it seems like not since we can calculate it from freqs in the decoder side
-    /// The frequency of the symbol.
-    pub freq: Freq,
+    #[cfg(not(feature = "arm"))]
+    /// The complementary frequency of the symbol, that is: frame_size - freq.
+    pub cmpl_freq: u16,
 
     /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
+
+    #[cfg(feature = "arm")]
+    pub freq: Freq,
 
     #[cfg(not(feature = "arm"))]
     pub magic: u8,
 }
 
 impl EncoderModelEntry {
-    pub fn new(freq: u16, k: usize, cumul: Freq) -> Self {
+    #[allow(unused_variables)]
+    pub fn new(freq: u16, k: usize, cumul: Freq, m: usize) -> Self {
         #[cfg(not(feature = "arm"))]
         let (reciprocal, magic) = if freq > 0 {
             get_reciprocal_data(freq)
@@ -70,18 +74,13 @@ impl EncoderModelEntry {
             reciprocal,
             #[cfg(not(feature = "arm"))]
             magic,
+            #[cfg(not(feature = "arm"))]
+            cmpl_freq: (1 << m) - freq,
+            #[cfg(feature = "arm")]
             freq,
             upperbound: (1_u64 << (k + B)) * freq as u64,
             cumul_freq: cumul,
         }
-    }
-}
-
-impl PartialEq for EncoderModelEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq
-            && self.upperbound == other.upperbound
-            && self.cumul_freq == other.cumul_freq
     }
 }
 

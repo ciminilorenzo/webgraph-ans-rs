@@ -54,14 +54,21 @@ impl ANSModel4Decoder {
             let mut last_slot = 0; // the last slot of the frame we have actually filled with data
 
             for (sym, symbol_entry) in table.table.iter().enumerate() {
+                #[cfg(feature = "arm")]
+                let freq = symbol_entry.freq;
+
+                #[cfg(not(feature = "arm"))]
+                let freq = (-(symbol_entry.cmpl_freq as i32) + (1i32 << table.frame_size)) as u16;
+
+                #[cfg(feature = "arm")]
                 if symbol_entry.freq == 0 {
                     continue; // let's skip symbols with frequency 0
                 }
 
-                for slot in last_slot..last_slot + symbol_entry.freq {
+                for slot in last_slot..last_slot + freq {
                     // fill the symbol's slots with the data
                     *vec.get_mut(slot as usize).unwrap() = DecoderModelEntry {
-                        freq: symbol_entry.freq,
+                        freq,
                         cumul_freq: symbol_entry.cumul_freq,
                         quasi_folded: Self::quasi_fold(
                             sym as Symbol,
@@ -71,7 +78,7 @@ impl ANSModel4Decoder {
                         ),
                     };
                 }
-                last_slot += symbol_entry.freq;
+                last_slot += freq;
             }
             vectors.push(ANSComponentModel4Decoder {
                 table: vec,

@@ -3,6 +3,9 @@ use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::multi_model_ans::{ANSCompressorPhase, Prelude};
 use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
+#[cfg(feature = "arm")]
+use crate::Freq;
+
 #[derive(Clone)]
 pub struct ANSEncoder {
     /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).
@@ -63,17 +66,36 @@ impl ANSEncoder {
         }
 
         #[cfg(feature = "arm")]
-        let block = self.state / sym_data.freq as u64;
+        self.calculate_new_state(
+            sym_data.freq,
+            sym_data.cumul_freq,
+            self.model.get_log2_frame_size(component),
+        );
 
         #[cfg(not(feature = "arm"))]
-        let block = ((sym_data.reciprocal as u128
-            * (self.state as u128 + (sym_data.magic & 1) as u128))
-            >> 64) as u64
-            >> (sym_data.magic >> 1);
+        self.calculate_new_state(
+            sym_data.cmpl_freq,
+            sym_data.reciprocal,
+            sym_data.magic,
+            sym_data.cumul_freq,
+        );
+    }
 
-        self.state = (block << self.model.get_log2_frame_size(component))
-            + sym_data.cumul_freq as u64
-            + (self.state - (block * sym_data.freq as u64));
+    #[inline(always)]
+    #[cfg(not(feature = "arm"))]
+    fn calculate_new_state(&mut self, cmpl_freq: u16, rcp: u64, magic: u8, cumul: u16) {
+        let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as u64
+            >> (magic >> 1);
+
+        self.state = block * cmpl_freq as u64 + cumul as u64 + self.state;
+    }
+
+    #[inline(always)]
+    #[cfg(feature = "arm")]
+    fn calculate_new_state(&mut self, freq: Freq, cumul: Freq, frame_size: usize) {
+        let block = self.state / freq as u64;
+
+        self.state = (block << frame_size) + cumul as u64 + (self.state - (block * freq as u64))
     }
 
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
