@@ -47,7 +47,7 @@ impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
         let phase = self
             .phases
-            .get(0)
+            .first()
             .expect("The node must have a phase associated to it.");
 
         Ok(ANSDecoder::from_raw_parts(

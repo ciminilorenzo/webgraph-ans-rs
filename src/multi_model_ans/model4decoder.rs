@@ -46,7 +46,7 @@ pub struct ANSModel4Decoder {
 impl ANSModel4Decoder {
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 
-    pub fn new(tables: &Vec<ANSComponentModel4Encoder>) -> Self {
+    pub fn new(tables: &[ANSComponentModel4Encoder]) -> Self {
         let mut vectors = Vec::with_capacity(tables.len());
 
         tables.iter().for_each(|table| {

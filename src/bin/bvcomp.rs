@@ -42,7 +42,7 @@ pub fn main() -> Result<()> {
         .load()?;
 
     // create a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
-    let log2_mock = Log2Estimator::new();
+    let log2_mock = Log2Estimator::default();
     // create a builder that uses the log2 mock writer
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(

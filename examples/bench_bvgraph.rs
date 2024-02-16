@@ -21,7 +21,7 @@ fn main() -> Result<()> {
         .endianness::<BE>()
         .load()?;
 
-    let log2_mock = Log2Estimator::new();
+    let log2_mock = Log2Estimator::default();
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
 

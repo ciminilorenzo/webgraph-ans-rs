@@ -1,3 +1,4 @@
+use std::iter::Iterator;
 use std::{hint::black_box, path::PathBuf};
 
 use anyhow::Result;

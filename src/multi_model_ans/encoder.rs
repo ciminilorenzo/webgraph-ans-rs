@@ -87,7 +87,7 @@ impl ANSEncoder {
         let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as u64
             >> (magic >> 1);
 
-        self.state = block * cmpl_freq as u64 + cumul as u64 + self.state;
+        self.state += block * cmpl_freq as u64 + cumul as u64;
     }
 
     #[inline(always)]

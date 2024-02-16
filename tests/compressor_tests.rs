@@ -12,7 +12,7 @@ use rand::prelude::SliceRandom;
 #[test]
 fn decodes_correctly_single_dummy_sequence() {
     let source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::default();
 
     for symbol in &source {
         model4encoder_builder
@@ -44,7 +44,7 @@ fn decodes_correctly_single_dummy_sequence() {
 fn decodes_correctly_dummy_sequence_with_folding() {
     let source = vec![1000, 1000, 2000];
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::default();
 
     for symbol in &source {
         model4encoder_builder
@@ -77,7 +77,7 @@ fn decodes_correctly_dummy_sequence_with_folding() {
 fn decoder_decodes_correctly_real_sequence() {
     let source = get_zipfian_distr(0, 1.2).to_vec();
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::default();
 
     for symbol in &source {
         model4encoder_builder
@@ -110,18 +110,18 @@ fn decoder_decodes_correctly_real_sequence() {
 fn decodes_correctly_dummy_sequences() {
     let first_source = vec![1_u64, 1, 1, 2, 2, 2, 3, 3, 4, 5];
     let second_source = vec![1_u64, 3, 3, 3, 2, 2, 3, 3, 4, 5];
-    let mut encoder_model_builder = ANSModel4EncoderBuilder::new();
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::default();
 
     for index in 0..first_source.len() {
-        encoder_model_builder
+        model4encoder_builder
             .push_symbol(first_source[index], BVGraphComponent::Outdegree)
             .unwrap();
-        encoder_model_builder
+        model4encoder_builder
             .push_symbol(second_source[index], BVGraphComponent::BlockCount)
             .unwrap();
     }
 
-    let encoder_model = encoder_model_builder.build();
+    let encoder_model = model4encoder_builder.build();
     let mut encoder = ANSEncoder::new(encoder_model);
 
     for index in 0..first_source.len() {
@@ -172,7 +172,7 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     let mut source = vec![first_sequence, second_sequence, third_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
-    let mut model4encoder_builder = ANSModel4EncoderBuilder::new();
+    let mut model4encoder_builder = ANSModel4EncoderBuilder::default();
 
     for (component, symbol) in &source {
         model4encoder_builder

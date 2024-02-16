@@ -27,19 +27,21 @@ pub struct ANSModel4EncoderBuilder {
     total_freqs: Vec<usize>,
 }
 
-impl ANSModel4EncoderBuilder {
-    /// The maximum frame size allowed for any of the [models](ANSComponentModel4Encoder) used by
-    /// the ANS encoder.
-    const MAXIMUM_FRAME_SIZE: usize = 1 << 15;
-
+impl Default for ANSModel4EncoderBuilder {
     /// Creates a new instance of the builder that will allow for the creation of a new
     /// [ANSModel4Encoder], one for each [component](BVGraphComponent).
-    pub fn new() -> Self {
+    fn default() -> Self {
         Self {
             real_freqs: vec![HashMap::new(); BVGraphComponent::COMPONENTS],
             total_freqs: vec![0; BVGraphComponent::COMPONENTS],
         }
     }
+}
+
+impl ANSModel4EncoderBuilder {
+    /// The maximum frame size allowed for any of the [models](ANSComponentModel4Encoder) used by
+    /// the ANS encoder.
+    const MAXIMUM_FRAME_SIZE: usize = 1 << 15;
 
     /// Pushes a new symbol for the given [component](BVGraphComponent) into the builder.
     ///

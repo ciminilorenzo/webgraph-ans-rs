@@ -176,14 +176,10 @@ impl Encoder for EntropyEstimator {
 }
 
 /// An estimator that simply returns the cost of each symbol calculated as the log2 of the value plus 2.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Log2Estimator {}
 
 impl Log2Estimator {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     fn get_symbol_cost(&self, value: u64, _component: BVGraphComponent) -> usize {
         u64::ilog2(value + 2) as usize
     }

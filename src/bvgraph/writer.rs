@@ -22,7 +22,7 @@ pub struct BVGraphModelBuilder<MW: Encoder> {
 impl<MW: Encoder> BVGraphModelBuilder<MW> {
     pub fn new(mock: MW) -> Self {
         Self {
-            model_builder: ANSModel4EncoderBuilder::new(),
+            model_builder: ANSModel4EncoderBuilder::default(),
             mock,
         }
     }
