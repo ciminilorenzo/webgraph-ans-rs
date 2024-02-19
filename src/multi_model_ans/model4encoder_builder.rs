@@ -59,7 +59,7 @@ impl ANSModel4EncoderBuilder {
         Ok(())
     }
 
-    pub fn build(mut self) -> ANSModel4Encoder {
+    pub fn build(self) -> ANSModel4Encoder {
         // the original cost of each component.
         let original_comp_costs = self.calculate_cost();
         // the cost of the folded graph, before the scaling process.
@@ -241,14 +241,8 @@ impl ANSModel4EncoderBuilder {
         }
 
         info!(
-            "{:<15} | {:<5} | {:<5} | {:<8} | {:<12} | {:<10} | {:<10}",
-            "Component",
-            "frame",
-            "radix",
-            "fidelity",
-            "Cost(bytes)",
-            "Cost difference(%)",
-            "Of total(%)"
+            "{:<15} | {:<5} | {} & {:<2} | {:<12} | {:<14}",
+            "Component", "frame", "R", "F", "Of total(%)", "Cost(bytes)"
         );
 
         // the cost of the graph before the scaling process.
@@ -257,25 +251,24 @@ impl ANSModel4EncoderBuilder {
 
         for component in 0..BVGraphComponent::COMPONENTS {
             info!(
-                "{} | {:<5} | {:<5} | {:<8} | {:<12} | {:<18.2} | {:<10.2}",
+                "{} | {:<5} | {}   {:<2} | {:<12.2} | {:.3}(+{:.2}%)",
                 BVGraphComponent::from(component),
                 models[component].frame_size,
                 models[component].radix,
                 models[component].fidelity,
+                // how much big this component is w.r.t the final folded graph
+                (components_final_cost[component] / final_graph_cost) * 100.0,
                 // the final cost of the component
                 (components_final_cost[component] / 8f64).round() as usize,
                 // the difference in percentage between the final cost and the original cost
                 ((components_final_cost[component] - original_comp_costs[component])
                     / original_comp_costs[component])
                     * 100.0,
-                // how much big this component is w.r.t the final folded graph
-                (components_final_cost[component] / final_graph_cost) * 100.0
             );
         }
 
         info!(
-            "Original graph cost: {:?} B | Final graph cost: {} B (+{:.2}%)\n",
-            (original_graph_cost / 8f64).round() as usize,
+            "Final graph's final self-information before ANS-based encoding is {:?} B (+{:.2}%)\n",
             (final_graph_cost / 8f64).round() as usize,
             ((final_graph_cost - original_graph_cost) / final_graph_cost) * 100.0
         );
@@ -286,7 +279,7 @@ impl ANSModel4EncoderBuilder {
     }
 
     /// Calculates the __original__ cost of every component.
-    fn calculate_cost(&mut self) -> Vec<f64> {
+    fn calculate_cost(&self) -> Vec<f64> {
         self.real_freqs
             .iter()
             .enumerate()

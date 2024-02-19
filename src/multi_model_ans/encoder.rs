@@ -27,6 +27,7 @@ impl ANSEncoder {
         }
     }
 
+    #[inline(always)]
     fn get_folds_number(&self, symbol: RawSymbol, component: BVGraphComponent) -> usize {
         ((u64::ilog2(symbol) + 1) as usize - self.model.get_fidelity(component))
             / self.model.get_radix(component)
@@ -98,6 +99,7 @@ impl ANSEncoder {
         self.state = (block << frame_size) + cumul as u64 + (self.state - (block * freq as u64))
     }
 
+    #[inline(always)]
     fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
         let lsb = (state & NORMALIZATION_MASK) as u32;
         out.push(lsb);
