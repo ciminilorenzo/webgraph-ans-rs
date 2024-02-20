@@ -12,6 +12,17 @@ use std::path::PathBuf;
 use webgraph::cli::utils::CompressArgs;
 use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 
+/// Returns the estimated size of an Elias-Fano representation of the prelude resulting from the
+/// encoding of a graph with `nodes_number` nodes ,`last_pointer` as the last pointer of the last phase
+/// and `last_state` as the final state of after the full encoding of the graph.
+fn get_elias_fano_size(last_pointer: usize, nodes_number: usize, last_state: usize) -> usize {
+    let last_pointer = ((last_pointer as u128) << 64u128) | last_state as u128;
+    let nodes_number = nodes_number as u128;
+
+    2 * nodes_number as usize
+        + (nodes_number as usize * (last_pointer / nodes_number).ilog2() as usize + 1)
+}
+
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
 struct Args {
@@ -119,6 +130,18 @@ pub fn main() -> Result<()> {
     let (encoder, phases) = bvcomp.flush()?.into_inner();
     // get the prelude from the encoder
     let prelude = encoder.into_prelude();
+
+    let estimated_elias_fano_size = get_elias_fano_size(
+        phases.last().unwrap().stream_pointer,
+        seq_graph.num_nodes(),
+        phases.last().unwrap().state as usize,
+    );
+    info!(
+        "Elias-Fano estimated size is: {} B",
+        estimated_elias_fano_size / 8
+    );
+
+    phases.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
 
     // let's store what we got
     prelude.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;

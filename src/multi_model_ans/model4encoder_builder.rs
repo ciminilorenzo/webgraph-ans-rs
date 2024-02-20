@@ -278,7 +278,8 @@ impl ANSModel4EncoderBuilder {
         }
     }
 
-    /// Calculates the __original__ cost of every component.
+    /// Calculates the __original__ cost of every component, calculated as the sum, for every symbol
+    /// in the sequence to encode, of its self-information times its frequency.
     fn calculate_cost(&self) -> Vec<f64> {
         self.real_freqs
             .iter()
@@ -295,8 +296,12 @@ impl ANSModel4EncoderBuilder {
             .collect::<Vec<f64>>()
     }
 
-    /// Calculate the information content of an approximated folded distribution, performed with the given fidelity
-    /// and radix, by using the original frequencies of the original folded distribution before the approximation.
+    /// Given the folded distribution (folded with the given radix & fidelity) and the new approximated
+    /// one, calculates the minimum cost we have to pay to encode the sequence by using the new probabilities
+    /// coming from the new distribution but the original frequencies from the original folded one.
+    ///
+    /// NB: for each folded symbol we consider as cost its self-information plus the bits we have to
+    /// dump in the state to fold the symbol, times its frequency.
     fn calculate_approx_folded_distribution_cost(
         folded_distr: &[usize],
         folded_approximated_distr: &[usize],
@@ -328,8 +333,9 @@ impl ANSModel4EncoderBuilder {
         information_content
     }
 
-    /// Calculate the cost of a folded distribution that uses the given fidelity and
-    /// radix.
+    /// Given a folded distribution (with the given radix & fidelity), calculates minimum cost we have
+    /// to pay to encode the sequence of symbols, that is the self-information of every symbol times
+    /// its frequency, plus the bits we have to dump in the state to fold the symbol.
     fn calculate_folded_distribution_cost(
         freqs: &[usize],
         total_freq: usize,
@@ -360,15 +366,16 @@ impl ANSModel4EncoderBuilder {
         information_content
     }
 
-    /// Returns all possibile combinations of radix and fidelity which sum is at least 4 and at most 11.
+    /// Returns all possibile combinations of radix and fidelity which sum is at least 4 and at most
+    /// 11.
+    /// These values are chosen since we want to explicitly represent at least the numbers in the
+    /// interval [0; 8) and at most the numbers in the interval [0; 1024).
     pub fn get_folding_params() -> Vec<(usize, usize)> {
         [1usize, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             .iter()
             .combinations_with_replacement(2)
             .map(|v| (*v[0], *v[1]))
-            .filter(|(fidelity, radix)|
-                // we want to represent explicitly at least 0..7 and at most up to 2^10 - 1
-                fidelity + radix <= 11 && fidelity + radix >= 4)
+            .filter(|(fidelity, radix)| fidelity + radix <= 11 && fidelity + radix >= 4)
             .collect()
     }
 }
