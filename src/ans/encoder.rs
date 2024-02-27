@@ -84,8 +84,8 @@ impl ANSEncoder {
 
     #[inline(always)]
     #[cfg(not(feature = "arm"))]
-    fn calculate_new_state(&mut self, cmpl_freq: u16, rcp: u64, magic: u8, cumul: u16) {
-        let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as State
+    fn calculate_new_state(&mut self, cmpl_freq: u16, rcp: u32, magic: u8, cumul: u16) {
+        let block = ((rcp as u64 * (self.state as u64 + (magic & 1) as u64)) >> 32) as State
             >> (magic >> 1);
 
         self.state += block * cmpl_freq as State + cumul as State;

@@ -56,7 +56,7 @@ impl<'a> ANSDecoder<'a> {
 impl<'a> ANSDecoder<'a> {
     /// Decodes a single symbol of a specific [`Component`](BVGraphComponent).
     pub fn decode(&mut self, component: BVGraphComponent) -> RawSymbol {
-        let slot = self.state & (self.model.get_frame_mask(component)) as State;
+        let slot = self.state & self.model.get_frame_mask(component) as State;
         let symbol_entry = self.model.symbol(slot as Symbol, component);
 
         self.state = (self.state >> self.model.get_log2_frame_size(component))

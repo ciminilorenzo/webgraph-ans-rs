@@ -41,7 +41,7 @@ pub struct EncoderModelEntry {
     pub upperbound: u32,
 
     #[cfg(not(feature = "arm"))]
-    pub reciprocal: u64,
+    pub reciprocal: u32,
 
     #[cfg(not(feature = "arm"))]
     /// The complementary frequency of the symbol, that is: frame_size - freq.

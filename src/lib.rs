@@ -1,5 +1,4 @@
 #![allow(unused_must_use)]
-#![allow(unconditional_recursion)]
 #![allow(dead_code)]
 
 pub mod ans;
@@ -18,8 +17,7 @@ pub const B: usize = 16;
 /// The maximum symbol that can be encoded/decoded.
 pub const MAX_RAW_SYMBOL: u64 = (1 << 48) - 1;
 
-/// The lower end of the interval in which the state of the compressor can be. Since [b](B) is fixed
-/// to be 32, the upper bound is going to be 2^64 - 1.
+/// The lower end of the interval in which the state of the compressor can stay.
 pub const INTERVAL_LOWER_BOUND: State = 1 << 16;
 
 /// The type representing an encoded symbols, that could have been either folded or not.
