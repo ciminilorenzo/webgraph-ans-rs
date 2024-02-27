@@ -1,137 +1,130 @@
-use crate::ans::model4encoder::SingleANSModel4Encoder;
-use crate::ans::{Prelude, K_LOG2};
-use crate::traits::folding::{FoldRead, FoldWrite};
-use crate::{RawSymbol, State, Symbol, B, FASTER_RADIX};
+use crate::a::model4encoder::ANSModel4Encoder;
+use crate::a::{ANSCompressorPhase, Prelude};
+use crate::bvgraph::BVGraphComponent;
+use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
-/// Used to extract the 32 LSB from a 64-bit state.
-const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
+#[cfg(feature = "arm")]
+use crate::Freq;
 
 #[derive(Clone)]
-pub struct FoldedStreamANSCoder<
-    'a,
-    const FIDELITY: usize,
-    const RADIX: usize = FASTER_RADIX,
-    F = Vec<u8>,
-> where
-    F: FoldWrite<RADIX> + Default + Clone,
-{
-    model: SingleANSModel4Encoder,
-
-    states: [u64; 4],
+pub struct ANSEncoder {
+    /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).
+    pub model: ANSModel4Encoder,
 
     /// The normalized bits during the encoding process.
-    normalized_bits: Vec<u32>,
+    pub stream: Vec<u32>,
 
-    /// The folded bits during the encoding process for those symbols which are bucketed.
-    folded_bits: F,
-
-    /// Original sequence of symbols.
-    input_sequence: &'a Vec<RawSymbol>,
-
-    /// The biggest singleton symbol, i.e. the biggest symbol that doesn't need to be folded.
-    folding_threshold: RawSymbol,
+    /// The state of the encoder.
+    pub state: State,
 }
 
-impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-where
-    F: FoldWrite<RADIX> + Default + Clone,
-{
-    /// Creates a FoldedStreamANSEncoder with the current values of `FIDELITY` and `RADIX` and the
-    /// given model. Please note that this constructor will return a decoder that uses a BitVec as
-    /// folded bits, which is way slower than the one that uses a Vec of bytes.
-    pub fn with_parameters(input: &'a Vec<RawSymbol>, folded_bits: F) -> Self {
+impl ANSEncoder {
+    pub fn new(model: ANSModel4Encoder) -> Self {
         Self {
-            states: [0; 4], // wasting 64 bits for each state
-            model: SingleANSModel4Encoder::new(input, RADIX, FIDELITY),
-            normalized_bits: Vec::new(),
-            folded_bits,
-            input_sequence: input,
-            folding_threshold: 1 << (RADIX + FIDELITY - 1),
+            state: INTERVAL_LOWER_BOUND,
+            model,
+            stream: Vec::new(),
         }
+    }
+
+    #[inline(always)]
+    fn get_folds_number(&self, symbol: RawSymbol, component: BVGraphComponent) -> usize {
+        ((u64::ilog2(symbol) + 1) as usize - self.model.get_fidelity(component))
+            / self.model.get_radix(component)
     }
 }
 
-impl<'a, const FIDELITY: usize> FoldedStreamANSCoder<'a, FIDELITY, FASTER_RADIX, Vec<u8>> {
-    /// Creates the standard FoldedStreamANSEncoder from the given parameters.
+impl ANSEncoder {
+    /// Encodes a single symbol of a specific [`Component`](BVGraphComponent).
     ///
-    /// The standard decoder uses fixed radix of 8. This means that, by using this
-    /// constructor, you're prevented from tuning any another parameter but fidelity.
-    /// If you want to create a decoder with different components, you should use the [this](Self::with_parameters)
-    pub fn new(input: &'a Vec<RawSymbol>) -> Self {
-        Self::with_parameters(input, Vec::new())
-    }
-}
+    /// Note that the ANS decodes the sequence in reverse order.
+    pub fn encode(&mut self, mut symbol: RawSymbol, component: BVGraphComponent) {
+        // if symbol has to be folded, dump the bytes we have to fold
+        if symbol >= self.model.get_folding_threshold(component) {
+            let folds = self.get_folds_number(symbol, component);
 
-/// Encoding functions
-impl<'a, const FIDELITY: usize, const RADIX: usize, F> FoldedStreamANSCoder<'a, FIDELITY, RADIX, F>
-where
-    F: FoldWrite<RADIX> + FoldRead<RADIX> + Default + Clone,
-{
-    /// Encodes the whole input sequence.
-    ///
-    /// # Note
-    /// In order to give priority to the decoding process, this function will encode the sequence in
-    /// reverse order.
-    pub fn encode_all(&mut self) {
-        let mut states = [1_u64 << (self.model.log2_frame_size + K_LOG2); 4];
-        let mut folded_bits = F::default();
-        let mut norm = Vec::with_capacity(self.input_sequence.len());
+            for _ in 0..folds {
+                let bits_to_push = symbol & ((1 << self.model.get_radix(component)) - 1);
 
-        let symbols_iter = self.input_sequence.chunks_exact(4);
-        let symbols_left = symbols_iter.remainder();
+                // dump in the state if there is enough space
+                if self.state.leading_zeros() >= self.model.get_radix(component) as u32 {
+                    self.state <<= self.model.get_radix(component);
+                    self.state += bits_to_push;
+                } else {
+                    // otherwise, normalize the state and push the bits in the normalized bits
+                    self.state = Self::shrink_state(self.state, &mut self.stream);
+                    self.state <<= self.model.get_radix(component);
+                    self.state += bits_to_push;
+                }
+                symbol >>= self.model.get_radix(component);
+            }
+            symbol += self.model.get_folding_offset(component) * folds as RawSymbol;
+        }
+        let sym_data = self.model.symbol(symbol, component);
 
-        for symbol in symbols_left.iter().rev() {
-            states[0] = self.encode_symbol(*symbol, states[0], &mut norm, &mut folded_bits);
+        if self.state >= sym_data.upperbound {
+            self.state = Self::shrink_state(self.state, &mut self.stream);
         }
 
-        symbols_iter.rev().for_each(|chunk| {
-            states[0] = self.encode_symbol(chunk[3], states[0], &mut norm, &mut folded_bits);
-            states[1] = self.encode_symbol(chunk[2], states[1], &mut norm, &mut folded_bits);
-            states[2] = self.encode_symbol(chunk[1], states[2], &mut norm, &mut folded_bits);
-            states[3] = self.encode_symbol(chunk[0], states[3], &mut norm, &mut folded_bits);
-        });
+        #[cfg(feature = "arm")]
+        self.calculate_new_state(
+            sym_data.freq,
+            sym_data.cumul_freq,
+            self.model.get_log2_frame_size(component),
+        );
 
-        self.states = states;
-        self.normalized_bits = norm;
-        self.folded_bits = folded_bits;
+        #[cfg(not(feature = "arm"))]
+        self.calculate_new_state(
+            sym_data.cmpl_freq,
+            sym_data.reciprocal,
+            sym_data.magic,
+            sym_data.cumul_freq,
+        );
     }
 
-    fn encode_symbol(
-        &self,
-        sym: RawSymbol,
-        mut state: State,
-        norm: &mut Vec<u32>,
-        folded_bits: &mut F,
-    ) -> State {
-        let symbol = if sym < self.folding_threshold {
-            sym as Symbol
-        } else {
-            folded_bits.fold_symbol(sym, FIDELITY)
-        };
+    #[inline(always)]
+    #[cfg(not(feature = "arm"))]
+    fn calculate_new_state(&mut self, cmpl_freq: u16, rcp: u64, magic: u8, cumul: u16) {
+        let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as u64
+            >> (magic >> 1);
 
-        let sym_data = &self.model[symbol];
-
-        if state >= sym_data.upperbound {
-            let lsb = (state & NORMALIZATION_MASK) as u32;
-            norm.push(lsb);
-            state >>= B;
-        }
-
-        let block = state / sym_data.fast_divisor;
-
-        (block << self.model.log2_frame_size)
-            + sym_data.cumul_freq as u64
-            + (state - (block * sym_data.freq as u64))
+        self.state += block * cmpl_freq as u64 + cumul as u64;
     }
 
-    pub fn serialize(&mut self) -> Prelude<RADIX, F> {
+    #[inline(always)]
+    #[cfg(feature = "arm")]
+    fn calculate_new_state(&mut self, freq: Freq, cumul: Freq, frame_size: usize) {
+        let block = self.state / freq as u64;
+
+        self.state = (block << frame_size) + cumul as u64 + (self.state - (block * freq as u64))
+    }
+
+    #[inline(always)]
+    fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
+        let lsb = (state & NORMALIZATION_MASK) as u32;
+        out.push(lsb);
+        state >>= B;
+        state
+    }
+
+    pub fn into_prelude(self) -> Prelude {
         Prelude {
-            table: self.model.to_raw_parts(),
-            sequence_length: self.input_sequence.len() as u64,
-            normalized_bits: self.normalized_bits.clone(),
-            folded_bits: self.folded_bits.clone(),
-            log2_frame_size: self.model.log2_frame_size,
-            states: self.states,
+            tables: self.model.component_models,
+            stream: self.stream,
+            state: self.state,
+        }
+    }
+
+    /// Returns the current phase of the compressor, that is: the current state and the index of the last chunk of 32 bits
+    /// that have been normalized.
+    ///
+    /// An [`ANSCompressorPhase`] can be utilized to restore the state of the compressor at a given point in time. In the
+    /// specific, if the compressor actual phase is `phase`, then the next decode symbol will be the same as the one
+    /// that led the compressor to the phase `phase`.
+    pub fn get_current_compressor_phase(&self) -> ANSCompressorPhase {
+        ANSCompressorPhase {
+            state: self.state,
+            stream_pointer: self.stream.len(),
         }
     }
 }

@@ -1,163 +1,134 @@
-use crate::ans::{DecoderModelEntry, EncoderModelEntry};
-use crate::traits::quasi::Quasi;
-use crate::{State, Symbol};
-use epserde::prelude::*;
 use std::ops::Index;
-use sucds::bit_vectors::{Rank, Rank9Sel};
-use sux::prelude::*;
 
-pub struct EliasFanoFrame<const RADIX: usize, T>
-where
-    T: Quasi<RADIX> + ZeroCopy,
-{
-    /// Contains, in each position, the data associated to the symbol in the same position within the EliasFano structure.
-    symbols: Vec<DecoderModelEntry<RADIX, T>>,
+use crate::a::model4encoder::ANSComponentModel4Encoder;
+use crate::a::DecoderModelEntry;
+use crate::bvgraph::BVGraphComponent;
+use crate::{RawSymbol, Symbol};
 
-    /// The mapped frame as an Elias-Fano structure.
-    frame: EliasFano,
+/// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode one of its [symbols](Symbol).
+pub struct ANSComponentModel4Decoder {
+    /// A table containing, at each index, an [entry](DecoderModelEntry) for the symbol equal to that index.
+    pub table: Vec<DecoderModelEntry>,
+
+    /// The log2 of the frame size for this [component](BVGraphComponent).
+    frame_size: usize,
+
+    /// The radix used by the current model.
+    radix: usize,
+
+    /// The fidelity used by the current model.
+    fidelity: usize,
+
+    /// The threshold representing the symbol from which we have to start folding, based on the current fidelity and radix.
+    folding_threshold: u64,
+
+    /// The offset used to fold the symbols.
+    folding_offset: u64,
 }
 
-impl<const RADIX: usize, T: Quasi<RADIX>> EliasFanoFrame<RADIX, T> {
-    pub fn new(
-        table: &[EncoderModelEntry],
-        log2_frame: usize,
-        folding_offset: u64,
-        folding_threshold: u64,
-    ) -> Self {
-        let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
-        let mut symbols = Vec::with_capacity(nonzero_symbols);
-        let mut frame_builder = EliasFanoBuilder::new(nonzero_symbols + 1, (1 << log2_frame) + 1);
-
-        table
-            .iter()
-            .enumerate()
-            .filter(|(_, symbol_entry)| symbol_entry.freq > 0)
-            .for_each(|(sym, symbol_entry)| {
-                frame_builder
-                    .push(symbol_entry.cumul_freq as usize)
-                    .unwrap();
-                symbols.push(DecoderModelEntry {
-                    freq: symbol_entry.freq,
-                    cumul_freq: symbol_entry.cumul_freq,
-                    quasi_folded: T::quasi_fold(sym as Symbol, folding_threshold, folding_offset),
-                });
-            });
-
-        frame_builder.push(1 << log2_frame).unwrap();
-        let frame: EliasFano = frame_builder.build().convert_to().unwrap();
-
-        Self {
-            symbols,
-            frame: frame.convert_to().unwrap(),
-        }
-    }
-}
-
-impl<const RADIX: usize, T: Quasi<RADIX>> Index<State> for EliasFanoFrame<RADIX, T> {
-    type Output = DecoderModelEntry<RADIX, T>;
+impl Index<Symbol> for ANSComponentModel4Decoder {
+    type Output = DecoderModelEntry;
 
     #[inline(always)]
-    fn index(&self, slot: State) -> &Self::Output {
-        let symbol_index =
-            unsafe { self.frame.pred_unchecked::<false>(&(slot as usize)).0 as Symbol };
-        &self.symbols[symbol_index as usize]
+    fn index(&self, symbol: Symbol) -> &Self::Output {
+        &self.table[symbol as usize]
     }
 }
 
-#[derive(Clone)]
-pub struct Rank9SelFrame<const RADIX: usize, T: Quasi<RADIX>> {
-    /// Contains, in each position, the data associated to the symbol in the same position within the Rank9Sel structure.
-    symbols: Vec<DecoderModelEntry<RADIX, T>>,
-
-    frame: Rank9Sel,
+/// The container for the whole set of models, one for each [component](BVGraphComponent) used by the ANS decoder to
+/// decode symbols.
+pub struct ANSModel4Decoder {
+    /// A table containing the whole set of [models](ANSComponentModel4Decoder) used by the ANS decoder, one for each
+    /// [component](BVGraphComponent).
+    pub tables: Vec<ANSComponentModel4Decoder>,
 }
 
-impl<const RADIX: usize, T: Quasi<RADIX>> Rank9SelFrame<RADIX, T> {
-    pub fn new(
-        table: &[EncoderModelEntry],
-        log2_frame: usize,
-        folding_offset: u64,
-        folding_threshold: u64,
-    ) -> Self {
-        let nonzero_symbols = table.iter().filter(|sym| sym.freq > 0).count();
-        let mut symbols = Vec::with_capacity(nonzero_symbols);
-        let mut vec = vec![false; 1 << log2_frame];
+impl ANSModel4Decoder {
+    const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 
-        table
-            .iter()
-            .enumerate()
-            .filter(|(_, symbol_entry)| symbol_entry.freq > 0)
-            .for_each(|(sym, symbol_entry)| {
-                match symbol_entry.cumul_freq {
-                    0 => (),
-                    _ => *vec.get_mut(symbol_entry.cumul_freq as usize).unwrap() = true,
+    pub fn new(tables: &[ANSComponentModel4Encoder]) -> Self {
+        let mut vectors = Vec::with_capacity(tables.len());
+
+        tables.iter().for_each(|table| {
+            let mut vec = vec![DecoderModelEntry::default(); 1 << table.frame_size];
+            let mut last_slot = 0; // the last slot of the frame we have actually filled with data
+
+            for (sym, symbol_entry) in table.table.iter().enumerate() {
+                #[cfg(feature = "arm")]
+                let freq = symbol_entry.freq;
+
+                #[cfg(not(feature = "arm"))]
+                let freq = (-(symbol_entry.cmpl_freq as i32) + (1i32 << table.frame_size)) as u16;
+
+                #[cfg(feature = "arm")]
+                if symbol_entry.freq == 0 {
+                    continue; // let's skip symbols with frequency 0
                 }
 
-                symbols.push(DecoderModelEntry {
-                    freq: symbol_entry.freq,
-                    cumul_freq: symbol_entry.cumul_freq,
-                    quasi_folded: T::quasi_fold(sym as Symbol, folding_threshold, folding_offset),
-                });
-            });
-
-        Self {
-            symbols,
-            frame: Rank9Sel::from_bits(vec),
-        }
-    }
-}
-
-impl<const RADIX: usize, T: Quasi<RADIX>> Index<State> for Rank9SelFrame<RADIX, T> {
-    type Output = DecoderModelEntry<RADIX, T>;
-
-    #[inline(always)]
-    fn index(&self, slot: State) -> &Self::Output {
-        let symbol_index = self.frame.rank1((slot + 1) as usize).unwrap() as Symbol;
-        &self.symbols[symbol_index as usize]
-    }
-}
-
-#[derive(Clone)]
-pub struct VecFrame<const RADIX: usize, T: Quasi<RADIX>>(Vec<DecoderModelEntry<RADIX, T>>);
-
-impl<const RADIX: usize, T: Quasi<RADIX>> VecFrame<RADIX, T> {
-    pub fn new(
-        table: &[EncoderModelEntry],
-        log2_frame_size: usize,
-        folding_offset: u64,
-        folding_threshold: u64,
-    ) -> Self {
-        let mut vec = vec![DecoderModelEntry::default(); 1 << log2_frame_size];
-        let mut last_slot = 0; // the last slot of the frame we have actually filled with data
-
-        table
-            .iter()
-            .enumerate()
-            .filter(|(_, symbol_entry)| symbol_entry.freq > 0)
-            .for_each(|(sym, symbol_entry)| {
-                for slot in last_slot..last_slot + symbol_entry.freq {
+                for slot in last_slot..last_slot + freq {
                     // fill the symbol's slots with the data
                     *vec.get_mut(slot as usize).unwrap() = DecoderModelEntry {
-                        freq: symbol_entry.freq,
+                        freq,
                         cumul_freq: symbol_entry.cumul_freq,
-                        quasi_folded: T::quasi_fold(
+                        quasi_folded: Self::quasi_fold(
                             sym as Symbol,
-                            folding_threshold,
-                            folding_offset,
+                            table.folding_offset,
+                            table.folding_threshold,
+                            table.radix,
                         ),
                     };
                 }
-                last_slot += symbol_entry.freq;
+                last_slot += freq;
+            }
+            vectors.push(ANSComponentModel4Decoder {
+                table: vec,
+                frame_size: table.frame_size,
+                radix: table.radix,
+                fidelity: table.fidelity,
+                folding_threshold: table.folding_threshold,
+                folding_offset: table.folding_offset,
             });
-        Self(vec)
-    }
-}
+        });
 
-impl<const RADIX: usize, T: Quasi<RADIX>> Index<State> for VecFrame<RADIX, T> {
-    type Output = DecoderModelEntry<RADIX, T>;
+        Self { tables: vectors }
+    }
+
+    fn quasi_fold(sym: Symbol, folding_offset: u64, folding_threshold: u64, radix: usize) -> u64 {
+        if sym < folding_threshold as Symbol {
+            return sym as u64;
+        }
+
+        let mut symbol = sym as u64;
+        let folds = (symbol - folding_threshold) / folding_offset + 1_u64;
+        let folds_bits = folds << Self::BIT_RESERVED_FOR_SYMBOL;
+
+        symbol -= folding_offset * folds as RawSymbol;
+        symbol <<= folds * radix as u64;
+        symbol | folds_bits
+    }
 
     #[inline(always)]
-    fn index(&self, slot: State) -> &Self::Output {
-        &self.0[slot as usize]
+    pub fn symbol(&self, slot: Symbol, component: BVGraphComponent) -> &DecoderModelEntry {
+        &self.tables[component as usize][slot]
+    }
+
+    #[inline(always)]
+    pub fn get_frame_mask(&self, component: BVGraphComponent) -> u64 {
+        (1 << self.tables[component as usize].frame_size) - 1
+    }
+
+    #[inline(always)]
+    pub fn get_log2_frame_size(&self, component: BVGraphComponent) -> usize {
+        self.tables[component as usize].frame_size
+    }
+
+    #[inline(always)]
+    pub fn get_radix(&self, component: BVGraphComponent) -> usize {
+        self.tables[component as usize].radix
+    }
+
+    #[inline(always)]
+    pub fn get_fidelity(&self, component: BVGraphComponent) -> usize {
+        self.tables[component as usize].fidelity
     }
 }

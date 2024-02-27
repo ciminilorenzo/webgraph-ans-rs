@@ -2,8 +2,8 @@ use std::convert::Infallible;
 
 use webgraph::graphs::Encoder;
 
+use crate::a::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
-use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
 use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::{Freq, Symbol, MAX_RAW_SYMBOL};
 

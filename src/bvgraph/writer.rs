@@ -1,12 +1,12 @@
 use std::convert::Infallible;
 use webgraph::graphs::{Encoder, MeasurableEncoder};
 
+use crate::a::encoder::ANSEncoder;
+use crate::a::model4encoder::ANSModel4Encoder;
+use crate::a::model4encoder_builder::ANSModel4EncoderBuilder;
+use crate::a::ANSCompressorPhase;
 use crate::bvgraph::mock_writers::EntropyEstimator;
 use crate::bvgraph::BVGraphComponent;
-use crate::multi_model_ans::encoder::ANSEncoder;
-use crate::multi_model_ans::model4encoder::ANSModel4Encoder;
-use crate::multi_model_ans::model4encoder_builder::ANSModel4EncoderBuilder;
-use crate::multi_model_ans::ANSCompressorPhase;
 
 /// An [`Encoder`] that writes to an [`ANSModel4EncoderBuilder`]. to collect data for each
 ///

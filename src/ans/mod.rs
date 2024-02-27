@@ -1,72 +1,100 @@
-use crate::traits::folding::FoldRead;
-use crate::traits::quasi::Quasi;
-use crate::{Freq, State};
-use strength_reduce::StrengthReducedU64;
-
 pub mod decoder;
 pub mod encoder;
 pub mod model4decoder;
 pub mod model4encoder;
+pub mod model4encoder_builder;
 
-pub const K: usize = 16;
-pub const K_LOG2: usize = 4;
+use crate::a::model4encoder::ANSComponentModel4Encoder;
+use crate::{Freq, State, B};
+use epserde::Epserde;
+use mem_dbg::{MemDbg, MemSize};
 
-/// How big M (the frame) can be. This constrained is imposed by the fact that B and K are fixed and
-/// State is a u64.
-pub const MAXIMUM_LOG2_M: usize = 28;
+#[cfg(not(feature = "arm"))]
+use crate::utils::ans_utilities::get_reciprocal_data;
 
-pub struct Prelude<const RADIX: usize, F: FoldRead<RADIX>> {
+#[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
+pub struct Prelude {
     /// Contains, for each index, the data associated to the symbol equal to that index.
-    pub table: Vec<EncoderModelEntry>,
-
-    /// The length of the sequence to decode.
-    pub sequence_length: u64,
+    pub tables: Vec<ANSComponentModel4Encoder>,
 
     /// The normalized bits during the encoding process.
-    pub normalized_bits: Vec<u32>,
+    pub stream: Vec<u32>,
 
-    /// The folded bits during the encoding process.
-    pub folded_bits: F,
-
-    pub log2_frame_size: usize,
-
-    pub states: [State; 4],
+    /// The state of the encoder after having encoded the last symbol of the input.
+    pub state: State,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]
+#[zero_copy]
+#[repr(C)]
+pub struct ANSCompressorPhase {
+    pub state: State,
+    pub stream_pointer: usize,
+}
+
+#[derive(Clone, Copy, Debug, Epserde, MemDbg, MemSize)]
+#[repr(C)]
+#[zero_copy]
 pub struct EncoderModelEntry {
-    pub freq: Freq,
+    /// The upperbound of the symbol, that is the maximum value starting from which we can safely encode this specific
+    /// symbol without overflowing the interval in which the state of the compressor can be.
     pub upperbound: u64,
+
+    #[cfg(not(feature = "arm"))]
+    pub reciprocal: u64,
+
+    #[cfg(not(feature = "arm"))]
+    /// The complementary frequency of the symbol, that is: frame_size - freq.
+    pub cmpl_freq: u16,
+
+    /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
-    pub fast_divisor: StrengthReducedU64,
+
+    #[cfg(feature = "arm")]
+    pub freq: Freq,
+
+    #[cfg(not(feature = "arm"))]
+    pub magic: u8,
 }
 
-impl PartialEq for EncoderModelEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.freq == other.freq
-            && self.upperbound == other.upperbound
-            && self.cumul_freq == other.cumul_freq
-            && self.fast_divisor.get() == other.fast_divisor.get()
-    }
-}
+impl EncoderModelEntry {
+    #[allow(unused_variables)]
+    pub fn new(freq: u16, k: usize, cumul: Freq, m: usize) -> Self {
+        #[cfg(not(feature = "arm"))]
+        let (reciprocal, magic) = if freq > 0 {
+            get_reciprocal_data(freq)
+        } else {
+            // we may have entries for symbols that doesn't exist. fill with dummy data
+            // since we won't be looking for it.
+            (0, 0)
+        };
 
-impl From<(Freq, u64, Freq)> for EncoderModelEntry {
-    fn from(tuple: (Freq, u64, Freq)) -> Self {
         Self {
-            freq: tuple.0,
-            upperbound: tuple.1,
-            cumul_freq: tuple.2,
-            fast_divisor: match tuple.0 > 0 {
-                true => StrengthReducedU64::new(tuple.0 as u64),
-                false => StrengthReducedU64::new(1),
-            },
+            #[cfg(not(feature = "arm"))]
+            reciprocal,
+            #[cfg(not(feature = "arm"))]
+            magic,
+            #[cfg(not(feature = "arm"))]
+            cmpl_freq: (1 << m) - freq,
+            #[cfg(feature = "arm")]
+            freq,
+            upperbound: (1_u64 << (k + B)) * freq as u64,
+            cumul_freq: cumul,
         }
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct DecoderModelEntry<const RADIX: usize, T: Quasi<RADIX>> {
+#[derive(Clone, Copy, Debug, Default, Epserde)]
+#[repr(C)]
+#[zero_copy]
+pub struct DecoderModelEntry {
+    /// The frequency of the symbol.
     pub freq: Freq,
+
+    /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
-    pub quasi_folded: T,
+
+    /// A 64-bit integer, containing the number of folds that we need to successively unfold to get the raw symbol back
+    /// in the most significant 16 bits, and the quasi-folded symbol in the least significant 48 bits.
+    pub quasi_folded: u64,
 }
