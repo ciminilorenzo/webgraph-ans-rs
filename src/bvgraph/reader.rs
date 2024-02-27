@@ -1,8 +1,8 @@
 use webgraph::graphs::{RandomAccessDecoderFactory, SequentialDecoderFactory};
 
-use crate::a::decoder::ANSDecoder;
-use crate::a::model4decoder::ANSModel4Decoder;
-use crate::a::{ANSCompressorPhase, Prelude};
+use crate::ans::decoder::ANSDecoder;
+use crate::ans::model4decoder::ANSModel4Decoder;
+use crate::ans::{ANSCompressorPhase, Prelude};
 
 pub struct ANSBVGraphDecoderFactory<'a> {
     /// The vec of ANSCompressorPhase, one for each node of the graph.

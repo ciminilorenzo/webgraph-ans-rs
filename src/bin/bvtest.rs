@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
 use epserde::prelude::*;
-use folded_streaming_rans::a::{ANSCompressorPhase, Prelude};
+use folded_streaming_rans::ans::{ANSCompressorPhase, Prelude};
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphDecoderFactory;
 use rand::rngs::SmallRng;
 use rand::Rng;

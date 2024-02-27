@@ -1,10 +1,10 @@
 mod utils;
 
 use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
-use folded_streaming_rans::a::decoder::ANSDecoder;
-use folded_streaming_rans::a::encoder::ANSEncoder;
-use folded_streaming_rans::a::model4decoder::ANSModel4Decoder;
-use folded_streaming_rans::a::model4encoder_builder::ANSModel4EncoderBuilder;
+use folded_streaming_rans::ans::decoder::ANSDecoder;
+use folded_streaming_rans::ans::encoder::ANSEncoder;
+use folded_streaming_rans::ans::model4decoder::ANSModel4Decoder;
+use folded_streaming_rans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use folded_streaming_rans::bvgraph::BVGraphComponent;
 use folded_streaming_rans::RawSymbol;
 use rand::prelude::SliceRandom;

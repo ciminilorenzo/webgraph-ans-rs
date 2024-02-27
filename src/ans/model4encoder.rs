@@ -2,7 +2,7 @@ use epserde::Epserde;
 use mem_dbg::{MemDbg, MemSize};
 use std::ops::Index;
 
-use crate::a::EncoderModelEntry;
+use crate::ans::EncoderModelEntry;
 use crate::bvgraph::BVGraphComponent;
 use crate::RawSymbol;
 

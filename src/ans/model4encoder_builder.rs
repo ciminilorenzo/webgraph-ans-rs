@@ -4,9 +4,9 @@ use log::info;
 use std::cmp::max;
 use std::collections::HashMap;
 
-use crate::a::model4encoder::ANSComponentModel4Encoder;
-use crate::a::model4encoder::ANSModel4Encoder;
-use crate::a::EncoderModelEntry;
+use crate::ans::model4encoder::ANSComponentModel4Encoder;
+use crate::ans::model4encoder::ANSModel4Encoder;
+use crate::ans::EncoderModelEntry;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::ans_utilities::fold_without_streaming_out;
 use crate::utils::data_utilities::scale_freqs;

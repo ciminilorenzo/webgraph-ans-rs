@@ -1,5 +1,5 @@
-use crate::a::model4encoder::ANSModel4Encoder;
-use crate::a::{ANSCompressorPhase, Prelude};
+use crate::ans::model4encoder::ANSModel4Encoder;
+use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 

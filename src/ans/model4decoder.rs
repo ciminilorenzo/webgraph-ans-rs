@@ -1,7 +1,7 @@
 use std::ops::Index;
 
-use crate::a::model4encoder::ANSComponentModel4Encoder;
-use crate::a::DecoderModelEntry;
+use crate::ans::model4encoder::ANSComponentModel4Encoder;
+use crate::ans::DecoderModelEntry;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, Symbol};
 

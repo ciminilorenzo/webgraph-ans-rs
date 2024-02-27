@@ -4,7 +4,7 @@ pub mod model4decoder;
 pub mod model4encoder;
 pub mod model4encoder_builder;
 
-use crate::a::model4encoder::ANSComponentModel4Encoder;
+use crate::ans::model4encoder::ANSComponentModel4Encoder;
 use crate::{Freq, State, B};
 use epserde::Epserde;
 use mem_dbg::{MemDbg, MemSize};
