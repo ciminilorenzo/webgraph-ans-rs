@@ -15,11 +15,12 @@ use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 /// Returns the estimated size of an Elias-Fano representation of the prelude resulting from the
 /// encoding of a graph with `nodes_number` nodes ,`last_pointer` as the last pointer of the last phase
 /// and `last_state` as the final state of after the full encoding of the graph.
-fn get_elias_fano_size(last_pointer: usize, nodes_number: usize, last_state: usize) -> usize {
-    let last_pointer = (last_pointer as u64) << 32 | last_state as u64;
+fn get_elias_fano_size(last_pointer: usize, nodes_number: usize) -> usize {
+    let last_pointer = last_pointer as u64;
     let nodes_number = nodes_number as u64;
 
     2 * nodes_number as usize
+        + 32
         + (nodes_number as usize * (last_pointer / nodes_number).ilog2() as usize + 1)
 }
 
@@ -131,11 +132,8 @@ pub fn main() -> Result<()> {
     // get the prelude from the encoder
     let prelude = encoder.into_prelude();
 
-    let estimated_elias_fano_size = get_elias_fano_size(
-        phases.last().unwrap().stream_pointer,
-        seq_graph.num_nodes(),
-        phases.last().unwrap().state as usize,
-    );
+    let estimated_elias_fano_size =
+        get_elias_fano_size(phases.last().unwrap().stream_pointer, seq_graph.num_nodes());
     info!(
         "Elias-Fano estimated size is: {} B",
         estimated_elias_fano_size / 8
