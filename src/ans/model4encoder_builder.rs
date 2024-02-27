@@ -216,7 +216,7 @@ impl ANSModel4EncoderBuilder {
 
             let mut table = Vec::with_capacity(scaled_distribution.len());
             let log_m = frame_size.ilog2() as usize;
-            let k = if log_m > 0 { 32 - log_m } else { 31 };
+            let k = if log_m > 0 { 16 - log_m } else { 15 };
 
             let mut last_covered_freq = 0;
 

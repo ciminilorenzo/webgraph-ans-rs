@@ -18,7 +18,7 @@ pub struct Prelude {
     pub tables: Vec<ANSComponentModel4Encoder>,
 
     /// The normalized bits during the encoding process.
-    pub stream: Vec<u32>,
+    pub stream: Vec<u16>,
 
     /// The state of the encoder after having encoded the last symbol of the input.
     pub state: State,
@@ -38,10 +38,10 @@ pub struct ANSCompressorPhase {
 pub struct EncoderModelEntry {
     /// The upperbound of the symbol, that is the maximum value starting from which we can safely encode this specific
     /// symbol without overflowing the interval in which the state of the compressor can be.
-    pub upperbound: u64,
+    pub upperbound: u32,
 
     #[cfg(not(feature = "arm"))]
-    pub reciprocal: u64,
+    pub reciprocal: u32,
 
     #[cfg(not(feature = "arm"))]
     /// The complementary frequency of the symbol, that is: frame_size - freq.
@@ -78,7 +78,7 @@ impl EncoderModelEntry {
             cmpl_freq: (1 << m) - freq,
             #[cfg(feature = "arm")]
             freq,
-            upperbound: (1_u64 << (k + B)) * freq as u64,
+            upperbound: (1_u32 << (k + B)) * freq as State,
             cumul_freq: cumul,
         }
     }

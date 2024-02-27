@@ -11,17 +11,17 @@ pub fn fold_without_streaming_out(mut sym: RawSymbol, radix: usize, fidelity: us
     u16::try_from(sym + offset).expect("Folded symbol is bigger than u16::MAX")
 }
 
-pub fn get_reciprocal_data(divisor: u16) -> (u64, u8) {
+pub fn get_reciprocal_data(divisor: u16) -> (u32, u8) {
     let m = divisor.ilog2();
 
     match divisor.is_power_of_two() {
-        true => (u64::MAX, ((m as u8) << 1) + 1u8),
+        true => (u32::MAX, ((m as u8) << 1) + 1u8),
 
         false => {
-            let t = ((1u128 << (m + 64)) / divisor as u128) as u64;
-            let r = (divisor as u128 * (t as u128 + 1) - (1u128 << (m + 64))) as u64;
+            let t = ((1u64 << (m + 32)) / divisor as u64) as u32;
+            let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
-            match r <= (1u64 << m) {
+            match r <= (1u32 << m) {
                 true => (t + 1, (m as u8) << 1),
                 false => (t, ((m as u8) << 1) + 1_u8),
             }

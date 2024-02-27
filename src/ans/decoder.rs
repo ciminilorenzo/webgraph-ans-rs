@@ -11,7 +11,7 @@ pub struct ANSDecoder<'a> {
     pub model: &'a ANSModel4Decoder,
 
     /// The normalized bits during the encoding process.
-    pub stream: &'a Vec<u32>,
+    pub stream: &'a Vec<u16>,
 
     /// The current state of the decoder.
     pub state: State,
@@ -22,7 +22,7 @@ pub struct ANSDecoder<'a> {
 
 impl<'a> ANSDecoder<'a> {
     /// The lower bound of the interval.
-    const LOWER_BOUND: State = 1 << 32;
+    const LOWER_BOUND: State = 1 << 16;
 
     /// The number of bits reserved to represent the symbol in the quasi-folded value.
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
@@ -56,7 +56,7 @@ impl<'a> ANSDecoder<'a> {
 impl<'a> ANSDecoder<'a> {
     /// Decodes a single symbol of a specific [`Component`](BVGraphComponent).
     pub fn decode(&mut self, component: BVGraphComponent) -> RawSymbol {
-        let slot = self.state & self.model.get_frame_mask(component);
+        let slot = self.state & self.model.get_frame_mask(component) as State;
         let symbol_entry = self.model.symbol(slot as Symbol, component);
 
         self.state = (self.state >> self.model.get_log2_frame_size(component))
@@ -76,7 +76,7 @@ impl<'a> ANSDecoder<'a> {
                 self.extend_state();
             }
             fold = (fold << self.model.get_radix(component))
-                | self.state & ((1 << self.model.get_radix(component)) - 1);
+                | (self.state as u64) & ((1 << self.model.get_radix(component)) - 1);
             self.state >>= self.model.get_radix(component);
 
             if self.state < Self::LOWER_BOUND {

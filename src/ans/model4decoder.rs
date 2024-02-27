@@ -18,12 +18,6 @@ pub struct ANSComponentModel4Decoder {
 
     /// The fidelity used by the current model.
     fidelity: usize,
-
-    /// The threshold representing the symbol from which we have to start folding, based on the current fidelity and radix.
-    folding_threshold: u64,
-
-    /// The offset used to fold the symbols.
-    folding_offset: u64,
 }
 
 impl Index<Symbol> for ANSComponentModel4Decoder {
@@ -85,8 +79,6 @@ impl ANSModel4Decoder {
                 frame_size: table.frame_size,
                 radix: table.radix,
                 fidelity: table.fidelity,
-                folding_threshold: table.folding_threshold,
-                folding_offset: table.folding_offset,
             });
         });
 
