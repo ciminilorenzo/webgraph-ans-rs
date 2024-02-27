@@ -12,7 +12,7 @@ pub struct ANSEncoder {
     pub model: ANSModel4Encoder,
 
     /// The normalized bits during the encoding process.
-    pub stream: Vec<u32>,
+    pub stream: Vec<u16>,
 
     /// The state of the encoder.
     pub state: State,
@@ -44,7 +44,7 @@ impl ANSEncoder {
             let folds = self.get_folds_number(symbol, component);
 
             for _ in 0..folds {
-                let bits_to_push = symbol & ((1 << self.model.get_radix(component)) - 1);
+                let bits_to_push = (symbol & ((1 << self.model.get_radix(component)) - 1)) as State;
 
                 // dump in the state if there is enough space
                 if self.state.leading_zeros() >= self.model.get_radix(component) as u32 {
@@ -85,23 +85,23 @@ impl ANSEncoder {
     #[inline(always)]
     #[cfg(not(feature = "arm"))]
     fn calculate_new_state(&mut self, cmpl_freq: u16, rcp: u64, magic: u8, cumul: u16) {
-        let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as u64
+        let block = ((rcp as u128 * (self.state as u128 + (magic & 1) as u128)) >> 64) as State
             >> (magic >> 1);
 
-        self.state += block * cmpl_freq as u64 + cumul as u64;
+        self.state += block * cmpl_freq as State + cumul as State;
     }
 
     #[inline(always)]
     #[cfg(feature = "arm")]
     fn calculate_new_state(&mut self, freq: Freq, cumul: Freq, frame_size: usize) {
-        let block = self.state / freq as u64;
+        let block = self.state / freq as State;
 
-        self.state = (block << frame_size) + cumul as u64 + (self.state - (block * freq as u64))
+        self.state = (block << frame_size) + cumul as State + (self.state - (block * freq as State))
     }
 
     #[inline(always)]
-    fn shrink_state(mut state: State, out: &mut Vec<u32>) -> State {
-        let lsb = (state & NORMALIZATION_MASK) as u32;
+    fn shrink_state(mut state: State, out: &mut Vec<u16>) -> State {
+        let lsb = (state & NORMALIZATION_MASK) as u16;
         out.push(lsb);
         state >>= B;
         state

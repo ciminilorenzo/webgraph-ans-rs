@@ -13,14 +13,14 @@ mod traits;
 ///
 /// Having said that, in this project b is fixed to be 32 in order to extract/insert 32 bits from/to
 /// the state at once.
-pub const B: usize = 32;
+pub const B: usize = 16;
 
 /// The maximum symbol that can be encoded/decoded.
 pub const MAX_RAW_SYMBOL: u64 = (1 << 48) - 1;
 
 /// The lower end of the interval in which the state of the compressor can be. Since [b](B) is fixed
 /// to be 32, the upper bound is going to be 2^64 - 1.
-pub const INTERVAL_LOWER_BOUND: u64 = 1 << 32;
+pub const INTERVAL_LOWER_BOUND: State = 1 << 16;
 
 /// The type representing an encoded symbols, that could have been either folded or not.
 ///
@@ -37,7 +37,7 @@ pub type Symbol = u16;
 pub type RawSymbol = u64;
 
 /// The type representing the state of the encoder/decoder.
-pub type State = u64;
+pub type State = u32;
 
 /// The type representing the frequencies of the symbols. This type is bounded to be u16 since we
 /// deliberately accept to have frequencies that can reach at most this value. This is done in order
@@ -45,8 +45,5 @@ pub type State = u64;
 /// symbol as 16-bit unsigned.
 pub type Freq = u16;
 
-/// The default value for RADIX used by both the encoder and the decoder.
-pub const FASTER_RADIX: usize = 8;
-
-/// Used to extract the 32 LSB from a 64-bit state.
-pub const NORMALIZATION_MASK: u64 = 0xFFFFFFFF;
+/// Used to extract the 16 LSB from a 32-bit state.
+pub const NORMALIZATION_MASK: u32 = 0xFFFF;
