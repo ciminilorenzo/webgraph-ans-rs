@@ -135,12 +135,12 @@ impl<P: AsRef<Path>> RevBuffer<P> {
         Ok(())
     }
 
-    pub fn flush(mut self) -> anyhow::Result<Iterable> {
+    pub fn flush(&mut self) -> anyhow::Result<Iterable> {
         let padding = u64::BITS as usize - self.bit_writer.flush()?;
         Ok(Iterable {
             len: self.len,
             padding,
-            mmap: MmapBackend::load(self.path, MmapFlags::SEQUENTIAL)?,
+            mmap: MmapBackend::load(&self.path, MmapFlags::SEQUENTIAL)?,
         })
     }
 }
