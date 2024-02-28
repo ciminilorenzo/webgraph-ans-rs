@@ -13,7 +13,7 @@ arm = []
 [dependencies]
 anyhow = "1.0.75"
 sux = "0.1.1"
-itertools = "0.12.0"
+itertools = "0.12.1"
 bitvec = "1.0.1"
 sucds = { version = "0.8.1", features = ["intrinsics"] }
 strength_reduce = "0.2.4"
@@ -30,6 +30,7 @@ log = "0.4.20"
 lender = "0.2.9"
 dsi-bitstream = "0.3.0"
 mmap-rs = "0.6.1"
+
 
 [dev-dependencies]
 criterion = "0.5.1"

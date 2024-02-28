@@ -328,6 +328,11 @@ impl ANSBVGraphMeasurableEncoder {
             models: RevBuffer::new(models_file).unwrap(),
         }
     }
+
+    /// Consume self and return the encoder.
+    pub fn into_inner(self) -> (ANSEncoder, Vec<ANSCompressorPhase>) {
+        (self.encoder, self.phases)
+    }
 }
 
 impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {

@@ -45,15 +45,6 @@ impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
-        let phase = self
-            .phases
-            .first()
-            .expect("The node must have a phase associated to it.");
-
-        Ok(ANSDecoder::from_raw_parts(
-            self.prelude,
-            &self.model,
-            *phase,
-        ))
+        Ok(ANSDecoder::new(self.prelude, &self.model))
     }
 }
