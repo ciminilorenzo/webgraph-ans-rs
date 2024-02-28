@@ -127,8 +127,8 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
 
     let model4encoder = bvcomp.flush()?.build();
 
-    let mut bvcomp = BVComp::<BVGraphMeasurableEncoder>::new(
-        BVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
+    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
         7,
         2,
         3,
