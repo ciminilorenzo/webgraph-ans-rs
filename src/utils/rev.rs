@@ -110,13 +110,13 @@ fn default_rev_write_gamma<E: Endianness, B: BitWrite<E>>(
         + backend.write_bits(0, number_of_bits_to_write as _)?)
 }
 
-pub struct RevBitWriter<P: AsRef<Path>> {
+pub struct RevBuffer<P: AsRef<Path>> {
     path: P,
     bit_writer: BufBitWriter<BE, WordAdapter<u64, BufWriter<File>>>,
     len: u64,
 }
 
-impl<P: AsRef<Path>> RevBitWriter<P> {
+impl<P: AsRef<Path>> RevBuffer<P> {
     pub fn new(path: P) -> anyhow::Result<Self> {
         let bit_writer = BufBitWriter::new(WordAdapter::new(BufWriter::new(File::create(
             path.as_ref(),
@@ -135,66 +135,81 @@ impl<P: AsRef<Path>> RevBitWriter<P> {
         Ok(())
     }
 
-    pub fn flush(mut self) -> anyhow::Result<impl Iterator<Item = anyhow::Result<u64>>> {
+    pub fn flush(mut self) -> anyhow::Result<Iterable> {
         let padding = u64::BITS as usize - self.bit_writer.flush()?;
-        let mut rev_reader = BufBitReader::<LE, _>::new(RevReader::new(self.path)?);
-        rev_reader.skip_bits(padding as usize)?;
-        Ok(Iter {
-            pos: 0,
+        Ok(Iterable {
             len: self.len,
-            rev_reader,
+            padding,
+            mmap: MmapBackend::load(self.path, MmapFlags::SEQUENTIAL)?,
         })
     }
 }
 
-struct Iter {
-    pos: u64,
+pub struct Iterable {
     len: u64,
-    rev_reader: BufBitReader<LE, RevReader>,
+    padding: usize,
+    mmap: MmapBackend<u32>,
 }
 
-impl Iterator for Iter {
-    type Item = anyhow::Result<u64>;
+impl<'a> IntoIterator for &'a Iterable {
+    type Item = u64;
+    type IntoIter = IntoIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let mut bit_reader = BufBitReader::<LE, _>::new(RevReader::new(self.mmap.as_ref()));
+        bit_reader.skip_bits(self.padding).unwrap();
+
+        IntoIter {
+            pos: 0,
+            len: self.len,
+            bit_reader,
+        }
+    }
+}
+
+pub struct IntoIter<'a> {
+    pos: u64,
+    len: u64,
+    bit_reader: BufBitReader<LE, RevReader<'a>>,
+}
+
+impl<'a> Iterator for IntoIter<'a> {
+    type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos == self.len {
             None
         } else {
             self.pos += 1;
-            Some(
-                self.rev_reader
-                    .read_gamma()
-                    .map_err(|e| anyhow::Error::new(e)),
-            )
+            // RevReader is infallible
+            Some(self.bit_reader.read_gamma().unwrap())
         }
     }
 }
 
-pub struct RevReader {
-    mmap: MmapBackend<u32>,
+struct RevReader<'a> {
+    data: &'a [u32],
     position: usize,
 }
 
-impl RevReader {
-    pub fn new<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
-        let mmap = MmapBackend::<u32>::load(path, MmapFlags::SEQUENTIAL)?;
-        let position = mmap.as_ref().len();
-        Ok(Self { mmap, position })
+impl<'a> RevReader<'a> {
+    pub fn new(data: &'a [u32]) -> Self {
+        Self {
+            data: data,
+            position: data.len(),
+        }
     }
 }
 
-impl WordRead for RevReader {
+impl WordRead for RevReader<'_> {
     type Word = u32;
-    type Error = std::io::Error;
-    fn read_word(&mut self) -> std::io::Result<u32> {
+    type Error = std::convert::Infallible;
+    fn read_word(&mut self) -> Result<u32, Self::Error> {
         if self.position == 0 {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "No more data to read",
-            ))
+            Ok(0)
         } else {
             self.position -= 1;
-            let w = self.mmap.as_ref()[self.position].to_be();
+            let w = self.data[self.position].to_be();
             Ok(w)
         }
     }
@@ -206,22 +221,30 @@ fn test_rev() -> anyhow::Result<()> {
     use rand::RngCore;
     use rand::SeedableRng;
     let tmp = tempfile::NamedTempFile::new()?;
-    let mut rev_writer = RevBitWriter::new(tmp)?;
+    let mut rev_writer = RevBuffer::new(tmp)?;
 
     let mut v = vec![];
 
     let mut r = SmallRng::seed_from_u64(42);
 
-    for _ in 0..1000 {
+    for _ in 0..100000 {
         let x = r.next_u64() % 1024;
         v.push(x);
         rev_writer.push(x);
     }
 
-    let mut rev_reader = rev_writer.flush()?;
+    let iterable = rev_writer.flush()?;
+    let mut into_iter = iterable.into_iter();
 
     for &x in v.iter().rev() {
-        let y = rev_reader.next().unwrap()?;
+        let y = into_iter.next().unwrap();
+        assert_eq!(y, x);
+    }
+
+    let mut into_iter = iterable.into_iter();
+
+    for &x in v.iter().rev() {
+        let y = into_iter.next().unwrap();
         assert_eq!(y, x);
     }
 
