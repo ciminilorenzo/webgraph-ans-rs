@@ -103,8 +103,8 @@ impl<MW: Encoder> Encoder for BVGraphModelBuilder<MW> {
         Ok(self.mock.write_residual(value).unwrap())
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+    fn flush(&mut self) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn end_node(_node: usize) -> Result<(), Self::Error> {
@@ -268,7 +268,7 @@ impl Encoder for BVGraphMeasurableEncoder {
     }
 
     // Dump last node
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) -> Result<usize, Self::Error> {
         for (component, symbols) in self.data.iter().enumerate().rev() {
             for &symbol in symbols.iter().rev() {
                 self.encoder
@@ -277,7 +277,7 @@ impl Encoder for BVGraphMeasurableEncoder {
         }
         self.phases
             .push(self.encoder.get_current_compressor_phase());
-        Ok(())
+        Ok(0)
     }
 
     fn end_node(_node: usize) -> Result<(), Self::Error> {

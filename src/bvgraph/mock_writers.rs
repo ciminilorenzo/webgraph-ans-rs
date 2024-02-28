@@ -166,8 +166,8 @@ impl Encoder for EntropyEstimator {
         Ok(self.get_symbol_cost(value, BVGraphComponent::Residual))
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+    fn flush(&mut self) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn end_node(_node: usize) -> Result<(), Self::Error> {
@@ -228,8 +228,8 @@ impl Encoder for Log2Estimator {
         Ok(self.get_symbol_cost(value, BVGraphComponent::Residual))
     }
 
-    fn flush(&mut self) -> Result<(), Self::Error> {
-        Ok(())
+    fn flush(&mut self) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn end_node(_node: usize) -> Result<(), Self::Error> {
