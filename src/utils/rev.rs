@@ -1,19 +1,13 @@
 use dsi_bitstream::{
-    codes::GammaReadParam,
     impls::{BufBitReader, BufBitWriter, WordAdapter},
-    traits::{BitRead, BitWrite, Endianness, WordRead, BE, LE, NE},
+    traits::{BitRead, BitWrite, Endianness, WordRead, BE, LE},
 };
 use mmap_rs::*;
-use std::{
-    fs::{self, File},
-    io::{BufWriter, Read},
-    path::Path,
-};
-use webgraph::{graphs::Mmap, utils::MmapBackend};
+
+use std::{fs::File, io::BufWriter, path::Path};
+use webgraph::utils::MmapBackend;
 
 /// Trait for writing reverse γ codes.
-///
-/// This is the trait you should usually pull in scope to write γ codes.
 pub trait GammaRevWrite<E: Endianness>: BitWrite<E> {
     fn write_rev_gamma(&mut self, n: u64) -> Result<usize, Self::Error>;
 }
@@ -77,37 +71,29 @@ impl<E: Endianness, P: AsRef<Path>> RevBitWriter<E, P> {
         BufBitWriter<E, WordAdapter<u64, BufWriter<std::fs::File>>>: BitWrite<E>,
     {
         let padding = u64::BITS as usize - self.bit_writer.flush()?;
-        dbg!(fs::metadata(&self.path)?.len());
         let mut rev_reader = BufBitReader::<LE, _, _>::new(RevReader::new(self.path)?);
-        println!("padding: {}", padding);
         rev_reader.skip_bits(padding as usize)?;
-        eprintln!("Skipped");
         Ok(rev_reader)
     }
 }
 
 pub struct RevReader {
-    mmap: MmapBackend<u8>,
+    mmap: MmapBackend<u32>,
     position: usize,
 }
 
 impl RevReader {
     pub fn new<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
-        let mmap = MmapBackend::<u8>::load(path, MmapFlags::empty())?;
-        for &x in mmap.as_ref().iter().rev() {
-            eprint!("{:08b} ", x);
-        }
-        eprintln!();
+        let mmap = MmapBackend::<u32>::load(path, MmapFlags::empty())?;
         let position = mmap.as_ref().len();
-        dbg!(position);
         Ok(Self { mmap, position })
     }
 }
 
 impl WordRead for RevReader {
-    type Word = u8;
+    type Word = u32;
     type Error = std::io::Error;
-    fn read_word(&mut self) -> std::io::Result<u8> {
+    fn read_word(&mut self) -> std::io::Result<u32> {
         if self.position == 0 {
             Err(std::io::Error::new(
                 std::io::ErrorKind::UnexpectedEof,
@@ -115,7 +101,8 @@ impl WordRead for RevReader {
             ))
         } else {
             self.position -= 1;
-            Ok(self.mmap.as_ref()[self.position])
+            let w = self.mmap.as_ref()[self.position].to_be();
+            Ok(w)
         }
     }
 }
@@ -123,18 +110,28 @@ impl WordRead for RevReader {
 #[test]
 fn test_rev() -> anyhow::Result<()> {
     use dsi_bitstream::codes::GammaRead;
+    use rand::rngs::SmallRng;
+    use rand::RngCore;
+    use rand::SeedableRng;
 
     let mut rev_writer = RevBitWriter::<BE, _>::new("test.rev")?;
-    rev_writer.push(0)?;
-    rev_writer.push(10)?;
-    rev_writer.push(128)?;
-    rev_writer.push(333)?;
+
+    let mut v = vec![];
+
+    let mut r = SmallRng::seed_from_u64(42);
+
+    for _ in 0..100 {
+        let x = r.next_u64();
+        v.push(x);
+        rev_writer.push(x);
+    }
+
     let mut rev_reader = rev_writer.flush()?;
-    eprintln!("*********");
-    assert_eq!(rev_reader.read_gamma()?, 333);
-    eprintln!("*********");
-    assert_eq!(rev_reader.read_gamma()?, 128);
-    assert_eq!(rev_reader.read_gamma_param::<false>()?, 10);
-    assert_eq!(rev_reader.read_gamma()?, 0);
+
+    for &x in v.iter().rev() {
+        let y = rev_reader.read_gamma()?;
+        assert_eq!(y, x);
+    }
+
     Ok(())
 }
