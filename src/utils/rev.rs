@@ -1,4 +1,5 @@
 use dsi_bitstream::{
+    codes::GammaRead,
     impls::{BufBitReader, BufBitWriter, WordAdapter},
     traits::{BitRead, BitWrite, Endianness, WordRead, BE, LE},
 };
@@ -90,7 +91,6 @@ impl<B: BitWrite<LE>> GammaRevWrite<LE> for B {
     #[allow(clippy::collapsible_if)]
     fn write_rev_gamma(&mut self, n: u64) -> Result<usize, Self::Error> {
         if let Some(len) = write_table_le(self, n)? {
-            eprint!("***");
             return Ok(len);
         }
         default_rev_write_gamma(self, n)
@@ -113,6 +113,7 @@ fn default_rev_write_gamma<E: Endianness, B: BitWrite<E>>(
 pub struct RevBitWriter<P: AsRef<Path>> {
     path: P,
     bit_writer: BufBitWriter<BE, WordAdapter<u64, BufWriter<File>>>,
+    len: u64,
 }
 
 impl<P: AsRef<Path>> RevBitWriter<P> {
@@ -121,18 +122,51 @@ impl<P: AsRef<Path>> RevBitWriter<P> {
             path.as_ref(),
         )?)));
 
-        Ok(Self { path, bit_writer })
+        Ok(Self {
+            path,
+            bit_writer,
+            len: 0,
+        })
     }
 
-    pub fn push(&mut self, x: u64) -> anyhow::Result<usize> {
-        Ok(self.bit_writer.write_rev_gamma(x)?)
+    pub fn push(&mut self, x: u64) -> anyhow::Result<()> {
+        self.bit_writer.write_rev_gamma(x)?;
+        self.len += 1;
+        Ok(())
     }
 
-    pub fn flush(mut self) -> anyhow::Result<BufBitReader<LE, RevReader>> {
+    pub fn flush(mut self) -> anyhow::Result<impl Iterator<Item = anyhow::Result<u64>>> {
         let padding = u64::BITS as usize - self.bit_writer.flush()?;
-        let mut rev_reader = BufBitReader::<LE, _, _>::new(RevReader::new(self.path)?);
+        let mut rev_reader = BufBitReader::<LE, _>::new(RevReader::new(self.path)?);
         rev_reader.skip_bits(padding as usize)?;
-        Ok(rev_reader)
+        Ok(Iter {
+            pos: 0,
+            len: self.len,
+            rev_reader,
+        })
+    }
+}
+
+struct Iter {
+    pos: u64,
+    len: u64,
+    rev_reader: BufBitReader<LE, RevReader>,
+}
+
+impl Iterator for Iter {
+    type Item = anyhow::Result<u64>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos == self.len {
+            None
+        } else {
+            self.pos += 1;
+            Some(
+                self.rev_reader
+                    .read_gamma()
+                    .map_err(|e| anyhow::Error::new(e)),
+            )
+        }
     }
 }
 
@@ -168,7 +202,6 @@ impl WordRead for RevReader {
 
 #[test]
 fn test_rev() -> anyhow::Result<()> {
-    use dsi_bitstream::codes::GammaRead;
     use rand::rngs::SmallRng;
     use rand::RngCore;
     use rand::SeedableRng;
@@ -188,7 +221,7 @@ fn test_rev() -> anyhow::Result<()> {
     let mut rev_reader = rev_writer.flush()?;
 
     for &x in v.iter().rev() {
-        let y = rev_reader.read_gamma()?;
+        let y = rev_reader.next().unwrap()?;
         assert_eq!(y, x);
     }
 
