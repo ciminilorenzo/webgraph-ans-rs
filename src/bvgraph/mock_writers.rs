@@ -4,7 +4,7 @@ use webgraph::graphs::Encoder;
 
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
-use crate::utils::ans_utilities::fold_without_streaming_out;
+use crate::utils::ans_utils::fold_without_streaming_out;
 use crate::{Freq, Symbol, MAX_RAW_SYMBOL};
 
 #[derive(Clone)]

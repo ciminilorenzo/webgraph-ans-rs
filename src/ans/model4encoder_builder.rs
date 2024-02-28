@@ -8,8 +8,8 @@ use crate::ans::model4encoder::ANSComponentModel4Encoder;
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::ans::EncoderModelEntry;
 use crate::bvgraph::BVGraphComponent;
-use crate::utils::ans_utilities::fold_without_streaming_out;
-use crate::utils::data_utilities::scale_freqs;
+use crate::utils::ans_utils::fold_without_streaming_out;
+use crate::utils::data_utils::scale_freqs;
 use crate::{RawSymbol, Symbol, MAX_RAW_SYMBOL};
 
 /// Multiplicative constant used to fix a maximum increase, in terms of cost, that we can accept
@@ -245,8 +245,6 @@ impl ANSModel4EncoderBuilder {
             "Component", "frame", "R", "F", "Of total(%)", "Cost(bytes)"
         );
 
-        // the cost of the graph before the scaling process.
-        let _folded_graph_cost = folded_comp_costs.iter().sum::<f64>();
         let final_graph_cost = components_final_cost.iter().sum::<f64>();
 
         for component in 0..BVGraphComponent::COMPONENTS {
@@ -268,7 +266,7 @@ impl ANSModel4EncoderBuilder {
         }
 
         info!(
-            "Final graph's final self-information before ANS-based encoding is {:?} B (+{:.2}%)\n",
+            "Final graph's entropy before ANS encoding is {:?} B (+{:.2}%)\n",
             (final_graph_cost / 8f64).round() as usize,
             ((final_graph_cost - original_graph_cost) / final_graph_cost) * 100.0
         );

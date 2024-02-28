@@ -8,6 +8,32 @@ use mmap_rs::*;
 use std::{fs::File, io::BufWriter, path::Path};
 use webgraph::utils::MmapBackend;
 
+///Table used to speed up the writing of gamma codes
+pub const WRITE_BE: &[u16] = &[
+    1, 2, 6, 4, 12, 20, 28, 8, 24, 40, 56, 72, 88, 104, 120, 16, 48, 80, 112, 144, 176, 208, 240,
+    272, 304, 336, 368, 400, 432, 464, 496, 32, 96, 160, 224, 288, 352, 416, 480, 544, 608, 672,
+    736, 800, 864, 928, 992, 1056, 1120, 1184, 1248, 1312, 1376, 1440, 1504, 1568, 1632, 1696,
+    1760, 1824, 1888, 1952, 2016, 64,
+];
+///Table used to speed up the writing of gamma codes
+pub const WRITE_LEN_BE: &[u16] = &[
+    1, 3, 3, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 7, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
+    11, 11, 11, 11, 11, 11, 11, 11, 13,
+];
+///Table used to speed up the writing of gamma codes
+pub const WRITE_LE: &[u16] = &[
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
+    51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
+];
+///Table used to speed up the writing of gamma codes
+pub const WRITE_LEN_LE: &[u16] = &[
+    1, 3, 3, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 7, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
+    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
+    11, 11, 11, 11, 11, 11, 11, 11, 13,
+];
+
 #[inline(always)]
 /// Write a value using an encoding table.
 ///
@@ -43,32 +69,6 @@ pub fn write_table_be<B: BitWrite<BE>>(
         None
     })
 }
-
-///Table used to speed up the writing of gamma codes
-pub const WRITE_BE: &[u16] = &[
-    1, 2, 6, 4, 12, 20, 28, 8, 24, 40, 56, 72, 88, 104, 120, 16, 48, 80, 112, 144, 176, 208, 240,
-    272, 304, 336, 368, 400, 432, 464, 496, 32, 96, 160, 224, 288, 352, 416, 480, 544, 608, 672,
-    736, 800, 864, 928, 992, 1056, 1120, 1184, 1248, 1312, 1376, 1440, 1504, 1568, 1632, 1696,
-    1760, 1824, 1888, 1952, 2016, 64,
-];
-///Table used to speed up the writing of gamma codes
-pub const WRITE_LEN_BE: &[u16] = &[
-    1, 3, 3, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 7, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
-    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-    11, 11, 11, 11, 11, 11, 11, 11, 13,
-];
-///Table used to speed up the writing of gamma codes
-pub const WRITE_LE: &[u16] = &[
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
-    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50,
-    51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64,
-];
-///Table used to speed up the writing of gamma codes
-pub const WRITE_LEN_LE: &[u16] = &[
-    1, 3, 3, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 7, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9,
-    11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
-    11, 11, 11, 11, 11, 11, 11, 11, 13,
-];
 
 /// Trait for writing reverse γ codes.
 pub trait GammaRevWrite<E: Endianness>: BitWrite<E> {
@@ -195,15 +195,16 @@ struct RevReader<'a> {
 impl<'a> RevReader<'a> {
     pub fn new(data: &'a [u32]) -> Self {
         Self {
-            data: data,
+            data,
             position: data.len(),
         }
     }
 }
 
 impl WordRead for RevReader<'_> {
-    type Word = u32;
     type Error = std::convert::Infallible;
+    type Word = u32;
+
     fn read_word(&mut self) -> Result<u32, Self::Error> {
         if self.position == 0 {
             Ok(0)

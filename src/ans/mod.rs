@@ -10,7 +10,7 @@ use epserde::Epserde;
 use mem_dbg::{MemDbg, MemSize};
 
 #[cfg(not(feature = "arm"))]
-use crate::utils::ans_utilities::get_reciprocal_data;
+use crate::utils::ans_utils::get_reciprocal_data;
 
 #[derive(Clone, Debug, Epserde, MemDbg, MemSize)]
 pub struct Prelude {

@@ -1,3 +1,3 @@
-pub mod ans_utilities;
-pub mod data_utilities;
+pub mod ans_utils;
+pub mod data_utils;
 pub mod rev;
