@@ -75,7 +75,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
-    let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 2, 7, 6, 4);
+    let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 6, 4, 7, 2);
 
     assert_eq!(
         decoded_graph.successors(0).collect::<Vec<_>>(),

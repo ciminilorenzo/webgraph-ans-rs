@@ -48,3 +48,35 @@ impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
         Ok(ANSDecoder::new(self.prelude, &self.model))
     }
 }
+
+/*
+
+pub struct ANSSeqBVGraphDecoderFactory<'a> {
+    /// The vec of ANSCompressorPhase, one for each node of the graph.
+    phases: Vec<ANSCompressorPhase>,
+
+    /// The prelude resulting from the encoding process of the graph.
+    prelude: &'a Prelude,
+
+    model: ANSModel4Decoder,
+}
+
+impl<'a> ANSSeqBVGraphDecoderFactory<'a> {
+    pub fn new(prelude: &'a Prelude, phases: Vec<ANSCompressorPhase>) -> Self {
+        Self {
+            prelude,
+            phases,
+            model: ANSModel4Decoder::new(&prelude.tables),
+        }
+    }
+}
+
+impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
+    type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
+
+    fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
+        Ok(ANSDecoder::new(self.prelude, &self.model))
+    }
+}
+
+*/
