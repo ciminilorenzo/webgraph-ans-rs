@@ -164,9 +164,17 @@ impl WithMagic {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("div");
-    let dividend = 0xdeadbeef_u32;
     let mut r = SmallRng::seed_from_u64(0);
     let n = 1024;
+    if let Some(core_ids) = core_affinity::get_core_ids() {
+        // Not core 0. Anything goes.
+        let core_id = core_ids[1];
+        if !core_affinity::set_for_current(core_id) {
+            eprintln!("Cannot pin thread to core {:?}", core_id);
+        }
+    } else {
+        eprintln!("Cannot retrieve core ids");
+    }
 
     let mut dividends = vec![];
     dividends.extend((0..n).map(|_| r.next_u64()));
