@@ -142,7 +142,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
     let decoded_graph =
-        BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 2, 7, num_nodes, num_arcs);
+        BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, num_nodes, num_arcs, 7, 2);
 
     for node_index in 0..graph.num_nodes() {
         let successors = graph.outdegree(node_index);
@@ -206,10 +206,10 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
 
     let decoded_graph = BVGraphSeq::<ANSBVGraphDecoderFactory>::new(
         code_reader_builder,
-        7,
-        2,
         num_nodes,
         Some(num_arcs),
+        7,
+        2,
     );
 
     for_![ ((_, s), (_, t)) in lender::zip(graph.iter(), decoded_graph.iter()){

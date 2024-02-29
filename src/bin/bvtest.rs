@@ -41,10 +41,10 @@ pub fn main() -> Result<()> {
 
     let graph = BVGraph::<ANSBVGraphDecoderFactory>::new(
         code_reader_builder,
-        2,
-        7,
         seq_graph.num_nodes(),
         seq_graph.num_arcs_hint().unwrap(),
+        7,
+        2,
     );
 
     let mut pl = ProgressLogger::default();
