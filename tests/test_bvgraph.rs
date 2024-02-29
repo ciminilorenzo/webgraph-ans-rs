@@ -1,7 +1,9 @@
 use anyhow::Result;
 use std::iter::Iterator;
 
-use folded_streaming_rans::bvgraph::reader::ANSBVGraphDecoderFactory;
+use folded_streaming_rans::bvgraph::reader::{
+    ANSBVGraphDecoderFactory, ANSBVGraphSeqDecoderFactory,
+};
 use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
 
 use dsi_bitstream::prelude::BE;
@@ -94,6 +96,11 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
 #[test]
 fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
+    let _ = stderrlog::new()
+        .verbosity(2)
+        .timestamp(stderrlog::Timestamp::Second)
+        .init();
+
     let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
@@ -191,13 +198,12 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (encoder, phases) = bvcomp.flush()?.into_inner();
+    let (encoder, _phases) = bvcomp.flush()?.into_inner();
     let prelude = encoder.into_prelude();
 
-    // todo -> i can't create it without phases.
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
+    let code_reader_builder = ANSBVGraphSeqDecoderFactory::new(&prelude);
 
-    let decoded_graph = BVGraphSeq::<ANSBVGraphDecoderFactory>::new(
+    let decoded_graph = BVGraphSeq::<ANSBVGraphSeqDecoderFactory>::new(
         code_reader_builder,
         num_nodes,
         Some(num_arcs),
