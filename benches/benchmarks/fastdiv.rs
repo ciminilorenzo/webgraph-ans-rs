@@ -2,8 +2,8 @@ use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 
 struct Reciprocal {
-    a: u64,
-    b: u64,
+    a: u32,
+    b: u32,
     shift: u16,
 }
 
@@ -20,8 +20,8 @@ fn get_multiplication_parameters(divisor: u16) -> Reciprocal {
         // finally:
         // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
         true => Reciprocal {
-            a: u64::MAX,
-            b: u64::MAX,
+            a: u32::MAX,
+            b: u32::MAX,
             shift: m as u16,
         },
         // else:
@@ -34,10 +34,10 @@ fn get_multiplication_parameters(divisor: u16) -> Reciprocal {
         // a := t; -> rounding down the reciprocal
         // b := t;
         false => {
-            let t = ((1u128 << m + 64) / divisor as u128) as u64;
-            let r = (divisor as u128 * (t as u128 + 1) - (1u128 << (m + 64))) as u64;
+            let t = ((1u64 << m + 64) / divisor as u64) as u32;
+            let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
-            match r <= (1u64 << m) {
+            match r <= (1u32 << m) {
                 true => Reciprocal {
                     a: t + 1,
                     b: 0,
@@ -54,7 +54,7 @@ fn get_multiplication_parameters(divisor: u16) -> Reciprocal {
 }
 
 struct Reciprocal2 {
-    a: u64,
+    a: u32,
     shift: u8,
     mul: u8,
 }
@@ -72,7 +72,7 @@ fn get_multiplication_parameters2(divisor: u16) -> Reciprocal2 {
         // finally:
         // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
         true => Reciprocal2 {
-            a: u64::MAX,
+            a: u32::MAX,
             shift: m as u8,
             mul: 1,
         },
@@ -86,10 +86,10 @@ fn get_multiplication_parameters2(divisor: u16) -> Reciprocal2 {
         // a := t; -> rounding down the reciprocal
         // b := t;
         false => {
-            let t = ((1u128 << m + 64) / divisor as u128) as u64;
-            let r = (divisor as u128 * (t as u128 + 1) - (1u128 << (m + 64))) as u64;
+            let t = ((1u64 << m + 32) / divisor as u64) as u32;
+            let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
-            match r <= (1u64 << m) {
+            match r <= (1u32 << m) {
                 true => Reciprocal2 {
                     a: t + 1,
                     shift: m as u8,
@@ -106,7 +106,7 @@ fn get_multiplication_parameters2(divisor: u16) -> Reciprocal2 {
 }
 
 struct Reciprocal3 {
-    a: u64,
+    a: u32,
     magic: u8,
 }
 
@@ -123,7 +123,7 @@ fn get_multiplication_parameters3(divisor: u16) -> Reciprocal3 {
         // finally:
         // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
         true => Reciprocal3 {
-            a: u64::MAX,
+            a: u32::MAX,
             magic: ((m as u8) << 1) + 1_u8,
         },
         // else:
@@ -136,10 +136,10 @@ fn get_multiplication_parameters3(divisor: u16) -> Reciprocal3 {
         // a := t; -> rounding down the reciprocal
         // b := t;
         false => {
-            let t = ((1u128 << m + 64) / divisor as u128) as u64;
-            let r = (divisor as u128 * (t as u128 + 1) - (1u128 << (m + 64))) as u64;
+            let t = ((1u64 << m + 32) / divisor as u64) as u32;
+            let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
-            match r <= (1u64 << m) {
+            match r <= (1u32 << m) {
                 true => Reciprocal3 {
                     a: t + 1,
                     magic: (m as u8) << 1,
@@ -155,16 +155,16 @@ fn get_multiplication_parameters3(divisor: u16) -> Reciprocal3 {
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("div");
-    let dividend = 0xdeadbeefdeadf00d_u64;
+    let dividend = 0xdeadbeef_u32;
 
     let reciprocal = get_multiplication_parameters(4242);
 
     group.bench_function("double_add", |b| {
         b.iter(|| {
             black_box(
-                ((black_box(reciprocal.a) as u128 * black_box(dividend) as u128
-                    + black_box(reciprocal.b) as u128)
-                    >> 64) as u64
+                ((black_box(reciprocal.a) as u64 * black_box(dividend) as u64
+                    + black_box(reciprocal.b) as u64)
+                    >> 32) as u32
                     >> black_box(reciprocal.shift),
             )
         });
@@ -174,9 +174,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("arithmetized", |b| {
         b.iter(|| {
             black_box(
-                (black_box(reciprocal.a) as u128
-                    * (black_box(dividend) as u128 + black_box(reciprocal.mul) as u128)
-                    >> 64) as u64
+                (black_box(reciprocal.a) as u64
+                    * (black_box(dividend) as u64 + black_box(reciprocal.mul) as u64)
+                    >> 32) as u32
                     >> black_box(reciprocal.shift),
             )
         });
@@ -185,10 +185,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("test", |b| {
         b.iter(|| {
             black_box(if black_box(reciprocal.mul) == 0 {
-                (black_box(reciprocal.a) as u128 * black_box(dividend) as u128 >> 64) as u64
+                (black_box(reciprocal.a) as u64 * black_box(dividend) as u64 >> 32) as u32
                     >> black_box(reciprocal.shift)
             } else {
-                (black_box(reciprocal.a) as u128 * (black_box(dividend) as u128 + 1) >> 64) as u64
+                (black_box(reciprocal.a) as u64 * (black_box(dividend) as u64 + 1) >> 32) as u32
                     >> black_box(reciprocal.shift)
             })
         });
@@ -199,17 +199,17 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("with magic", |b| {
         b.iter(|| {
             black_box(
-                (black_box(reciprocal3.a) as u128
-                    * (black_box(dividend) as u128
-                        + black_box(black_box(reciprocal3.magic) & 1_u8) as u128)
-                    >> 64) as u64
+                (black_box(reciprocal3.a) as u64
+                    * (black_box(dividend) as u64
+                        + black_box(black_box(reciprocal3.magic) & 1_u8) as u64)
+                    >> 32) as u32
                     >> black_box(black_box(reciprocal3.magic) >> 1),
             )
         });
     });
 
     group.bench_function("division", |b| {
-        b.iter(|| black_box(black_box(dividend) / black_box(4242_u64)));
+        b.iter(|| black_box(black_box(dividend) / black_box(4242_u32)));
     });
 }
 
