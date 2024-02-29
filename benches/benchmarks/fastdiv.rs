@@ -1,5 +1,3 @@
-use std::ops::Div;
-
 use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
@@ -37,7 +35,7 @@ impl DoubleAdd {
             // a := t; -> rounding down the reciprocal
             // b := t;
             false => {
-                let t = ((1u64 << m + 64) / divisor as u64) as u32;
+                let t = ((1u64 << m + 32) / divisor as u64) as u32;
                 let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
                 match r <= (1u32 << m) {
@@ -55,51 +53,41 @@ impl DoubleAdd {
             }
         }
     }
+
+    #[inline(always)]
+    pub fn div(&self, dividend: u32) -> u32 {
+        ((self.a as u64 * dividend as u64 + self.b as u64) >> 32) as u32 >> self.shift
+    }
 }
 
 #[derive(Clone, Debug)]
-struct MulShift {
+struct MulShiftTwoFields {
     a: u32,
     mul: u8,
     shift: u8,
 }
 
-impl MulShift {
-    fn new(divisor: u16) -> MulShift {
+impl MulShiftTwoFields {
+    fn new(divisor: u16) -> MulShiftTwoFields {
         let m = divisor.ilog2();
 
         match divisor.is_power_of_two() {
-            // If the divisor (d) is power of two, then:
-            // a := 2^n - 1 = 2^64 - 1;
-            // b := 2^n - 1 = 2^64 - 1;
-            // m := log_{2}(d)
-            // finally:
-            // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
-            true => MulShift {
+            true => MulShiftTwoFields {
                 a: u32::MAX,
                 shift: m as u8,
                 mul: 1,
             },
-            // else:
-            // t := floor(2^m+n / d);
-            // r := (d * (t - 1)) - 2^m+n;
-            // if r <= 2^m then:
-            // a := t + 1; -> rounding up the reciprocal
-            // b := 0;
-            // else:
-            // a := t; -> rounding down the reciprocal
-            // b := t;
             false => {
                 let t = ((1u64 << m + 32) / divisor as u64) as u32;
                 let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
                 match r <= (1u32 << m) {
-                    true => MulShift {
+                    true => MulShiftTwoFields {
                         a: t + 1,
                         shift: m as u8,
                         mul: 0,
                     },
-                    false => MulShift {
+                    false => MulShiftTwoFields {
                         a: t,
                         shift: m as u8,
                         mul: 1,
@@ -108,57 +96,50 @@ impl MulShift {
             }
         }
     }
+
+    #[inline(always)]
+    pub fn div_test(&self, dividend: u32) -> u32 {
+        if self.mul == 0 {
+            (self.a as u64 * dividend as u64 >> 32) as u32 >> self.shift
+        } else {
+            (self.a as u64 * (dividend as u64 + 1) >> 32) as u32 >> self.shift
+        }
+    }
+
+    #[inline(always)]
+    pub fn div_arith(&self, dividend: u32) -> u32 {
+        (self.a as u64 * (dividend as u64 + self.mul as u64) >> 32) as u32 >> self.shift
+    }
 }
 
 #[derive(Clone, Debug)]
-struct WithMagic {
+struct MulShiftOneField {
     a: u32,
-    magic: u8,
+    magic: u8, // WRT MulShiftTwoFields, shift << 1 | mul
 }
 
-/// This function returns the parameters a, b and m, that is the value used to get the same result
-/// we would get by dividing any number by the divisor if a multiplication is performed.
-
-impl WithMagic {
-    fn new(divisor: u16) -> WithMagic {
-        let m = divisor.ilog2();
-
-        match divisor.is_power_of_two() {
-            // If the divisor (d) is power of two, then:
-            // a := 2^n - 1 = 2^64 - 1;
-            // b := 2^n - 1 = 2^64 - 1;
-            // m := log_{2}(d)
-            // finally:
-            // floor(x / d)  = floor((ax + b)) / 2^n) / 2^m
-            true => WithMagic {
-                a: u32::MAX,
-                magic: ((m as u8) << 1) + 1_u8,
-            },
-            // else:
-            // t := floor(2^m+n / d);
-            // r := (d * (t - 1)) - 2^m+n;
-            // if r <= 2^m then:
-            // a := t + 1; -> rounding up the reciprocal
-            // b := 0;
-            // else:
-            // a := t; -> rounding down the reciprocal
-            // b := t;
-            false => {
-                let t = ((1u64 << m + 32) / divisor as u64) as u32;
-                let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
-
-                match r <= (1u32 << m) {
-                    true => WithMagic {
-                        a: t + 1,
-                        magic: (m as u8) << 1,
-                    },
-                    false => WithMagic {
-                        a: t,
-                        magic: ((m as u8) << 1) + 1_u8,
-                    },
-                }
-            }
+impl MulShiftOneField {
+    fn new(divisor: u16) -> MulShiftOneField {
+        let m = MulShiftTwoFields::new(divisor);
+        MulShiftOneField {
+            a: m.a,
+            magic: m.shift << 1 | m.mul,
         }
+    }
+
+    #[inline(always)]
+    pub fn div_test(&self, dividend: u32) -> u32 {
+        if self.magic & 1 == 0 {
+            (self.a as u64 * dividend as u64 >> 32) as u32 >> (self.magic >> 1)
+        } else {
+            (self.a as u64 * (dividend as u64 + 1) >> 32) as u32 >> (self.magic >> 1)
+        }
+    }
+
+    #[inline(always)]
+    pub fn div_arith(&self, dividend: u32) -> u32 {
+        (self.a as u64 * (dividend as u64 + (self.magic & 1) as u64) >> 32) as u32
+            >> (self.magic >> 1)
     }
 }
 
@@ -177,95 +158,79 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     }
 
     let mut dividends = vec![];
-    dividends.extend((0..n).map(|_| r.next_u64()));
+    dividends.extend((0..n).map(|_| r.next_u32()));
 
     let mut divisors = vec![];
-    divisors.extend((0..n).map(|_| (r.next_u32() + 1) as u16));
+    divisors.extend((0..n).map(|_| (r.next_u32() as u16).max(1)));
 
-    let double_adds = divisors
+    let double_add = divisors
         .iter()
         .map(|&x| DoubleAdd::new(x))
         .collect::<Vec<_>>();
 
-    group.bench_function("Double Add", |b| {
+    group.bench_function("No-op", |b| {
         let mut i = 0;
         b.iter(|| {
-            let dividend = dividends[i];
-            let double_add = double_adds[i].clone();
-            black_box(
-                ((black_box(double_add.a) as u64 * black_box(dividend) as u64
-                    + black_box(double_add.b) as u64)
-                    >> 32) as u32
-                    >> black_box(double_add.shift),
-            );
-
+            black_box(double_add[i].a);
+            black_box(dividends[i]);
             i = (i + 1) % n;
         });
     });
 
-    let mul_shifts = divisors
+    group.bench_function("double_add", |b| {
+        let mut i = 0;
+        b.iter(|| {
+            black_box(double_add[i].div(dividends[i]));
+            i = (i + 1) % n;
+        });
+    });
+
+    let mul_shift_two_fields = divisors
         .iter()
-        .map(|&x| MulShift::new(x))
+        .map(|&x| MulShiftTwoFields::new(x))
         .collect::<Vec<_>>();
 
-    group.bench_function("Mul + Shift (test)", |b| {
+    group.bench_function("mul_shift (two fields, test)", |b| {
         let mut i = 0;
         b.iter(|| {
-            let dividend = dividends[i];
-            let mul_shift = mul_shifts[i].clone();
-            black_box(if black_box(mul_shift.mul) == 0 {
-                (black_box(mul_shift.a) as u64 * black_box(dividend) as u64 >> 32) as u32
-                    >> black_box(mul_shift.shift)
-            } else {
-                (black_box(mul_shift.a) as u64 * (black_box(dividend) as u64 + 1) >> 32) as u32
-                    >> black_box(mul_shift.shift)
-            });
+            black_box(mul_shift_two_fields[i].div_test(dividends[i]));
             i = (i + 1) % n;
         });
     });
 
-    group.bench_function("Mul + Shift (arithmetized)", |b| {
+    group.bench_function("mul_shift (two fields, arithmetized)", |b| {
         let mut i = 0;
         b.iter(|| {
-            let dividend = dividends[i];
-            let mul_shift = mul_shifts[i].clone();
-            black_box(
-                (black_box(mul_shift.a) as u64
-                    * (black_box(dividend) as u64 + black_box(mul_shift.mul) as u64)
-                    >> 32) as u32
-                    >> black_box(mul_shift.shift),
-            );
+            black_box(mul_shift_two_fields[i].div_arith(dividends[i]));
             i = (i + 1) % n;
         });
     });
 
-    let with_magics = divisors
+    let mul_shift_one_field = divisors
         .iter()
-        .map(|&x| WithMagic::new(x))
+        .map(|&x| MulShiftOneField::new(x))
         .collect::<Vec<_>>();
 
-    group.bench_function("Mul + Shift (with magic)", |b| {
+    group.bench_function("mul_shift (one field, test)", |b| {
         let mut i = 0;
         b.iter(|| {
-            let dividend = dividends[i];
-            let with_magic = with_magics[i].clone();
-            black_box(
-                (black_box(with_magic.a) as u64
-                    * (black_box(dividend) as u64
-                        + black_box(black_box(with_magic.magic) & 1_u8) as u64)
-                    >> 32) as u32
-                    >> black_box(black_box(with_magic.magic) >> 1),
-            );
+            black_box(mul_shift_one_field[i].div_test(dividends[i]));
             i = (i + 1) % n;
         });
     });
 
-    group.bench_function("division", |b| {
+    group.bench_function("mul_shift (one field, arithmetized)", |b| {
         let mut i = 0;
         b.iter(|| {
-            let dividend = dividends[i];
-            let divisor = divisors[i];
-            black_box(black_box(dividend) / black_box(divisor) as u64);
+            black_box(mul_shift_one_field[i].div_arith(dividends[i]));
+            i = (i + 1) % n;
+        });
+    });
+
+    group.bench_function("Hardware Division", |b| {
+        let mut i = 0;
+        b.iter(|| {
+            black_box(black_box(dividends[i]) / black_box(divisors[i]) as u32);
             i = (i + 1) % n;
         });
     });
