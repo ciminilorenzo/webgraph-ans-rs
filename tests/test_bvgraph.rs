@@ -150,6 +150,11 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
 
 #[test]
 fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
+    let _ = stderrlog::new()
+        .verbosity(2)
+        .timestamp(stderrlog::Timestamp::Second)
+        .init();
+
     let graph = BVGraphSeq::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
