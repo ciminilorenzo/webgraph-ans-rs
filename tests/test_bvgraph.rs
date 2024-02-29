@@ -2,9 +2,7 @@ use anyhow::Result;
 use std::iter::Iterator;
 
 use folded_streaming_rans::bvgraph::reader::ANSBVGraphDecoderFactory;
-use folded_streaming_rans::bvgraph::writer::{
-    ANSBVGraphMeasurableEncoder, BVGraphMeasurableEncoder, BVGraphModelBuilder,
-};
+use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
 
 use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
@@ -54,8 +52,8 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     }
 
     let model4encoder = bvcomp.flush()?.build();
-    let mut bvcomp = BVComp::<BVGraphMeasurableEncoder>::new(
-        BVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table),
+    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table),
         7,
         2,
         3,

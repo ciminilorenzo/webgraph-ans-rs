@@ -4,7 +4,7 @@ use dsi_bitstream::prelude::*;
 use dsi_progress_logger::*;
 use epserde::prelude::Serialize;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
-use folded_streaming_rans::bvgraph::writer::{BVGraphMeasurableEncoder, BVGraphModelBuilder};
+use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
 use lender::*;
 use log::info;
 use mem_dbg::{DbgFlags, MemDbg};
@@ -108,8 +108,8 @@ pub fn main() -> Result<()> {
     // get the final ANSModel4Encoder from the second iteration
     let model4encoder = bvcomp.flush()?.build();
     pl.done();
-    let mut bvcomp = BVComp::<BVGraphMeasurableEncoder>::new(
-        BVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
+    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
         args.compressions_args.compression_window,
         args.compressions_args.min_interval_length,
         args.compressions_args.max_ref_count,
