@@ -170,7 +170,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         .map(|&x| DoubleAdd::new(x))
         .collect::<Vec<_>>();
 
-    group.bench_function("No-op", |b| {
+    group.bench_function("no-op", |b| {
         let mut i = 0;
         b.iter(|| {
             black_box(unsafe { double_add.get_unchecked(i) }.a);
@@ -243,16 +243,17 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         });
     });
 
+    // These are all nonzero by construction.
     let non_zero = divisors
         .iter()
-        .map(|&x| std::num::NonZeroU16::try_from(x).unwrap())
+        .map(|&x| NonZeroU16::try_from(x).unwrap())
         .collect::<Vec<_>>();
 
-    group.bench_function("Hardware Division", |b| {
+    group.bench_function("hardware", |b| {
         let mut i = 0;
         b.iter(|| {
             // For LLVM, division by zero is undefined behavior, so Rust inserts
-            // a check for zero at each division to avoid this, we must
+            // a check for zero at each division. To avoid this, we must
             // guarantee that the divisor is not zero by wrapping it in a
             // NonZeroU16, which we cast to a NonZeroU32.
             black_box(
