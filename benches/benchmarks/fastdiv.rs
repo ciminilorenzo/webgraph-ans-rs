@@ -171,8 +171,8 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("No-op", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(double_add[i].a);
-            black_box(dividends[i]);
+            black_box(unsafe { double_add.get_unchecked(i) }.a);
+            black_box(unsafe { *dividends.get_unchecked(i) });
             i = (i + 1) % n;
         });
     });
@@ -180,7 +180,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("double_add", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(double_add[i].div(dividends[i]));
+            black_box(
+                unsafe { double_add.get_unchecked(i) }.div(unsafe { *dividends.get_unchecked(i) }),
+            );
             i = (i + 1) % n;
         });
     });
@@ -193,7 +195,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("mul_shift (two fields, test)", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(mul_shift_two_fields[i].div_test(dividends[i]));
+            black_box(
+                unsafe { mul_shift_two_fields.get_unchecked(i) }
+                    .div_test(unsafe { *dividends.get_unchecked(i) }),
+            );
             i = (i + 1) % n;
         });
     });
@@ -201,7 +206,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("mul_shift (two fields, arithmetized)", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(mul_shift_two_fields[i].div_arith(dividends[i]));
+            black_box(
+                unsafe { mul_shift_two_fields.get_unchecked(i) }
+                    .div_arith(unsafe { *dividends.get_unchecked(i) }),
+            );
             i = (i + 1) % n;
         });
     });
@@ -214,7 +222,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("mul_shift (one field, test)", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(mul_shift_one_field[i].div_test(dividends[i]));
+            black_box(
+                unsafe { mul_shift_one_field.get_unchecked(i) }
+                    .div_test(unsafe { *dividends.get_unchecked(i) }),
+            );
             i = (i + 1) % n;
         });
     });
@@ -222,7 +233,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("mul_shift (one field, arithmetized)", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(mul_shift_one_field[i].div_arith(dividends[i]));
+            black_box(
+                unsafe { mul_shift_one_field.get_unchecked(i) }
+                    .div_arith(unsafe { *dividends.get_unchecked(i) }),
+            );
             i = (i + 1) % n;
         });
     });
@@ -230,7 +244,10 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     group.bench_function("Hardware Division", |b| {
         let mut i = 0;
         b.iter(|| {
-            black_box(black_box(dividends[i]) / black_box(divisors[i]) as u32);
+            black_box(
+                black_box(unsafe { *dividends.get_unchecked(i) })
+                    / black_box(unsafe { *divisors.get_unchecked(i) }) as u32,
+            );
             i = (i + 1) % n;
         });
     });
