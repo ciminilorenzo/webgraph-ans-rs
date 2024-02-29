@@ -160,6 +160,9 @@ impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {
     }
 }
 
+/// Note that every Encoder's function write as model the component's index - 8 in order to have
+/// the most frequent components encoded with the smallest number of bits. Reversing the order of
+/// the components' indexes a good way to represent the expected frequency of the components.
 impl Encoder for ANSBVGraphMeasurableEncoder {
     type Error = Infallible;
 
@@ -169,70 +172,70 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::Outdegree as u64);
+        self.models.push(8 - BVGraphComponent::Outdegree as u64);
         self.estimator.write_outdegree(value)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::ReferenceOffset as u64);
+        self.models
+            .push(8 - BVGraphComponent::ReferenceOffset as u64);
         self.estimator.write_reference_offset(value)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::BlockCount as u64);
+        self.models.push(8 - BVGraphComponent::BlockCount as u64);
         self.estimator.write_block_count(value)
     }
 
     fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::Blocks as u64);
+        self.models.push(8 - BVGraphComponent::Blocks as u64);
         self.estimator.write_block(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::IntervalCount as u64);
+        self.models.push(8 - BVGraphComponent::IntervalCount as u64);
         self.estimator.write_interval_count(value)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::IntervalStart as u64);
+        self.models.push(8 - BVGraphComponent::IntervalStart as u64);
         self.estimator.write_interval_start(value)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::IntervalLen as u64);
+        self.models.push(8 - BVGraphComponent::IntervalLen as u64);
         self.estimator.write_interval_len(value)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::FirstResidual as u64);
+        self.models.push(8 - BVGraphComponent::FirstResidual as u64);
         self.estimator.write_first_residual(value)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
-        self.models.push(BVGraphComponent::Residual as u64);
+        self.models.push(8 - BVGraphComponent::Residual as u64);
         self.estimator.write_residual(value)
     }
 
-    // todo -> invert components' indexes
     // called after having encoded the last symbols of the last node
     fn flush(&mut self) -> Result<usize, Self::Error> {
         let symbols_iter = self.symbols.flush().unwrap();
         let models_iter = self.models.flush().unwrap();
 
         for (symbol, model) in symbols_iter.into_iter().zip(models_iter.into_iter()) {
-            self.encoder
-                .encode(symbol, BVGraphComponent::from(model as usize));
+            let model = 8 - model as usize;
+            self.encoder.encode(symbol, BVGraphComponent::from(model));
 
             // let's save the phase if we have encoded the outdegree
-            if model == BVGraphComponent::Outdegree as u64 {
+            if model == BVGraphComponent::Outdegree as usize {
                 self.phases
                     .push(self.encoder.get_current_compressor_phase());
             }
