@@ -1,3 +1,5 @@
+use std::num::{NonZeroU16, NonZeroU32};
+
 use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
@@ -241,12 +243,21 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         });
     });
 
+    let non_zero = divisors
+        .iter()
+        .map(|&x| std::num::NonZeroU16::try_from(x).unwrap())
+        .collect::<Vec<_>>();
+
     group.bench_function("Hardware Division", |b| {
         let mut i = 0;
         b.iter(|| {
+            // For LLVM, division by zero is undefined behavior, so Rust inserts
+            // a check for zero at each division to avoid this, we must
+            // guarantee that the divisor is not zero by wrapping it in a
+            // NonZeroU16, which we cast to a NonZeroU32.
             black_box(
                 black_box(unsafe { *dividends.get_unchecked(i) })
-                    / black_box(unsafe { *divisors.get_unchecked(i) }) as u32,
+                    / black_box(NonZeroU32::from(unsafe { *non_zero.get_unchecked(i) })),
             );
             i = (i + 1) % n;
         });
