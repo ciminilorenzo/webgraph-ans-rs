@@ -206,8 +206,8 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
 
     let decoded_graph = BVGraphSeq::<ANSBVGraphDecoderFactory>::new(
         code_reader_builder,
-        2,
         7,
+        2,
         num_nodes,
         Some(num_arcs),
     );
