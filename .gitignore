@@ -17,3 +17,7 @@ Cargo.lock
 profile.json
 
 .DS_Store
+
+# There may be results of bvcomp somewhere.
+*.ans
+*.phases

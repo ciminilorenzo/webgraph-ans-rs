@@ -22,6 +22,40 @@ pub struct Prelude {
 
     /// The state of the encoder after having encoded the last symbol of the input.
     pub state: State,
+
+    /// The number of nodes in the graph.
+    pub number_of_nodes: usize,
+
+    /// the maximum distance between two nodes that ∂∂reference each other.
+    pub compression_window: usize,
+
+    /// The minimum size of the intervals we are going to decode.
+    pub min_interval_length: usize,
+
+    /// The number of arcs in the graph.
+    pub number_of_arcs: u64,
+}
+
+impl Prelude {
+    pub fn new(
+        tables: Vec<ANSComponentModel4Encoder>,
+        stream: Vec<u16>,
+        state: State,
+        number_of_nodes: usize,
+        number_of_arcs: u64,
+        compression_window: usize,
+        min_interval_length: usize,
+    ) -> Self {
+        Self {
+            tables,
+            stream,
+            state,
+            number_of_nodes,
+            number_of_arcs,
+            compression_window,
+            min_interval_length,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]

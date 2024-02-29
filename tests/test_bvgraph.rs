@@ -55,7 +55,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
     let model4encoder = bvcomp.flush()?.build();
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table),
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table, 6, 4, 7, 2),
         7,
         3,
         2,
@@ -72,8 +72,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let (encoder, phases) = bvcomp.flush()?.into_inner();
-    let prelude = encoder.into_prelude();
+    let (prelude, phases) = bvcomp.flush()?.into_inner();
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
@@ -127,7 +126,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let model4encoder = bvcomp.flush()?.build();
 
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2),
         7,
         3,
         2,
@@ -137,8 +136,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (encoder, phases) = bvcomp.flush()?.into_inner();
-    let prelude = encoder.into_prelude();
+    let (prelude, phases) = bvcomp.flush()?.into_inner();
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
@@ -188,7 +186,7 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     let model4encoder = bvcomp.flush()?.build();
 
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
+        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2),
         7,
         3,
         2,
@@ -198,9 +196,7 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (encoder, _phases) = bvcomp.flush()?.into_inner();
-    let prelude = encoder.into_prelude();
-
+    let (prelude, _phases) = bvcomp.flush()?.into_inner();
     let code_reader_builder = ANSBVGraphSeqDecoderFactory::new(&prelude);
 
     let decoded_graph = BVGraphSeq::<ANSBVGraphSeqDecoderFactory>::new(

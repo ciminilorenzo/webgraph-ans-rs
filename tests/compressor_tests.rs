@@ -27,9 +27,9 @@ fn decodes_correctly_single_dummy_sequence() {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.into_prelude();
-    let model = ANSModel4Decoder::new(&prelude.tables);
-    let mut decoder = ANSDecoder::new(&prelude, &model);
+    let prelude = encoder.get_compression_results();
+    let model = ANSModel4Decoder::new(&prelude.0);
+    let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -59,9 +59,9 @@ fn decodes_correctly_dummy_sequence_with_folding() {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.into_prelude();
-    let model = ANSModel4Decoder::new(&prelude.tables);
-    let mut decoder = ANSDecoder::new(&prelude, &model);
+    let prelude = encoder.get_compression_results();
+    let model = ANSModel4Decoder::new(&prelude.0);
+    let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -92,9 +92,9 @@ fn decoder_decodes_correctly_real_sequence() {
         encoder.encode(*symbol, BVGraphComponent::Outdegree);
     }
 
-    let prelude = encoder.into_prelude();
-    let model = ANSModel4Decoder::new(&prelude.tables);
-    let mut decoder = ANSDecoder::new(&prelude, &model);
+    let prelude = encoder.get_compression_results();
+    let model = ANSModel4Decoder::new(&prelude.0);
+    let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
     let mut decoded_symbols: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..source.len() {
@@ -129,9 +129,9 @@ fn decodes_correctly_dummy_sequences() {
         encoder.encode(second_source[index], BVGraphComponent::BlockCount);
     }
 
-    let prelude = encoder.into_prelude();
-    let model = ANSModel4Decoder::new(&prelude.tables);
-    let mut decoder = ANSDecoder::new(&prelude, &model);
+    let prelude = encoder.get_compression_results();
+    let model = ANSModel4Decoder::new(&prelude.0);
+    let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
 
     let mut first_decoded_sequence: Vec<RawSymbol> = Vec::new();
     let mut second_decoded_sequence: Vec<RawSymbol> = Vec::new();
@@ -193,9 +193,9 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
         encoder.encode(*symbol, *component);
     }
 
-    let prelude = encoder.into_prelude();
-    let model = ANSModel4Decoder::new(&prelude.tables);
-    let mut decoder = ANSDecoder::new(&prelude, &model);
+    let prelude = encoder.get_compression_results();
+    let model = ANSModel4Decoder::new(&prelude.0);
+    let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(); BVGraphComponent::COMPONENTS];
 
     source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse

@@ -33,19 +33,11 @@ impl<'a> RandomAccessDecoderFactory for ANSBVGraphDecoderFactory<'a> {
             .get(node)
             .expect("The node must have a phase associated to it.");
 
-        Ok(ANSDecoder::from_raw_parts(
-            self.prelude,
+        Ok(ANSDecoder::from_phase(
             &self.model,
+            &self.prelude.stream,
             *phase,
         ))
-    }
-}
-
-impl<'a> SequentialDecoderFactory for ANSBVGraphDecoderFactory<'a> {
-    type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
-
-    fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
-        Ok(ANSDecoder::new(self.prelude, &self.model))
     }
 }
 
@@ -69,6 +61,10 @@ impl<'a> SequentialDecoderFactory for ANSBVGraphSeqDecoderFactory<'a> {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
-        Ok(ANSDecoder::new(self.prelude, &self.model))
+        Ok(ANSDecoder::new(
+            &self.model,
+            &self.prelude.stream,
+            self.prelude.state,
+        ))
     }
 }

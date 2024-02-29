@@ -31,7 +31,6 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let seq_graph = BVGraph::with_basename(&args.basename).load()?;
     let mut buf = PathBuf::from(&args.basename);
     buf.set_extension("ans");
     let prelude = Prelude::load_full(buf.as_path())?;
@@ -41,10 +40,10 @@ pub fn main() -> Result<()> {
 
     let graph = BVGraph::<ANSBVGraphDecoderFactory>::new(
         code_reader_builder,
-        seq_graph.num_nodes(),
-        seq_graph.num_arcs_hint().unwrap(),
-        7,
-        2,
+        prelude.number_of_nodes,
+        prelude.number_of_arcs,
+        prelude.compression_window,
+        prelude.min_interval_length,
     );
 
     let mut pl = ProgressLogger::default();

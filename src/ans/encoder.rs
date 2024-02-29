@@ -1,5 +1,5 @@
-use crate::ans::model4encoder::ANSModel4Encoder;
-use crate::ans::{ANSCompressorPhase, Prelude};
+use crate::ans::model4encoder::{ANSComponentModel4Encoder, ANSModel4Encoder};
+use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
@@ -107,12 +107,12 @@ impl ANSEncoder {
         state
     }
 
-    pub fn into_prelude(self) -> Prelude {
-        Prelude {
-            tables: self.model.component_models,
-            stream: self.stream,
-            state: self.state,
-        }
+    /// Returns the results of the compression:
+    /// - the model used to encode the symbols, which contains an ANSComponentModel4Encoder for each component
+    /// - the normalized bits
+    /// - the final state of the encoder
+    pub fn get_compression_results(self) -> (Vec<ANSComponentModel4Encoder>, Vec<u16>, State) {
+        (self.model.component_models, self.stream, self.state)
     }
 
     /// Returns the current phase of the compressor, that is: the current state and the index of the last chunk of 32 bits

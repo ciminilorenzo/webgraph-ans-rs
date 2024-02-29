@@ -1,5 +1,5 @@
 use crate::ans::model4decoder::ANSModel4Decoder;
-use crate::ans::{ANSCompressorPhase, Prelude};
+use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, Symbol, B};
 
@@ -27,28 +27,28 @@ impl<'a> ANSDecoder<'a> {
     /// The number of bits reserved to represent the symbol in the quasi-folded value.
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 
-    pub fn new(prelude: &'a Prelude, model: &'a ANSModel4Decoder) -> Self {
+    pub fn new(model: &'a ANSModel4Decoder, stream: &'a Vec<u16>, state: State) -> Self {
         Self {
             model,
-            stream: &prelude.stream,
-            state: prelude.state,
-            stream_pointer: prelude.stream.len(),
+            stream,
+            state,
+            stream_pointer: stream.len(),
         }
     }
 
     /// Initialize a new ANSDecoder from its raw parts.
     ///
     /// Note: the next decoded symbol will be the last one encoded in the given [`phase`](ANSCompressorPhase)
-    pub fn from_raw_parts(
-        prelude: &'a Prelude,
+    pub fn from_phase(
         model: &'a ANSModel4Decoder,
+        stream: &'a Vec<u16>,
         phase: ANSCompressorPhase,
     ) -> Self {
         Self {
             model,
-            stream: &prelude.stream,
-            state: phase.state,
+            stream,
             stream_pointer: phase.stream_pointer,
+            state: phase.state,
         }
     }
 }

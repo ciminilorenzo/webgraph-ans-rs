@@ -109,7 +109,14 @@ pub fn main() -> Result<()> {
     let model4encoder = bvcomp.flush()?.build();
     pl.done();
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
+        ANSBVGraphMeasurableEncoder::new(
+            model4encoder,
+            entropy_estimator,
+            seq_graph.num_nodes(),
+            seq_graph.num_arcs_hint().unwrap(),
+            args.compressions_args.compression_window,
+            args.compressions_args.min_interval_length,
+        ),
         args.compressions_args.compression_window,
         args.compressions_args.max_ref_count,
         args.compressions_args.min_interval_length,
@@ -128,16 +135,7 @@ pub fn main() -> Result<()> {
     pl.done();
 
     // get phases and the encoder from the bvcomp
-    let (encoder, phases) = bvcomp.flush()?.into_inner();
-    // get the prelude from the encoder
-    let prelude = encoder.into_prelude();
-
-    let estimated_elias_fano_size =
-        get_elias_fano_size(phases.last().unwrap().stream_pointer, seq_graph.num_nodes());
-    info!(
-        "Elias-Fano estimated size is: {} B",
-        estimated_elias_fano_size / 8
-    );
+    let (prelude, phases) = bvcomp.flush()?.into_inner();
 
     phases.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
 

@@ -5,7 +5,7 @@ use webgraph::graphs::{Encoder, MeasurableEncoder};
 use crate::ans::encoder::ANSEncoder;
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::ans::model4encoder_builder::ANSModel4EncoderBuilder;
-use crate::ans::ANSCompressorPhase;
+use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::mock_writers::EntropyEstimator;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::rev::RevBuffer;
@@ -130,10 +130,22 @@ pub struct ANSBVGraphMeasurableEncoder {
 
     /// The buffer where models associated to each collected symbol are collected before encoding.
     models: RevBuffer<NamedTempFile>,
+
+    number_of_nodes: usize,
+    number_of_arcs: u64,
+    compression_window: usize,
+    min_interval_length: usize,
 }
 
 impl ANSBVGraphMeasurableEncoder {
-    pub fn new(model: ANSModel4Encoder, estimator: EntropyEstimator) -> Self {
+    pub fn new(
+        model: ANSModel4Encoder,
+        estimator: EntropyEstimator,
+        number_of_nodes: usize,
+        number_of_arcs: u64,
+        compression_window: usize,
+        min_interval_length: usize,
+    ) -> Self {
         let symbols_file = Builder::new().prefix("symbols").tempfile().unwrap();
         let models_file = Builder::new().prefix("models").tempfile().unwrap();
 
@@ -143,12 +155,30 @@ impl ANSBVGraphMeasurableEncoder {
             encoder: ANSEncoder::new(model),
             symbols: RevBuffer::new(symbols_file).unwrap(),
             models: RevBuffer::new(models_file).unwrap(),
+            number_of_nodes,
+            number_of_arcs,
+            compression_window,
+            min_interval_length,
         }
     }
 
-    /// Consume self and return the encoder.
-    pub fn into_inner(self) -> (ANSEncoder, Vec<ANSCompressorPhase>) {
-        (self.encoder, self.phases)
+    /// Returns the Prelude, containing the compression results of the encoded graph and all the
+    /// complementary data needed to decode it, and the list of ANSCompressorPhase, one for each node.
+    pub fn into_inner(self) -> (Prelude, Vec<ANSCompressorPhase>) {
+        let compression_results = self.encoder.get_compression_results();
+
+        (
+            Prelude::new(
+                compression_results.0,
+                compression_results.1,
+                compression_results.2,
+                self.number_of_nodes,
+                self.number_of_arcs,
+                self.compression_window,
+                self.min_interval_length,
+            ),
+            self.phases,
+        )
     }
 }
 
