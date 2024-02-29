@@ -24,7 +24,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
 
     let log_mock = Log2Estimator::default();
     let model_builder = BVGraphModelBuilder::new(log_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
 
     // first iteration -> build the model with log2 mock writer
     for node_index in 0..graph.num_nodes() {
@@ -40,7 +40,7 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     let entropic_costs_table = EntropyEstimator::new(&model4encoder, folding_params);
     let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropic_costs_table.clone());
     let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 2, 3, 0);
+        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0);
 
     // second iteration -> build the model with entropic mock writer
     for node_index in 0..graph.num_nodes() {
@@ -55,8 +55,8 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
         ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table),
         7,
-        2,
         3,
+        2,
         0,
     );
 
@@ -108,7 +108,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
 
     let log2_mock = Log2Estimator::default();
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
 
     // First iteration with Log2MockWriter
     bvcomp.extend(graph.iter())?;
@@ -118,7 +118,7 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let entropic_mock = EntropyEstimator::new(&model4encoder, folding_params);
     let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropic_mock.clone());
     let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 2, 3, 0);
+        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0);
 
     // second iteration with EntropyMockWriter
     bvcomp.extend(graph.iter())?;
@@ -128,8 +128,8 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
         ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
         7,
-        2,
         3,
+        2,
         0,
     );
 
@@ -170,7 +170,7 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
 
     let log2_mock = Log2Estimator::default();
     let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 2, 3, 0);
+    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
 
     // First iteration with Log2MockWriter
     bvcomp.extend(graph.iter())?;
@@ -180,7 +180,7 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     let entropic_mock = EntropyEstimator::new(&model4encoder, folding_params);
     let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropic_mock.clone());
     let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 2, 3, 0);
+        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0);
 
     // second iteration with EntropyMockWriter
     bvcomp.extend(graph.iter())?;
@@ -190,8 +190,8 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
         ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock),
         7,
-        2,
         3,
+        2,
         0,
     );
 

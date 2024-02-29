@@ -60,8 +60,8 @@ pub fn main() -> Result<()> {
     let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(
         model_builder,
         args.compressions_args.compression_window,
-        args.compressions_args.min_interval_length,
         args.compressions_args.max_ref_count,
+        args.compressions_args.min_interval_length,
         0,
     );
 
@@ -88,8 +88,8 @@ pub fn main() -> Result<()> {
     let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(
         model_builder,
         args.compressions_args.compression_window,
-        args.compressions_args.min_interval_length,
         args.compressions_args.max_ref_count,
+        args.compressions_args.min_interval_length,
         0,
     );
 
@@ -111,8 +111,8 @@ pub fn main() -> Result<()> {
     let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
         ANSBVGraphMeasurableEncoder::new(model4encoder, entropy_estimator),
         args.compressions_args.compression_window,
-        args.compressions_args.min_interval_length,
         args.compressions_args.max_ref_count,
+        args.compressions_args.min_interval_length,
         0,
     );
 
