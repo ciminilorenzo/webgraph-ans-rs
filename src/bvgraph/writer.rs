@@ -114,9 +114,6 @@ impl<MW: Encoder> Encoder for BVGraphModelBuilder<MW> {
     }
 }
 
-/// The value used to mark the end of a node inside the buffer.
-const NODE_END_MARKER: u64 = 10;
-
 /// An [`Encoder`] that writes to an [`ANSEncoder`].
 pub struct ANSBVGraphMeasurableEncoder {
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
@@ -171,11 +168,6 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        // let's mark the end of the previous node
-        self.symbols.push(value);
-        self.models.push(NODE_END_MARKER);
-
-        // now start writing data of the new node.
         self.symbols.push(value);
         self.models.push(BVGraphComponent::Outdegree as u64);
         self.estimator.write_outdegree(value)
@@ -233,19 +225,17 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
     // called after having encoded the last symbols of the last node
     fn flush(&mut self) -> Result<usize, Self::Error> {
         let symbols_iter = self.symbols.flush().unwrap();
-        let sym_iter = symbols_iter.into_iter();
         let models_iter = self.models.flush().unwrap();
-        let mod_iter = models_iter.into_iter();
 
-        for (symbol, model) in sym_iter.zip(mod_iter) {
-            if model == NODE_END_MARKER {
-                self.phases
-                    .push(self.encoder.get_current_compressor_phase());
-                continue;
-            }
-
+        for (symbol, model) in symbols_iter.into_iter().zip(models_iter.into_iter()) {
             self.encoder
                 .encode(symbol, BVGraphComponent::from(model as usize));
+
+            // let's save the phase if we have encoded the outdegree
+            if model == BVGraphComponent::Outdegree as u64 {
+                self.phases
+                    .push(self.encoder.get_current_compressor_phase());
+            }
         }
         // let's reverse the phases so that the first phase is associated to the last node encoded
         self.phases.reverse();
