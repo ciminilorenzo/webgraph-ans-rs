@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use crate::ans::model4encoder::{ANSComponentModel4Encoder, ANSModel4Encoder};
 use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
@@ -66,7 +68,13 @@ impl ANSEncoder {
             self.state = Self::shrink_state(self.state, &mut self.stream);
         }
 
-        let block = self.state / sym_data.freq as State;
+        // SAFETY
+        //
+        // Unless the compiler knows that the divisor is nonzero, it will add a
+        // test for zero to avoid UB. In this case, the divisor is always
+        // nonzero.
+        let block =
+            self.state / unsafe { NonZeroU32::try_from(sym_data.freq as State).unwrap_unchecked() };
 
         self.state = (block << self.model.get_log2_frame_size(component))
             + sym_data.cumul_freq as State
