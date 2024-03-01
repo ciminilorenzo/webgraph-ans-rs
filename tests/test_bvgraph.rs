@@ -72,7 +72,10 @@ fn decoder_decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let (prelude, phases) = bvcomp.flush()?.into_inner();
+    let (prelude, mut phases) = bvcomp.flush()?.into_inner();
+
+    // let's reverse the phases so that the first phase is associated to the last node encoded
+    phases.reverse();
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
@@ -136,7 +139,10 @@ fn decoder_decodes_correctly_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (prelude, phases) = bvcomp.flush()?.into_inner();
+    let (prelude, mut phases) = bvcomp.flush()?.into_inner();
+
+    // let's reverse the phases so that the first phase is associated to the last node encoded
+    phases.reverse();
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
 
@@ -197,6 +203,7 @@ fn decoder_decodes_correctly_sequential_cnr_graph() -> Result<()> {
     bvcomp.extend(graph.iter())?;
 
     let (prelude, _phases) = bvcomp.flush()?.into_inner();
+
     let code_reader_builder = ANSBVGraphSeqDecoderFactory::new(&prelude);
 
     let decoded_graph = BVGraphSeq::<ANSBVGraphSeqDecoderFactory>::new(

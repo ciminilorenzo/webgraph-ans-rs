@@ -39,27 +39,11 @@ impl EntropyEstimator {
 
                 (0_usize..(max_folded_sym as usize) + 1)
                     .map(|sym| {
-                        #[cfg(feature = "arm")]
                         let sym_freq = match model.component_models[component].table.get(sym) {
                             Some(entry) => match entry.freq {
                                 0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
                                 freq => freq,
                             },
-                            None => 1,
-                        };
-
-                        #[cfg(not(feature = "arm"))]
-                        let sym_freq = match model.component_models[component].table.get(sym) {
-                            Some(entry) => {
-                                let frame_size =
-                                    model.get_log2_frame_size(BVGraphComponent::from(component));
-                                let freq =
-                                    (-(entry.cmpl_freq as i32) + (1i32 << frame_size)) as u16;
-                                match freq {
-                                    0 => 1, // we can have 0 frequencies for symbols that exists due to bigger ones
-                                    freq => freq,
-                                }
-                            }
                             None => 1,
                         };
 

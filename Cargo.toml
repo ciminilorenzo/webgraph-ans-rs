@@ -7,16 +7,10 @@ edition = "2021"
 debug = true
 opt-level = 3
 
-[features]
-arm = []
-
 [dependencies]
 anyhow = "1.0.75"
 sux = "0.1.1"
 itertools = "0.12.1"
-bitvec = "1.0.1"
-sucds = { version = "0.8.1", features = ["intrinsics"] }
-strength_reduce = "0.2.4"
 rand = { version = "0.8.5", features = [] }
 webgraph = { git = "https://github.com/vigna/webgraph-rs"}
 clap = "4.4.16"

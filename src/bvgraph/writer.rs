@@ -270,8 +270,6 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
                     .push(self.encoder.get_current_compressor_phase());
             }
         }
-        // let's reverse the phases so that the first phase is associated to the last node encoded
-        self.phases.reverse();
         Ok(0)
     }
 

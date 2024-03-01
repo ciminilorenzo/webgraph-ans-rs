@@ -221,12 +221,7 @@ impl ANSModel4EncoderBuilder {
             let mut last_covered_freq = 0;
 
             for freq in scaled_distribution.iter() {
-                table.push(EncoderModelEntry::new(
-                    *freq as u16,
-                    k,
-                    last_covered_freq,
-                    log_m,
-                ));
+                table.push(EncoderModelEntry::new(*freq as u16, k, last_covered_freq));
                 last_covered_freq += *freq as u16;
             }
 

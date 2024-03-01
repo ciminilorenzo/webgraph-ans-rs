@@ -9,6 +9,7 @@ use lender::*;
 use log::info;
 use mem_dbg::{DbgFlags, MemDbg};
 use std::path::PathBuf;
+use sux::dict::EliasFanoBuilder;
 use webgraph::cli::utils::CompressArgs;
 use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 
@@ -137,8 +138,22 @@ pub fn main() -> Result<()> {
     // get phases and the encoder from the bvcomp
     let (prelude, phases) = bvcomp.flush()?.into_inner();
 
-    phases.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
+    // ------ ------ let's create elias-fano ------ ------
+    let upper_bound =
+        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
+    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
 
+    for phase in phases.iter() {
+        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
+    }
+
+    // ------ ------ elias-fano created ------ ------
+
+    let ef = ef_builder.build();
+
+    ef.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
+
+    phases.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
     // let's store what we got
     prelude.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
     let mut buf = PathBuf::from(&args.new_basename);

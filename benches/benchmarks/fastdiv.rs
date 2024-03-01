@@ -1,8 +1,9 @@
-use std::num::{NonZeroU16, NonZeroU32};
+// https://ieeexplore.ieee.org/document/1467632
 
 use criterion::{black_box, criterion_group, Criterion};
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
+use std::num::{NonZeroU16, NonZeroU32};
 
 #[derive(Clone, Debug)]
 struct DoubleAdd {
