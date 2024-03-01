@@ -1,12 +1,10 @@
+use std::hint::black_box;
 use std::iter::Iterator;
-use std::{hint::black_box, path::PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
 use dsi_progress_logger::*;
-use epserde::prelude::*;
-use folded_streaming_rans::ans::{ANSCompressorPhase, Prelude};
-use folded_streaming_rans::bvgraph::reader::ANSBVGraphDecoderFactory;
+use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
@@ -31,21 +29,7 @@ pub fn main() -> Result<()> {
         .init()
         .unwrap();
 
-    let mut buf = PathBuf::from(&args.basename);
-    buf.set_extension("ans");
-    let prelude = Prelude::load_full(buf.as_path())?;
-    buf.set_extension("phases");
-    let phases = Vec::<ANSCompressorPhase>::load_full(buf.as_path())?;
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(&prelude, phases);
-
-    let graph = BVGraph::<ANSBVGraphDecoderFactory>::new(
-        code_reader_builder,
-        prelude.number_of_nodes,
-        prelude.number_of_arcs,
-        prelude.compression_window,
-        prelude.min_interval_length,
-    );
-
+    let graph = ANSBVGraph::load(&args.basename)?;
     let mut pl = ProgressLogger::default();
     let mut rng = SmallRng::seed_from_u64(0);
 

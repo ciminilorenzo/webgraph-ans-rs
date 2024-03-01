@@ -13,18 +13,6 @@ use sux::dict::EliasFanoBuilder;
 use webgraph::cli::utils::CompressArgs;
 use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 
-/// Returns the estimated size of an Elias-Fano representation of the prelude resulting from the
-/// encoding of a graph with `nodes_number` nodes ,`last_pointer` as the last pointer of the last phase
-/// and `last_state` as the final state of after the full encoding of the graph.
-fn get_elias_fano_size(last_pointer: usize, nodes_number: usize) -> usize {
-    let last_pointer = last_pointer as u64;
-    let nodes_number = nodes_number as u64;
-
-    2 * nodes_number as usize
-        + 32
-        + (nodes_number as usize * (last_pointer / nodes_number).ilog2() as usize + 1)
-}
-
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
 struct Args {

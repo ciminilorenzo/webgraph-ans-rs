@@ -4,27 +4,27 @@ use crate::ans::decoder::ANSDecoder;
 use crate::ans::model4decoder::ANSModel4Decoder;
 use crate::ans::{ANSCompressorPhase, Prelude};
 
-pub struct ANSBVGraphDecoderFactory<'a> {
+pub struct ANSBVGraphDecoderFactory {
     /// The vec of ANSCompressorPhase, one for each node of the graph.
     phases: Vec<ANSCompressorPhase>,
 
     /// The prelude resulting from the encoding process of the graph.
-    prelude: &'a Prelude,
+    pub prelude: Prelude,
 
     model: ANSModel4Decoder,
 }
 
-impl<'a> ANSBVGraphDecoderFactory<'a> {
-    pub fn new(prelude: &'a Prelude, phases: Vec<ANSCompressorPhase>) -> Self {
+impl ANSBVGraphDecoderFactory {
+    pub fn new(prelude: Prelude, phases: Vec<ANSCompressorPhase>) -> Self {
         Self {
-            prelude,
             phases,
             model: ANSModel4Decoder::new(&prelude.tables),
+            prelude,
         }
     }
 }
 
-impl<'a> RandomAccessDecoderFactory for ANSBVGraphDecoderFactory<'a> {
+impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self, node: usize) -> anyhow::Result<Self::Decoder<'_>> {

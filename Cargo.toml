@@ -9,9 +9,7 @@ opt-level = 3
 
 [dependencies]
 anyhow = "1.0.75"
-sux = "0.1.1"
-itertools = "0.12.1"
-rand = { version = "0.8.5", features = [] }
+sux = "0.2.0"
 webgraph = { git = "https://github.com/vigna/webgraph-rs"}
 clap = "4.4.16"
 stderrlog = "0.5.4"
@@ -24,15 +22,15 @@ log = "0.4.20"
 lender = "0.2.9"
 dsi-bitstream = "0.3.0"
 mmap-rs = "0.6.1"
-core_affinity = "0.8.1"
-
+itertools = "0.12.1"
+rand = "0.8.5"
 
 [dev-dependencies]
 criterion = "0.5.1"
 pprof = { version = "0.13.0", features = ["flamegraph", "criterion", "frame-pointer"] }
-rand = "0.8.5"
 rand_distr = "0.4.3"
 rstest = "0.18.2"
+core_affinity = "0.8.1"
 
 [[bench]]
 name = "bench_main"

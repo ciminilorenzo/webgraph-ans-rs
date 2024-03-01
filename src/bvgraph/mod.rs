@@ -1,7 +1,9 @@
 use std::fmt::Display;
 
 pub mod mock_writers;
+pub mod random_access;
 pub mod reader;
+pub mod sequential;
 pub mod writer;
 
 /// An enumeration of the components getting a different model in the Rust
