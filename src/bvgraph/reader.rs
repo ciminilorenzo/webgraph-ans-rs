@@ -41,23 +41,23 @@ impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
     }
 }
 
-pub struct ANSBVGraphSeqDecoderFactory<'a> {
+pub struct ANSBVGraphSeqDecoderFactory {
     /// The prelude resulting from the encoding process of the graph.
-    prelude: &'a Prelude,
+    prelude: Prelude,
 
     model: ANSModel4Decoder,
 }
 
-impl<'a> ANSBVGraphSeqDecoderFactory<'a> {
-    pub fn new(prelude: &'a Prelude) -> Self {
+impl ANSBVGraphSeqDecoderFactory {
+    pub fn new(prelude: Prelude) -> Self {
         Self {
-            prelude,
             model: ANSModel4Decoder::new(&prelude.tables),
+            prelude,
         }
     }
 }
 
-impl<'a> SequentialDecoderFactory for ANSBVGraphSeqDecoderFactory<'a> {
+impl SequentialDecoderFactory for ANSBVGraphSeqDecoderFactory {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
