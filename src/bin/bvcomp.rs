@@ -1,17 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
-use dsi_bitstream::prelude::*;
-use dsi_progress_logger::*;
-use epserde::prelude::Serialize;
-use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
-use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
-use lender::*;
-use log::info;
-use mem_dbg::{DbgFlags, MemDbg};
-use std::path::PathBuf;
-use sux::dict::EliasFanoBuilder;
+use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use webgraph::cli::utils::CompressArgs;
-use webgraph::prelude::{BVComp, BVGraphSeq, SequentialLabeling};
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -35,120 +25,14 @@ pub fn main() -> Result<()> {
         .unwrap();
 
     let args = Args::parse();
-    let mut pl = ProgressLogger::default();
 
-    info!("Loading graph...");
-    let seq_graph = BVGraphSeq::with_basename(&args.basename)
-        .endianness::<BE>()
-        .load()?;
-
-    // create a log2 mock writer, where the cost of each symbol is the amount of bits needed to represent it
-    let log2_mock = Log2Estimator::default();
-    // create a builder that uses the log2 mock writer
-    let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(
-        model_builder,
+    ANSBVGraph::store(
+        &args.basename,
+        &args.new_basename,
         args.compressions_args.compression_window,
         args.compressions_args.max_ref_count,
         args.compressions_args.min_interval_length,
-        0,
-    );
-
-    pl.item_name("node")
-        .expected_updates(Some(seq_graph.num_nodes()));
-    pl.start("Pushing input into the model builder with log2 mock...");
-
-    // first iteration: build a model with the log2 mock writer
-    for_![ (_, succ) in seq_graph {
-        bvcomp.push(succ)?;
-        pl.update();
-    }];
-    pl.done();
-
-    pl.start("Building the model with log2 mock...");
-    // get the ANSModel4Encoder obtained from the first iteration
-    let model4encoder = bvcomp.flush()?.build();
-    pl.done();
-    // get the folding parameters from the model, that is the best combination of radix and fidelity
-    let folding_params = model4encoder.get_folding_params();
-    // create a new table of costs based on params obtained from the previous step
-    let entropy_estimator = EntropyEstimator::new(&model4encoder, folding_params);
-    let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(
-        model_builder,
-        args.compressions_args.compression_window,
-        args.compressions_args.max_ref_count,
-        args.compressions_args.min_interval_length,
-        0,
-    );
-
-    pl.item_name("node")
-        .expected_updates(Some(seq_graph.num_nodes()));
-    pl.start("Pushing input into the model builder with entropy mock...");
-
-    // second iteration: build a model with the entropy mock writer
-    for_![ (_, succ) in seq_graph {
-        bvcomp.push(succ)?;
-        pl.update();
-    }];
-    pl.done();
-
-    pl.start("Building the model with entropy mock...");
-    // get the final ANSModel4Encoder from the second iteration
-    let model4encoder = bvcomp.flush()?.build();
-    pl.done();
-    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(
-            model4encoder,
-            entropy_estimator,
-            seq_graph.num_nodes(),
-            seq_graph.num_arcs_hint().unwrap(),
-            args.compressions_args.compression_window,
-            args.compressions_args.min_interval_length,
-        ),
-        args.compressions_args.compression_window,
-        args.compressions_args.max_ref_count,
-        args.compressions_args.min_interval_length,
-        0,
-    );
-
-    pl.item_name("node")
-        .expected_updates(Some(seq_graph.num_nodes()));
-    pl.start("Compressing graph...");
-
-    // third iteration: encode with the encoder that uses the ANSModel4Encoder we just got
-    for_![ (_, succ) in seq_graph {
-        bvcomp.push(succ)?;
-        pl.update();
-    }];
-    pl.done();
-
-    // get phases and the encoder from the bvcomp
-    let (prelude, phases) = bvcomp.flush()?.into_inner();
-
-    // ------ ------ let's create elias-fano ------ ------
-    let upper_bound =
-        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
-    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
-
-    for phase in phases.iter() {
-        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
-    }
-
-    // ------ ------ elias-fano created ------ ------
-
-    let ef = ef_builder.build();
-
-    ef.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
-
-    phases.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
-    // let's store what we got
-    prelude.mem_dbg(DbgFlags::default() | DbgFlags::PERCENTAGE)?;
-    let mut buf = PathBuf::from(&args.new_basename);
-    buf.set_extension("ans");
-    prelude.store(buf.as_path())?;
-    buf.set_extension("phases");
-    phases.store(buf.as_path())?;
+    )?;
 
     Ok(())
 }

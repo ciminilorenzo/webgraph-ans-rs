@@ -1,5 +1,4 @@
 use crate::ans::model4decoder::ANSModel4Decoder;
-use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, Symbol, B};
 
@@ -38,17 +37,20 @@ impl<'a> ANSDecoder<'a> {
 
     /// Initialize a new ANSDecoder from its raw parts.
     ///
-    /// Note: the next decoded symbol will be the last one encoded in the given [`phase`](ANSCompressorPhase)
-    pub fn from_phase(
+    /// Note: the next decoded symbol will be the __last__ encoded in the given state. If the decoder
+    /// will need to expand the state with bits in the stream, it will pull chunks starting from the
+    /// `stream_pointer` index.
+    pub fn from_raw_parts(
         model: &'a ANSModel4Decoder,
         stream: &'a Vec<u16>,
-        phase: ANSCompressorPhase,
+        stream_pointer: usize,
+        state: State,
     ) -> Self {
         Self {
             model,
             stream,
-            stream_pointer: phase.stream_pointer,
-            state: phase.state,
+            stream_pointer,
+            state,
         }
     }
 }

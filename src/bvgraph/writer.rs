@@ -164,7 +164,7 @@ impl ANSBVGraphMeasurableEncoder {
 
     /// Returns the Prelude, containing the compression results of the encoded graph and all the
     /// complementary data needed to decode it, and the list of ANSCompressorPhase, one for each node.
-    pub fn into_inner(self) -> (Prelude, Vec<ANSCompressorPhase>) {
+    pub fn into_prelude_phases(self) -> (Prelude, Vec<ANSCompressorPhase>) {
         let compression_results = self.encoder.get_compression_results();
 
         (

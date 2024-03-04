@@ -1,6 +1,5 @@
 use anyhow::Result;
 use std::iter::Iterator;
-use std::path::PathBuf;
 
 use folded_streaming_rans::bvgraph::reader::{
     ANSBVGraphDecoderFactory, ANSBVGraphSeqDecoderFactory,
@@ -8,11 +7,11 @@ use folded_streaming_rans::bvgraph::reader::{
 use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
 
 use dsi_bitstream::prelude::BE;
-use epserde::prelude::Serialize;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
 use lender::for_;
+use sux::dict::EliasFanoBuilder;
 use webgraph::prelude::*;
 
 #[test]
@@ -76,12 +75,19 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
         bvcomp.push(successors)?;
     }
 
-    let (prelude, mut phases) = bvcomp.flush()?.into_inner();
+    let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
-    // let's reverse the phases so that the first phase is associated to the last node encoded
-    phases.reverse();
+    // (4) create elias fano
+    let upper_bound =
+        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
+    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
 
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, phases);
+    for phase in phases.iter() {
+        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
+    }
+    let ef = ef_builder.build();
+
+    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
 
     let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 6, 4, 7, 2);
 
@@ -138,12 +144,19 @@ fn decodes_correctly_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (prelude, mut phases) = bvcomp.flush()?.into_inner();
+    let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
-    // let's reverse the phases so that the first phase is associated to the last node encoded
-    phases.reverse();
+    // (4) create elias fano
+    let upper_bound =
+        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
+    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
 
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, phases);
+    for phase in phases.iter() {
+        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
+    }
+    let ef = ef_builder.build();
+
+    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
 
     let decoded_graph =
         BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, num_nodes, num_arcs, 7, 2);
@@ -196,7 +209,7 @@ fn decodes_correctly_sequential_cnr_graph() -> Result<()> {
     // Encoding the graph
     bvcomp.extend(graph.iter())?;
 
-    let (prelude, _phases) = bvcomp.flush()?.into_inner();
+    let (prelude, _phases) = bvcomp.flush()?.into_prelude_phases();
 
     let code_reader_builder = ANSBVGraphSeqDecoderFactory::new(prelude);
 
@@ -216,59 +229,26 @@ fn decodes_correctly_sequential_cnr_graph() -> Result<()> {
 }
 
 #[test]
-fn decodes_correctly_cnr_loaded_from_disk() -> Result<()> {
-    // (1) encode the graph
+fn decodes_correctly_cnr_written_and_loaded_from_disk() -> Result<()> {
     let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
-    let num_nodes = graph.num_nodes();
-    let num_arcs = graph.num_arcs_hint().unwrap();
 
-    let log2_mock = Log2Estimator::default();
-    let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
-
-    // First iteration with Log2MockWriter
-    bvcomp.extend(graph.iter())?;
-
-    let model4encoder = bvcomp.flush()?.build();
-    let folding_params = model4encoder.get_folding_params();
-    let entropic_mock = EntropyEstimator::new(&model4encoder, folding_params);
-    let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropic_mock.clone());
-    let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0);
-
-    // second iteration with EntropyMockWriter
-    bvcomp.extend(graph.iter())?;
-
-    let model4encoder = bvcomp.flush()?.build();
-
-    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2),
+    // (1) encode the BVGraph
+    ANSBVGraph::store(
+        "tests/data/cnr-2000/cnr-2000",
+        "tests/data/cnr-2000/results",
         7,
         3,
         2,
-        0,
-    );
-
-    // Encoding the graph
-    bvcomp.extend(graph.iter())?;
-
-    let (prelude, phases) = bvcomp.flush()?.into_inner();
-
-    // (2) store the results of compression on disk on ./results.ans and ./results.phases
-    let mut buf = PathBuf::from("results");
-    buf.set_extension("ans");
-    prelude.store(buf.as_path())?;
-    buf.set_extension("phases");
-    phases.store(buf.as_path())?;
+    )?;
 
     // (3) load the compressed graph from disk
-    let decoded_graph = ANSBVGraph::load("results")?;
+    let decoded_graph = ANSBVGraph::load("tests/data/cnr-2000/results")?;
 
-    for node_index in 0..graph.num_nodes() {
-        let successors = graph.outdegree(node_index);
-        let decoded_successors = decoded_graph.outdegree(node_index);
+    for node_index in 0..decoded_graph.num_nodes() {
+        let successors = graph.successors(node_index).collect::<Vec<_>>();
+        let decoded_successors = decoded_graph.successors(node_index).collect::<Vec<_>>();
 
         assert_eq!(successors, decoded_successors);
     }
@@ -277,52 +257,22 @@ fn decodes_correctly_cnr_loaded_from_disk() -> Result<()> {
 }
 
 #[test]
-fn decodes_correctly_sequential_cnr_loaded_from_disk() -> Result<()> {
-    let graph = BVGraphSeq::with_basename("tests/data/cnr-2000/cnr-2000")
+fn decodes_correctly_sequential_cnr_written_and_loaded_from_disk() -> Result<()> {
+    let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
-    let num_nodes = graph.num_nodes();
-    let num_arcs = graph.num_arcs_hint().unwrap();
 
-    let log2_mock = Log2Estimator::default();
-    let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
-
-    // First iteration with Log2MockWriter
-    bvcomp.extend(graph.iter())?;
-
-    let model4encoder = bvcomp.flush()?.build();
-    let folding_params = model4encoder.get_folding_params();
-    let entropic_mock = EntropyEstimator::new(&model4encoder, folding_params);
-    let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropic_mock.clone());
-    let mut bvcomp =
-        BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0);
-
-    // second iteration with EntropyMockWriter
-    bvcomp.extend(graph.iter())?;
-
-    let model4encoder = bvcomp.flush()?.build();
-
-    let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2),
+    // (1) encode the BVGraph
+    ANSBVGraph::store(
+        "tests/data/cnr-2000/cnr-2000",
+        "tests/data/cnr-2000/results",
         7,
         3,
         2,
-        0,
-    );
-
-    // Encoding the graph
-    bvcomp.extend(graph.iter())?;
-
-    let (prelude, _phases) = bvcomp.flush()?.into_inner();
-
-    // (2) store the results of compression on disk on ./results.ans
-    let mut buf = PathBuf::from("results");
-    buf.set_extension("ans");
-    prelude.store(buf.as_path())?;
+    )?;
 
     // (3) load the compressed graph from disk
-    let decoded_graph = ANSBVGraphSeq::load("results")?;
+    let decoded_graph = ANSBVGraphSeq::load("tests/data/cnr-2000/results")?;
 
     for_![ ((_, s), (_, t)) in lender::zip(graph.iter(), decoded_graph.iter()){
         assert!(itertools::equal(s, t));
