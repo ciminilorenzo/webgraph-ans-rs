@@ -24,3 +24,5 @@ profile.json
 
 # venv
 venv/
+
+*.csv

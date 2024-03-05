@@ -21,25 +21,35 @@ if not os.path.isdir(graphs_dir):
 subprocess.run(["cargo", "build", "--release", "--bin", "bvcomp"])
 
 ans_sizes = []
+ans_phases_sizes = []
 
 for graph in ans_graphs:
     print(f"Starting compression of {graph}")
     subprocess.run(["./target/release/bvcomp", f"{graphs_dir}{graph}/{graph}", f"{compressed_graphs_dir}{graph}"])
 
-    with open(f"{compressed_graphs_dir}{graph}.ans", 'rb') as f:
-        actual_size = len(f.read())
-        ans_sizes.append(actual_size)
+    ans_size = os.path.getsize(f"{compressed_graphs_dir}{graph}.ans")
+    ans_sizes.append(ans_size)
+    phases_size = os.path.getsize(f"{compressed_graphs_dir}{graph}.phases")
+    ans_phases_sizes.append(phases_size)
+
 
 with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     # create the csv writer
     writer = csv.writer(f)
     # write the header
-    writer.writerow(['name', 'BVGraph(bytes)', 'ANSBVGraph(bytes)', 'bit/link', 'improvement'])
+    writer.writerow(['name', 'BVGraph', 'ANSBVGraph', 'improvement', 'bit/link', 'phases'])
 
     for index in range(len(ans_graphs)):
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
         improvement = "-{:.0f}%".format((bv_graphs[index] - ans_sizes[index]) / bv_graphs[index] * 100)
-        data = [ans_graphs[index], bv_graphs[index], ans_sizes[index], bit_link, improvement]
+        data = [
+            ans_graphs[index],
+            "{} B".format(bv_graphs[index]),
+            "{} B".format(ans_sizes[index]),
+            improvement,
+            bit_link,
+            "{} B".format(ans_phases_sizes[index])
+        ]
 
         # write the data
         writer.writerow(data)
