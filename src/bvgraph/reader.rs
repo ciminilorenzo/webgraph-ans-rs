@@ -9,7 +9,8 @@ use crate::ans::Prelude;
 use crate::State;
 
 pub struct ANSBVGraphDecoderFactory {
-    /// The vec of ANSCompressorPhase, one for each node of the graph.
+    /// The EliasFano containing the phases of the ANS encoding, that is a stream pointer
+    /// and state for each node. This data is merged into a single u64, one for each node.
     phases: EliasFano,
 
     /// The prelude resulting from the encoding process of the graph.
@@ -37,6 +38,8 @@ impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self, node: usize) -> Result<Self::Decoder<'_>> {
+        // nodes' phases are stored in reversed order. Thus, for example, let's
+        // take the last phase if we want the phase of the first node.
         let ef_entry = self.phases.get(self.num_nodes - node - 1);
 
         Ok(ANSDecoder::from_raw_parts(
