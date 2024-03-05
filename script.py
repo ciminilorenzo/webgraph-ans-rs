@@ -47,7 +47,7 @@ for graph in ans_graphs:
     )
 
     # Define regular expression pattern
-    pattern = r'INFO - Elapsed: (\d+\w{1,2}) \['
+    pattern = r'INFO - Elapsed: (.*?) \['
 
     # Find all matches
     matches = re.findall(pattern, f"{timing}")
