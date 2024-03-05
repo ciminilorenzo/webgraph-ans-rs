@@ -5,7 +5,7 @@ use dsi_bitstream::{
 };
 use mmap_rs::*;
 
-use std::{fs::File, io::BufWriter, path::Path};
+use std::{fs::File, io::BufWriter, iter::FusedIterator, path::Path};
 use webgraph::utils::MmapBackend;
 
 ///Table used to speed up the writing of gamma codes
@@ -186,6 +186,8 @@ impl<'a> Iterator for IntoIter<'a> {
         }
     }
 }
+
+impl<'a> FusedIterator for IntoIter<'a> {}
 
 struct RevReader<'a> {
     data: &'a [u32],
