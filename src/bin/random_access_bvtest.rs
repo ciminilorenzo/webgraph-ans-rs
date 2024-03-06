@@ -39,16 +39,14 @@ pub fn main() -> Result<()> {
     let mut rng = SmallRng::seed_from_u64(0);
     let mut c: u64 = 0;
     let num_nodes = graph.num_nodes();
+    let random_nodes = (0..RANDOM_TEST_SAMPLES).map(|_| rng.gen_range(0..num_nodes));
     let start = std::time::Instant::now();
-    for _ in 0..RANDOM_TEST_SAMPLES {
-        c += black_box(graph.successors(rng.gen_range(0..num_nodes)).count() as u64);
+    for node in random_nodes {
+        c += black_box(graph.successors(node).count() as u64);
         pl.update();
     }
-    pl.done();
+    pl.done_with_count(c as usize);
 
-    println!(
-        "{:.2} ns/arc",
-        (start.elapsed().as_secs_f64() / c as f64) * 1e9
-    );
+    println!("{:.2} ns/arc", start.elapsed().as_nanos() / c as u128);
     Ok(())
 }

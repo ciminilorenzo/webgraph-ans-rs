@@ -2,17 +2,22 @@ use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use crate::bvgraph::reader::ANSBVGraphDecoderFactory;
 use crate::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
-use anyhow::Result;
+use crate::EF;
+use anyhow::{Context, Result};
 use dsi_bitstream::prelude::BE;
 use dsi_progress_logger::{ProgressLog, ProgressLogger};
 use epserde::prelude::*;
 use epserde::ser::Serialize;
 use lender::for_;
 use log::info;
+use std::fs::File;
+use std::io::BufWriter;
 use std::path::PathBuf;
 use sux::dict::{EliasFano, EliasFanoBuilder};
+use sux::prelude::{BitFieldVec, CountBitVec, SelectFixed1, SelectFixed2};
+use sux::traits::ConvertTo;
 use webgraph::graphs::{BVComp, BVGraph, BVGraphSeq};
-use webgraph::prelude::SequentialLabeling;
+use webgraph::prelude::{suffix_path, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
 pub struct ANSBVGraph(BVGraph<ANSBVGraphDecoderFactory>);
@@ -29,8 +34,8 @@ impl ANSBVGraph {
         let prelude = Prelude::load_full(buf.as_path())?;
 
         // load phases
-        buf.set_extension("phases");
-        let phases = EliasFano::load_full(buf.as_path())?;
+        let ef_path = suffix_path(&basename, ".ef");
+        let phases = EF::load_full(ef_path)?;
 
         let nun_nodes = prelude.number_of_nodes;
         let num_arcs = prelude.number_of_arcs;
@@ -153,14 +158,23 @@ impl ANSBVGraph {
         // get phases and the encoder from the bvcomp
         let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
         let ef = Self::build_elias_from_phases(phases, prelude.number_of_nodes)?;
+        let ef: EF = ef.convert_to()?;
 
         // (5) serialize
         let mut buf = PathBuf::from(&new_basename);
+        buf.set_extension("ef");
+        let mut ef_file = BufWriter::new(
+            File::create(&buf)
+                .with_context(|| format!("Could not create {}", buf.to_str().unwrap()))?,
+        );
+
+        ef.serialize(&mut ef_file).with_context(|| {
+            format!("Could not serialize EliasFano to {}", buf.to_str().unwrap())
+        })?;
+
+        let mut buf = PathBuf::from(&new_basename);
         buf.set_extension("ans");
         prelude.store(buf.as_path())?;
-        buf.set_extension("phases");
-        ef.store(buf.as_path())?;
-
         Ok(())
     }
 
@@ -170,11 +184,11 @@ impl ANSBVGraph {
     ) -> Result<EliasFano> {
         let upper_bound =
             phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
-        let mut ef_builder = EliasFanoBuilder::new(num_nodes, upper_bound + 1);
+        let mut efb = EliasFanoBuilder::new(num_nodes, upper_bound + 1);
 
         for phase in phases.iter() {
-            ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
+            efb.push(phase.stream_pointer << 32 | phase.state as usize)?;
         }
-        Ok(ef_builder.build())
+        Ok(efb.build())
     }
 }

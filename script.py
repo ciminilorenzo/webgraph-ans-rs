@@ -3,10 +3,18 @@ import subprocess
 import sys
 import csv
 
+# bvgraph_seq_speed = ["9.5 ns/arc"]
+# bvgraph_rand_speed = ["43.8 ns/arc"]
 highly_compressed_params = {"w": "16", "c": "2000000000"}
-ans_graphs = ['cnr-2000', 'in-2004']
-bv_graphs_size = [1258291, 4613734]
-arcs = [3216152, 16917053]
+ans_graphs = ['cnr-2000']
+
+bv_graphs_size = [1258291]
+bv_hc_graphs_size = [987136]
+
+bv_graphs_bit_link = [3.12]
+bv_hc_graphs_bit_link = [2.45]
+
+arcs = [3216152]
 
 # The first parameter must be the path to the directory containing the whole set of ans_graphs
 graphs_dir = sys.argv[1]
@@ -49,7 +57,7 @@ for graph in ans_graphs:
     ans_hc_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}-hc.ans"))
     ans_phases_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.phases"))
 
-    # The sequential speed is done by running seq_access_bvtest on the high compressed graph.
+    # The sequential speed test is performed by running seq_access_bvtest on the high compressed graph.
     print(f"Starting sequential speed test of {graph}")
     sequential_speed = (subprocess.run([
         "./target/release/seq_access_bvtest",
@@ -58,7 +66,7 @@ for graph in ans_graphs:
 
     sequential_access_speed.append(sequential_speed.stdout.decode('utf-8'))
 
-    # The random speed is done by running random_access_bvtest on the compressed graph.
+    # The random speed test is performed by running random_access_bvtest on the compressed graph.
     print(f"Starting random speed test of {graph}")
     random_speed = (subprocess.run([
         "./target/release/random_access_bvtest",
@@ -71,17 +79,41 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     # create the csv writer
     writer = csv.writer(f)
     # write the header
-    writer.writerow(['name', 'BVGraph', 'ANSBVGraph', 'occupation', 'bit/link', 'phases', 'random speed', 'sequential speed'])
+    writer.writerow([
+        'name',
+        '.graph',
+        '.ans',
+        '.graph bit/link',
+        '.ans bit/link',
+        'occupation',
+        'hc.graph',
+        'hc.ans',
+        'hc.graph bit/link',
+        'hc.ans bit/link',
+        'occupation hc',
+        'phases',
+        'random speed',
+        'sequential speed'
+    ])
 
     for index in range(len(ans_graphs)):
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
+        hc_bit_link = "{:.3f}".format((ans_hc_sizes[index] * 8) / arcs[index])
         occupation = "-{:.0f}%".format((bv_graphs_size[index] - ans_sizes[index]) / bv_graphs_size[index] * 100)
+        occupation_hc = "-{:.0f}%".format((bv_hc_graphs_size[index] - ans_hc_sizes[index]) / bv_hc_graphs_size[index] * 100)
+
         data = [
             ans_graphs[index],
             "{} B".format(bv_graphs_size[index]),
             "{} B".format(ans_sizes[index]),
-            occupation,
+            bv_graphs_bit_link[index],
             bit_link,
+            occupation,
+            "{} B".format(bv_hc_graphs_size[index]),
+            "{} B".format(ans_hc_sizes[index]),
+            bv_hc_graphs_bit_link[index],
+            hc_bit_link,
+            occupation_hc,
             "{} B".format(ans_phases_sizes[index]),
             random_access_speed[index],
             sequential_access_speed[index],

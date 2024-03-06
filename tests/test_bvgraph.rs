@@ -11,7 +11,9 @@ use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimat
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
 use lender::for_;
-use sux::dict::EliasFanoBuilder;
+use sux::bits::BitFieldVec;
+use sux::dict::{EliasFano, EliasFanoBuilder};
+use sux::prelude::{ConvertTo, SelectFixed1, SelectFixed2};
 use webgraph::prelude::*;
 
 #[test]
@@ -86,9 +88,9 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
         ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
     }
     let ef = ef_builder.build();
+    let ef: EliasFano<SelectFixed2> = ef.convert_to()?;
 
     let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
-
     let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 6, 4, 7, 2);
 
     assert_eq!(
@@ -155,7 +157,7 @@ fn decodes_correctly_cnr_graph() -> Result<()> {
         ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
     }
     let ef = ef_builder.build();
-
+    let ef: EliasFano<SelectFixed2> = ef.convert_to()?;
     let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
 
     let decoded_graph =

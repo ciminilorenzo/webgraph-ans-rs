@@ -20,7 +20,7 @@ profile.json
 
 # There may be results of bvcomp somewhere.
 *.ans
-*.phases
+*.ef
 
 # venv
 venv/
