@@ -2,11 +2,10 @@ import os
 import subprocess
 import sys
 import csv
-import re
 
-# Graphs are: cnr-2000 and in-2004
+highly_compressed_params = {"w": "16", "c": "2000000000"}
 ans_graphs = ['cnr-2000', 'in-2004']
-bv_graphs = [1258291, 4613734]
+bv_graphs_size = [1258291, 4613734]
 arcs = [3216152, 16917053]
 
 # The first parameter must be the path to the directory containing the whole set of ans_graphs
@@ -18,59 +17,70 @@ if not os.path.isdir(graphs_dir):
     print(f"{graphs_dir} doesn't exist.")
     exit(1)
 
-# Build bvcomp
+# Build bins
 subprocess.run(["cargo", "build", "--release", "--bin", "bvcomp"])
-# Build bvtest
-subprocess.run(["cargo", "build", "--release", "--bin", "bvtest"])
+subprocess.run(["cargo", "build", "--release", "--bin", "random_access_bvtest"])
+subprocess.run(["cargo", "build", "--release", "--bin", "seq_access_bvtest"])
 
 ans_sizes = []
+ans_hc_sizes = []
 ans_phases_sizes = []
 random_access_speed = []
 sequential_access_speed = []
 
 for graph in ans_graphs:
-    print(f"Starting compression of {graph}")
-    subprocess.run(["./target/release/bvcomp", f"{graphs_dir}{graph}/{graph}", f"{compressed_graphs_dir}{graph}"])
+    print(f"Starting standard compression of {graph}")
+    subprocess.run([
+        "./target/release/bvcomp",
+        f"{graphs_dir}{graph}/{graph}",
+        f"{compressed_graphs_dir}{graph}"
+    ])
 
-    ans_size = os.path.getsize(f"{compressed_graphs_dir}{graph}.ans")
-    ans_sizes.append(ans_size)
-    phases_size = os.path.getsize(f"{compressed_graphs_dir}{graph}.phases")
-    ans_phases_sizes.append(phases_size)
+    print(f"Starting high compression of {graph}")
+    subprocess.run([
+        "./target/release/bvcomp",
+        f"{graphs_dir}{graph}/{graph}",
+        f"{compressed_graphs_dir}{graph}-hc",
+        "-w", f"{highly_compressed_params.get('w')}",
+        "-c", f"{highly_compressed_params.get('c')}"
+        ])
 
-    print(f"Starting random/sequential speed test of {graph}")
+    ans_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.ans"))
+    ans_hc_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}-hc.ans"))
+    ans_phases_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.phases"))
 
-    timing = subprocess.run([
-        "./target/release/bvtest",
+    # The sequential speed is done by running seq_access_bvtest on the high compressed graph.
+    print(f"Starting sequential speed test of {graph}")
+    sequential_speed = (subprocess.run([
+        "./target/release/seq_access_bvtest",
+        f"{compressed_graphs_dir}{graph}-hc",
+    ],stdout=subprocess.PIPE))
+
+    sequential_access_speed.append(sequential_speed.stdout.decode('utf-8'))
+
+    # The random speed is done by running random_access_bvtest on the compressed graph.
+    print(f"Starting random speed test of {graph}")
+    random_speed = (subprocess.run([
+        "./target/release/random_access_bvtest",
         f"{compressed_graphs_dir}{graph}",
-    ],
-        stderr=subprocess.PIPE,
-    )
+    ],stdout=subprocess.PIPE))
 
-    # Define regular expression pattern
-    pattern = r'INFO - Elapsed: (.*?) \['
-
-    # Find all matches
-    matches = re.findall(pattern, f"{timing}")
-
-    random = matches[0]
-    sequential = matches[1]
-    random_access_speed.append(random)
-    sequential_access_speed.append(sequential)
+    random_access_speed.append(random_speed.stdout.decode('utf-8'))
 
 with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     # create the csv writer
     writer = csv.writer(f)
     # write the header
-    writer.writerow(['name', 'BVGraph', 'ANSBVGraph', 'improvement', 'bit/link', 'phases', 'random', 'sequential'])
+    writer.writerow(['name', 'BVGraph', 'ANSBVGraph', 'occupation', 'bit/link', 'phases', 'random speed', 'sequential speed'])
 
     for index in range(len(ans_graphs)):
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
-        improvement = "-{:.0f}%".format((bv_graphs[index] - ans_sizes[index]) / bv_graphs[index] * 100)
+        occupation = "-{:.0f}%".format((bv_graphs_size[index] - ans_sizes[index]) / bv_graphs_size[index] * 100)
         data = [
             ans_graphs[index],
-            "{} B".format(bv_graphs[index]),
+            "{} B".format(bv_graphs_size[index]),
             "{} B".format(ans_sizes[index]),
-            improvement,
+            occupation,
             bit_link,
             "{} B".format(ans_phases_sizes[index]),
             random_access_speed[index],
