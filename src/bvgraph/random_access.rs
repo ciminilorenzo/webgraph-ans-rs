@@ -33,7 +33,7 @@ impl ANSBVGraph {
         let prelude = Prelude::load_full(buf.as_path())?;
 
         // load phases
-        let ef_path = suffix_path(&basename, ".ef");
+        let ef_path = suffix_path(&basename, ".phases");
         let phases = EF::load_full(ef_path)?;
 
         let nun_nodes = prelude.number_of_nodes;
@@ -160,7 +160,7 @@ impl ANSBVGraph {
 
         // (5) serialize
         let mut buf = PathBuf::from(&new_basename);
-        buf.set_extension("ef");
+        buf.set_extension("phases");
         let mut ef_file = BufWriter::new(
             File::create(&buf)
                 .with_context(|| format!("Could not create {}", buf.to_str().unwrap()))?,
