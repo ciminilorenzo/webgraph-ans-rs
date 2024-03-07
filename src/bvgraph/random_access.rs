@@ -13,8 +13,7 @@ use log::info;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
-use sux::dict::{EliasFano, EliasFanoBuilder};
-use sux::prelude::{BitFieldVec, CountBitVec, SelectFixed1, SelectFixed2};
+use sux::dict::EliasFanoBuilder;
 use sux::traits::ConvertTo;
 use webgraph::graphs::{BVComp, BVGraph, BVGraphSeq};
 use webgraph::prelude::{suffix_path, SequentialLabeling};
@@ -158,7 +157,6 @@ impl ANSBVGraph {
         // get phases and the encoder from the bvcomp
         let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
         let ef = Self::build_elias_from_phases(phases, prelude.number_of_nodes)?;
-        let ef: EF = ef.convert_to()?;
 
         // (5) serialize
         let mut buf = PathBuf::from(&new_basename);
@@ -178,10 +176,10 @@ impl ANSBVGraph {
         Ok(())
     }
 
-    fn build_elias_from_phases(
+    pub fn build_elias_from_phases(
         phases: Vec<ANSCompressorPhase>,
         num_nodes: usize,
-    ) -> Result<EliasFano> {
+    ) -> Result<EF> {
         let upper_bound =
             phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
         let mut efb = EliasFanoBuilder::new(num_nodes, upper_bound + 1);
@@ -189,6 +187,6 @@ impl ANSBVGraph {
         for phase in phases.iter() {
             efb.push(phase.stream_pointer << 32 | phase.state as usize)?;
         }
-        Ok(efb.build())
+        Ok(efb.build().convert_to()?)
     }
 }

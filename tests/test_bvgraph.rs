@@ -11,9 +11,8 @@ use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimat
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
 use lender::for_;
-use sux::bits::BitFieldVec;
 use sux::dict::{EliasFano, EliasFanoBuilder};
-use sux::prelude::{ConvertTo, SelectFixed1, SelectFixed2};
+use sux::prelude::{ConvertTo, SelectFixed2};
 use webgraph::prelude::*;
 
 #[test]
@@ -80,16 +79,7 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
     let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
     // (4) create elias fano
-    let upper_bound =
-        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
-    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
-
-    for phase in phases.iter() {
-        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
-    }
-    let ef = ef_builder.build();
-    let ef: EliasFano<SelectFixed2> = ef.convert_to()?;
-
+    let ef = ANSBVGraph::build_elias_from_phases(phases, graph.num_nodes())?;
     let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
     let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 6, 4, 7, 2);
 
@@ -149,15 +139,7 @@ fn decodes_correctly_cnr_graph() -> Result<()> {
     let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
     // (4) create elias fano
-    let upper_bound =
-        phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
-    let mut ef_builder = EliasFanoBuilder::new(prelude.number_of_nodes, upper_bound + 1);
-
-    for phase in phases.iter() {
-        ef_builder.push(phase.stream_pointer << 32 | phase.state as usize)?;
-    }
-    let ef = ef_builder.build();
-    let ef: EliasFano<SelectFixed2> = ef.convert_to()?;
+    let ef = ANSBVGraph::build_elias_from_phases(phases, num_nodes)?;
     let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
 
     let decoded_graph =
