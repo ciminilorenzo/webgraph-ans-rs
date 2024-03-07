@@ -36,7 +36,6 @@ impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
     type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
 
     fn new_decoder(&self, node: usize) -> Result<Self::Decoder<'_>> {
-        println!("Asking for node: {}", node);
         // nodes' phases are stored in reversed order. Thus, for example, let's
         // take the last phase if we want the phase of the first node.
         let ef_entry = self.phases.get(self.num_nodes - node - 1);

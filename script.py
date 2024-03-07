@@ -3,19 +3,14 @@ import subprocess
 import sys
 import csv
 
-# bvgraph_seq_speed = ["9.5 ns/arc"]
-# bvgraph_rand_speed = ["43.8 ns/arc"]
 highly_compressed_params = {"w": "16", "c": "2000000000"}
-ans_graphs = ['cnr-2000']
-
-bv_graphs_size = [1258291]
-bv_hc_graphs_size = [987136]
-
-bv_graphs_bit_link = [3.12]
-bv_hc_graphs_bit_link = [2.45]
-
-arcs = [3216152]
-
+ans_graphs = ['gsh-2015-host']
+# The size, in bytes, of the compressed graphs (.graph)
+bv_graphs_size = [1503238553]
+# The number of arcs in the graph
+arcs = [1802747600]
+# The size, in bytes, of the high compressed graphs (-hc.graph)
+bv_hc_graphs_size = [1395864371]
 # The first parameter must be the path to the directory containing the whole set of ans_graphs
 graphs_dir = sys.argv[1]
 # The second parameter must be the path where the new graph will be stored.
@@ -76,7 +71,6 @@ for graph in ans_graphs:
     random_access_speed.append(random_speed.stdout.decode('utf-8'))
 
 with open('results.csv', 'w', encoding='UTF8', newline='') as f:
-    # create the csv writer
     writer = csv.writer(f)
     # write the header
     writer.writerow([
@@ -97,21 +91,29 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     ])
 
     for index in range(len(ans_graphs)):
+        # bit/link .ans
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
+        # bit/link -hc.ans
         hc_bit_link = "{:.3f}".format((ans_hc_sizes[index] * 8) / arcs[index])
+        # How much we save in space w.r.t the .graph
         occupation = "-{:.0f}%".format((bv_graphs_size[index] - ans_sizes[index]) / bv_graphs_size[index] * 100)
+        # How much we save in space w.r.t the -hc.graph
         occupation_hc = "-{:.0f}%".format((bv_hc_graphs_size[index] - ans_hc_sizes[index]) / bv_hc_graphs_size[index] * 100)
+        # bit/link .graph
+        bv_graphs_bit_link = ans_sizes[index] * 8 / arcs[index]
+        # bit/link -hc.graph
+        bv_hc_graphs_bit_link = ans_hc_sizes[index] * 8 / arcs[index]
 
         data = [
             ans_graphs[index],
             "{} B".format(bv_graphs_size[index]),
             "{} B".format(ans_sizes[index]),
-            bv_graphs_bit_link[index],
+            bv_graphs_bit_link,
             bit_link,
             occupation,
             "{} B".format(bv_hc_graphs_size[index]),
             "{} B".format(ans_hc_sizes[index]),
-            bv_hc_graphs_bit_link[index],
+            bv_hc_graphs_bit_link,
             hc_bit_link,
             occupation_hc,
             "{} B".format(ans_phases_sizes[index]),
@@ -119,7 +121,6 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
             sequential_access_speed[index],
         ]
 
-        # write the data
         writer.writerow(data)
 
 print("Saving results in ./results.csv")
