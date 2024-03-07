@@ -4,6 +4,7 @@ import sys
 import csv
 
 highly_compressed_params = {"w": "16", "c": "2000000000"}
+# Names of the graphs to be compressed
 ans_graphs = ['gsh-2015-host']
 # The size, in bytes, of the compressed graphs (.graph)
 bv_graphs_size = [1503238553]
@@ -77,14 +78,10 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         'name',
         '.graph',
         '.ans',
-        '.graph bit/link',
-        '.ans bit/link',
-        'occupation',
+        'bit/link',
         'hc.graph',
         'hc.ans',
-        'hc.graph bit/link',
-        'hc.ans bit/link',
-        'occupation hc',
+        'hc bit/link',
         'phases',
         'random speed',
         'sequential speed'
@@ -103,22 +100,22 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         bv_graphs_bit_link = "{:.2f}".format(ans_sizes[index] * 8 / arcs[index])
         # bit/link -hc.graph
         bv_hc_graphs_bit_link = "{:.2f}".format(ans_hc_sizes[index] * 8 / arcs[index])
+        # .obl size
+        obl_size = os.path.getsize(f"{compressed_graphs_dir}{ans_graphs[index]}.obl")
+        # How much we spend w.r.t the .obl
+        occupation_phases = "{:.0f}%".format((-(obl_size - ans_phases_sizes[index]) / obl_size * 100))
 
         data = [
             ans_graphs[index],
             "{} B".format(bv_graphs_size[index]),
             "{} B".format(ans_sizes[index]),
-            bv_graphs_bit_link,
-            bit_link,
-            occupation,
+            "{}({})".format(bit_link, occupation),
             "{} B".format(bv_hc_graphs_size[index]),
             "{} B".format(ans_hc_sizes[index]),
-            bv_hc_graphs_bit_link,
-            hc_bit_link,
-            occupation_hc,
-            "{} B".format(ans_phases_sizes[index]),
-            random_access_speed[index],
-            sequential_access_speed[index],
+            "{}({})".format(hc_bit_link, occupation_hc),
+            "{}({}) B".format(ans_phases_sizes[index], occupation_phases),
+            random_access_speed[index], # to compare with bv random speed
+            sequential_access_speed[index], # to compare with bv sequential speed
         ]
 
         writer.writerow(data)
