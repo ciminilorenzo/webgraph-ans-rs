@@ -83,7 +83,7 @@ impl ANSBVGraph {
 
         pl.item_name("node")
             .expected_updates(Some(seq_graph.num_nodes()));
-        pl.start("Pushing input into the model builder with log2 mock...");
+        pl.start("Pushing symbols into model builder with Log2Estimator...");
 
         // first iteration: build a model with Log2Estimator
         for_![ (_, succ) in seq_graph {
@@ -113,7 +113,7 @@ impl ANSBVGraph {
 
         pl.item_name("node")
             .expected_updates(Some(seq_graph.num_nodes()));
-        pl.start("Pushing input into the model builder with the EntropyEstimator...");
+        pl.start("Pushing symbols into model builder with EntropyEstimator...");
 
         // second iteration: build a model with the entropy mock writer
         for_![ (_, succ) in seq_graph {

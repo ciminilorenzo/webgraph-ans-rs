@@ -57,7 +57,7 @@ for graph in ans_graphs:
     sequential_speed = (subprocess.run([
         "./target/release/seq_access_bvtest",
         f"{compressed_graphs_dir}{graph}-hc",
-    ],stdout=subprocess.PIPE))
+    ], stdout=subprocess.PIPE))
 
     sequential_access_speed.append(sequential_speed.stdout.decode('utf-8'))
 
@@ -66,7 +66,7 @@ for graph in ans_graphs:
     random_speed = (subprocess.run([
         "./target/release/random_access_bvtest",
         f"{compressed_graphs_dir}{graph}",
-    ],stdout=subprocess.PIPE))
+    ], stdout=subprocess.PIPE))
 
     random_access_speed.append(random_speed.stdout.decode('utf-8'))
 
@@ -100,9 +100,9 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         # How much we save in space w.r.t the -hc.graph
         occupation_hc = "-{:.0f}%".format((bv_hc_graphs_size[index] - ans_hc_sizes[index]) / bv_hc_graphs_size[index] * 100)
         # bit/link .graph
-        bv_graphs_bit_link = ans_sizes[index] * 8 / arcs[index]
+        bv_graphs_bit_link = "{:.2f}".format(ans_sizes[index] * 8 / arcs[index])
         # bit/link -hc.graph
-        bv_hc_graphs_bit_link = ans_hc_sizes[index] * 8 / arcs[index]
+        bv_hc_graphs_bit_link = "{:.2f}".format(ans_hc_sizes[index] * 8 / arcs[index])
 
         data = [
             ans_graphs[index],
