@@ -17,12 +17,16 @@ compressed_graphs_dir = sys.argv[2]
 webgraph_rs_dir = sys.argv[3]
 
 # Check all needed directories are present before actually starting the script.
-if not os.path.isdir(graphs_dir) or not os.path.isdir(compressed_graphs_dir):
-    print(f"{graphs_dir} doesn't exist. Usage is: \n <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
+if not os.path.isdir(graphs_dir):
+    print(f"{graphs_dir} it not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
     exit(1)
 
 if not os.path.isdir(webgraph_rs_dir):
-    print(f"{webgraph_rs_dir} Usage is: \n <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
+    print(f"{webgraph_rs_dir} is not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
+    exit(1)
+
+if not os.path.isdir(compressed_graphs_dir):
+    print(f"{compressed_graphs_dir} is not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
     exit(1)
 
 # Check all needed files are present before actually starting the script.
@@ -101,7 +105,8 @@ for graph in ans_graphs:
         f"{compressed_graphs_dir}{graph}-hc",
     ], stdout=subprocess.PIPE))
 
-    sequential_access_speed.append(float(sequential_speed.stdout.decode('utf-8')))
+    sequential_speed = sorted([float(speed) for speed in sequential_speed.stdout.decode('utf-8').split("\n") if speed != ''])
+    sequential_access_speed.append(sequential_speed[len(sequential_speed) // 2])
 
     # The random speed test is performed by running random_access_bvtest on the compressed graph.
     print(f"Starting random speed test of {graph}")
@@ -110,7 +115,8 @@ for graph in ans_graphs:
         f"{compressed_graphs_dir}{graph}",
     ], stdout=subprocess.PIPE))
 
-    random_access_speed.append(float(random_speed.stdout.decode('utf-8')))
+    random_speed = sorted([float(speed) for speed in random_speed.stdout.decode('utf-8').split("\n") if speed != ''])
+    random_access_speed.append(random_speed[len(random_speed) // 2])
 
 with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     writer = csv.writer(f)
@@ -130,12 +136,12 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     ])
 
     for index in range(len(ans_graphs)):
-        print("Building the .ef file")
-        command = f"{webgraph_rs_dir}target/release/webgraph build ef {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}"
-        subprocess.run(command, shell=True)
+        if not os.path.isfile(f"{graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}.ef"):
+            print("Building the .ef file")
+            command = f"{webgraph_rs_dir}target/release/webgraph build ef {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}"
+            subprocess.run(command, shell=True)
 
         print(f"Starting random speed test of {ans_graphs[index]} with webgraph-rs")
-
         command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]} --random 10000000"
         lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
         speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
