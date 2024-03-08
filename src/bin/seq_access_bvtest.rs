@@ -33,10 +33,7 @@ pub fn main() -> anyhow::Result<()> {
     while let Some((_, succ)) = iter.next() {
         c += succ.into_iter().count() as u64;
     }
-    println!(
-        "{:.2} ns/arc",
-        (start.elapsed().as_secs_f64() / c as f64) * 1e9
-    );
+    println!("{}", (start.elapsed().as_secs_f64() / c as f64) * 1e9);
 
     assert_eq!(c, graph.num_arcs_hint().unwrap());
 

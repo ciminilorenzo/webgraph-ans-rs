@@ -47,6 +47,6 @@ pub fn main() -> Result<()> {
     }
     pl.done_with_count(c as usize);
 
-    println!("{:.2} ns/arc", start.elapsed().as_nanos() / c as u128);
+    println!("{:.2}", start.elapsed().as_nanos() / c as u128);
     Ok(())
 }
