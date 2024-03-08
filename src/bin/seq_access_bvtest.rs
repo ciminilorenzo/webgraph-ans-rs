@@ -24,17 +24,19 @@ pub fn main() -> anyhow::Result<()> {
     let graph = ANSBVGraph::load(args.basename)?;
 
     pl.item_name("node")
-        .expected_updates(Some(graph.num_nodes()));
+        .expected_updates(Some(graph.num_nodes() * 10));
     pl.start("Starting sequential-access speed test...");
+    let mut c: u64 = 0;
 
     for _ in 0..10 {
-        let mut c: u64 = 0;
         let start = std::time::Instant::now();
         let mut iter = graph.iter();
         while let Some((_, succ)) = iter.next() {
             c += succ.into_iter().count() as u64;
+            pl.update();
         }
         println!("{}", (start.elapsed().as_secs_f64() / c as f64) * 1e9);
     }
+    pl.done_with_count(c as usize);
     Ok(())
 }
