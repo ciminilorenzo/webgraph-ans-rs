@@ -4,9 +4,10 @@ import sys
 import csv
 import re
 
-# !!!! Modify this array by adding/removing names as pleased !!!!
 # Names of the graphs to be compressed
-ans_graphs = ["cnr-2000"]
+ans_graphs = ["cnr-2000"]  # !!!! Modify this array by adding/removing graphs' name as pleased !!!!
+
+# The parameters to be used for the high compressed graphs
 high_compressed_params = {"w": "16", "c": "2000000000"}
 # The first parameter must be the path to the directory containing the whole set of ans_graphs
 graphs_dir = sys.argv[1]
@@ -16,8 +17,12 @@ compressed_graphs_dir = sys.argv[2]
 webgraph_rs_dir = sys.argv[3]
 
 # Check all needed directories are present before actually starting the script.
-if not os.path.isdir(graphs_dir) or not os.path.isdir(compressed_graphs_dir) or not os.path.isdir(webgraph_rs_dir):
-    print(f"{graphs_dir} doesn't exist.")
+if not os.path.isdir(graphs_dir) or not os.path.isdir(compressed_graphs_dir):
+    print(f"{graphs_dir} doesn't exist. Usage is: \n <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
+    exit(1)
+
+if not os.path.isdir(webgraph_rs_dir):
+    print(f"{webgraph_rs_dir} Usage is: \n <graphs' dir> <new graphs' dir> <webgraph-rs dir>")
     exit(1)
 
 # Check all needed files are present before actually starting the script.
@@ -25,19 +30,18 @@ for graph in ans_graphs:
     if not os.path.isfile(f"{graphs_dir}{graph}/{graph}.properties") or \
             not os.path.isfile(f"{graphs_dir}{graph}/{graph}-hc.properties") or \
             not os.path.isfile(f"{graphs_dir}{graph}/{graph}.obl") or \
-            not os.path.isfile(f"{graphs_dir}{graph}/{graph}.graph"):
+            not os.path.isfile(f"{graphs_dir}{graph}/{graph}.graph") or \
+            not os.path.isfile(f"{graphs_dir}{graph}/{graph}-hc.graph"):
         print(f"{graph} is missing some files.")
+        print(f"Be sure that in {graphs_dir}{graph} there are the following files:")
+        print(f"{graph}.properties, {graph}-hc.properties, {graph}.obl, {graph}.graph", f"{graph}-hc.graph")
         exit(1)
 
 # Build bins
 subprocess.run(["cargo", "build", "--release", "--bin", "bvcomp"])
 subprocess.run(["cargo", "build", "--release", "--bin", "random_access_bvtest"])
 subprocess.run(["cargo", "build", "--release", "--bin", "seq_access_bvtest"])
-try:
-    subprocess.run(["cargo", "build", "--release", "--manifest-path", f"{webgraph_rs_dir}/Cargo.toml"]).check_returncode()
-except:
-    print(f"Error building webgraph-rs")
-    exit(1)
+subprocess.run(["cargo", "build", "--release", "--manifest-path", f"{webgraph_rs_dir}/Cargo.toml"]).check_returncode()
 
 # The size, in bytes, of the compressed graphs (.graph)
 bv_graphs_size = []
@@ -126,15 +130,20 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
     ])
 
     for index in range(len(ans_graphs)):
+        print("Building the .ef file")
+        command = f"{webgraph_rs_dir}target/release/webgraph build ef {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}"
+        subprocess.run(command, shell=True)
+
         print(f"Starting random speed test of {ans_graphs[index]} with webgraph-rs")
-        command = f"{webgraph_rs_dir}/target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]} --random 10000000"
+
+        command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]} --random 10000000"
         lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
         speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
         # Get the median of the speeds
         bv_random_speed = speeds[len(speeds) // 2]
 
         print(f"Starting sequential speed test of {ans_graphs[index]}-hc with webgraph-rs")
-        command = f"{webgraph_rs_dir}/target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
+        command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
         lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
         speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
         # Get the median of the speeds
@@ -154,9 +163,11 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         # How much we spend w.r.t the .obl
         occupation_phases = "{:.0f}%".format(-(((obl_size - ans_phases_sizes[index]) / obl_size) * 100))
         # Random speed comparison
-        random_speed_comparison = "{:.1f}".format(-(((bv_random_speed - random_access_speed[index]) / bv_random_speed) * 100))
+        random_speed_comparison = "{:.1f}%".format(
+            -(((bv_random_speed - random_access_speed[index]) / bv_random_speed) * 100))
         # Sequential speed comparison
-        sequential_speed_comparison = "{:.1f}".format(-(((bv_seq_speed - sequential_access_speed[index]) / bv_seq_speed) * 100))
+        sequential_speed_comparison = "{:.1f}%".format(
+            -(((bv_seq_speed - sequential_access_speed[index]) / bv_seq_speed) * 100))
 
         data = [
             ans_graphs[index],
