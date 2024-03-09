@@ -37,8 +37,8 @@ for graph in ans_graphs:
     if not os.path.isfile(f"{graphs_dir}{graph}/{graph}.properties") or \
             not os.path.isfile(f"{graphs_dir}{graph}/{graph}-hc.properties") or \
             not os.path.isfile(f"{graphs_dir}{graph}/{graph}.obl") or \
-            not os.path.isfile(f"{graphs_dir}{graph}/{graph}.graph"):
-            # not os.path.isfile(f"{graphs_dir}{graph}/{graph}-hc.graph"):
+            not os.path.isfile(f"{graphs_dir}{graph}/{graph}.graph") or \
+            not os.path.isfile(f"{graphs_dir}{graph}/{graph}-hc.graph"):
         print(f"{graph} is missing some files.")
         print(f"Be sure that in {graphs_dir}{graph} there are the following files:")
         print(f"{graph}.properties, {graph}-hc.properties, {graph}.obl, {graph}.graph", f"{graph}-hc.graph")
@@ -110,7 +110,8 @@ for graph in ans_graphs:
         f"{compressed_graphs_dir}{graph}-hc",
     ], stdout=subprocess.PIPE))
 
-    sequential_speed = sorted([float(speed) for speed in sequential_speed.stdout.decode('utf-8').split("\n") if speed != ''])
+    sequential_speed = sorted(
+        [float(speed) for speed in sequential_speed.stdout.decode('utf-8').split("\n") if speed != ''])
     sequential_access_speed.append(sequential_speed[len(sequential_speed) // 2])
 
     # The random speed test is performed by running random_access_bvtest on the compressed graph.
@@ -155,12 +156,12 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         # Get the median of the speeds
         bv_random_speed = speeds[len(speeds) // 2]
 
-        print(f"Starting sequential speed test of {ans_graphs[index]}-hc with webgraph-rs")
-        command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
-        lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
-        speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
+        # print(f"Starting sequential speed test of {ans_graphs[index]}-hc with webgraph-rs")
+        # command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
+        # lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
+        # speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
         # Get the median of the speeds
-        bv_seq_speed = speeds[len(speeds) // 2]
+        # bv_seq_speed = speeds[len(speeds) // 2]
 
         # bit/link .ans
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
@@ -179,7 +180,7 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         random_speed_comparison = "{:.1f}%".format(
             -(((bv_random_speed - random_access_speed[index]) / bv_random_speed) * 100))
         # Sequential speed comparison
-        #sequential_speed_comparison = "{:.1f}%".format(
+        # sequential_speed_comparison = "{:.1f}%".format(
         #    -(((bv_seq_speed - sequential_access_speed[index]) / bv_seq_speed) * 100))
 
         data = [

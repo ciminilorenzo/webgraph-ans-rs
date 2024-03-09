@@ -21,34 +21,21 @@ struct Args {
 
 pub fn main() -> Result<()> {
     let args = Args::parse();
-
-    stderrlog::new()
-        .verbosity(2)
-        .timestamp(stderrlog::Timestamp::Second)
-        .init()
-        .unwrap();
-
-    let mut pl = ProgressLogger::default();
     let graph = ANSBVGraph::load(args.basename)?;
 
-    pl.item_name("node")
-        .expected_updates(Some(RANDOM_TEST_SAMPLES as usize * 10));
-    pl.start("Starting random-access speed test...");
-    let mut c: u64 = 0;
-
-    for _ in 0..10 {
+    for i in 0..10 {
+        eprintln!("Iteration number {} out of 10", i);
         // Random-access speed test
         let mut rng = SmallRng::seed_from_u64(0);
+        let mut c: u64 = 0;
 
         let num_nodes = graph.num_nodes();
         let random_nodes = (0..RANDOM_TEST_SAMPLES).map(|_| rng.gen_range(0..num_nodes));
         let start = std::time::Instant::now();
         for node in random_nodes {
             c += black_box(graph.successors(node).count() as u64);
-            pl.update();
         }
         println!("{:.2}", start.elapsed().as_nanos() / c as u128);
     }
-    pl.done_with_count(c as usize);
     Ok(())
 }
