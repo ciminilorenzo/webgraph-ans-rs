@@ -101,7 +101,10 @@ for graph in ans_graphs:
 
     ans_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.ans"))
     ans_hc_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}-hc.ans"))
-    ans_phases_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.phases"))
+
+    states = os.path.getsize(f"{compressed_graphs_dir}{graph}.states")
+    pointers = os.path.getsize(f"{compressed_graphs_dir}{graph}.pointers")
+    ans_phases_sizes.append(states + pointers)
 
     # The sequential speed test is performed by running seq_access_bvtest on the high compressed graph.
     print(f"Starting sequential speed test on {graph}")

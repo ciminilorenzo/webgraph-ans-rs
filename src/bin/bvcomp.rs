@@ -30,7 +30,7 @@ pub fn main() -> Result<()> {
         &args.basename,
         &args.new_basename,
         args.compressions_args.compression_window,
-        args.compressions_args.max_ref_count,
+        args.compressions_args.max_ref_count as usize,
         args.compressions_args.min_interval_length,
     )?;
 
