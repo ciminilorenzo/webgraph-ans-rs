@@ -3,7 +3,6 @@ use std::iter::Iterator;
 
 use anyhow::Result;
 use clap::Parser;
-use dsi_progress_logger::*;
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use rand::rngs::SmallRng;
 use rand::Rng;
@@ -35,6 +34,7 @@ pub fn main() -> Result<()> {
         for node in random_nodes {
             c += black_box(graph.successors(node).count() as u64);
         }
+        // results are in nanos
         println!("{:.2}", start.elapsed().as_nanos() / c as u128);
     }
     Ok(())

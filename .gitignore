@@ -18,9 +18,10 @@ profile.json
 
 .DS_Store
 
-# There may be results of bvcomp somewhere.
+# There may be results of either bvcomp or tests somewhere.
 *.ans
-*.phases
+*.states
+*.pointers
 *.obl
 *.properties
 

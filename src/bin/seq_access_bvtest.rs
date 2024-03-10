@@ -1,5 +1,4 @@
 use clap::Parser;
-use dsi_progress_logger::{ProgressLog, ProgressLogger};
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use lender::Lender;
 use webgraph::prelude::SequentialLabeling;

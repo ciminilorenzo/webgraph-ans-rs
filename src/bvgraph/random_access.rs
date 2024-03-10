@@ -2,7 +2,7 @@ use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use crate::bvgraph::reader::ANSBVGraphDecoderFactory;
 use crate::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
-use crate::EF;
+use crate::{State, EF};
 use anyhow::{Context, Result};
 use dsi_bitstream::prelude::BE;
 use dsi_progress_logger::{ProgressLog, ProgressLogger};
@@ -32,15 +32,19 @@ impl ANSBVGraph {
         buf.set_extension("ans");
         let prelude = Prelude::load_full(buf.as_path())?;
 
-        // load phases
-        let ef_path = suffix_path(&basename, ".phases");
+        // load pointers
+        let ef_path = suffix_path(&basename, ".pointers");
         let phases = EF::load_full(ef_path)?;
+
+        // load states
+        let states_path = suffix_path(&basename, ".states");
+        let states = Box::<[State]>::load_full(states_path)?;
 
         let nun_nodes = prelude.number_of_nodes;
         let num_arcs = prelude.number_of_arcs;
         let compression_window = prelude.compression_window;
         let min_interval_length = prelude.min_interval_length;
-        let factory = ANSBVGraphDecoderFactory::new(prelude, phases);
+        let factory = ANSBVGraphDecoderFactory::new(prelude, phases, states);
 
         Ok(BVGraph::<ANSBVGraphDecoderFactory>::new(
             factory,
@@ -154,39 +158,43 @@ impl ANSBVGraph {
         }];
         pl.done();
 
-        // get phases and the encoder from the bvcomp
+        // get phases and the prelude after the graph's compression
         let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
-        let ef = Self::build_elias_from_phases(phases, prelude.number_of_nodes)?;
 
         // (5) serialize
         let mut buf = PathBuf::from(&new_basename);
-        buf.set_extension("phases");
+
+        // serialize states
+        let states: Box<[State]> = phases.iter().map(|phase| phase.state).collect();
+        buf.set_extension("states");
+        states.store(buf.as_path())?;
+
+        // serialize ef containing stream pointers
+        buf.set_extension("pointers");
+        let ef = Self::build_ef(phases, prelude.number_of_nodes)?;
         let mut ef_file = BufWriter::new(
             File::create(&buf)
                 .with_context(|| format!("Could not create {}", buf.to_str().unwrap()))?,
         );
-
         ef.serialize(&mut ef_file).with_context(|| {
             format!("Could not serialize EliasFano to {}", buf.to_str().unwrap())
         })?;
 
+        // serialize prelude
         let mut buf = PathBuf::from(&new_basename);
         buf.set_extension("ans");
         prelude.store(buf.as_path())?;
         Ok(())
     }
 
-    pub fn build_elias_from_phases(
-        phases: Vec<ANSCompressorPhase>,
-        num_nodes: usize,
-    ) -> Result<EF> {
-        let upper_bound =
-            phases.last().unwrap().stream_pointer << 32 | phases.last().unwrap().state as usize;
+    /// Builds an EliasFano with the whole set of stream pointers contained in the phases.
+    pub fn build_ef(phases: Vec<ANSCompressorPhase>, num_nodes: usize) -> Result<EF> {
+        let upper_bound = phases.last().unwrap().stream_pointer;
         let mut efb = EliasFanoBuilder::new(num_nodes, upper_bound + 1);
 
         for phase in phases.iter() {
-            efb.push(phase.stream_pointer << 32 | phase.state as usize)?;
+            efb.push(phase.stream_pointer)?;
         }
-        Ok(efb.build().convert_to()?)
+        efb.build().convert_to()
     }
 }

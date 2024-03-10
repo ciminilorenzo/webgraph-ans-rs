@@ -10,9 +10,8 @@ use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
+use folded_streaming_rans::State;
 use lender::for_;
-use sux::dict::{EliasFano, EliasFanoBuilder};
-use sux::prelude::{ConvertTo, SelectFixed2};
 use webgraph::prelude::*;
 
 #[test]
@@ -79,8 +78,9 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
     let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
     // (4) create elias fano
-    let ef = ANSBVGraph::build_elias_from_phases(phases, graph.num_nodes())?;
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
+    let states: Box<[State]> = phases.iter().map(|phase| phase.state).collect();
+    let ef = ANSBVGraph::build_ef(phases, graph.num_nodes())?;
+    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef, states);
     let decoded_graph = BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, 6, 4, 7, 2);
 
     assert_eq!(
@@ -139,8 +139,9 @@ fn decodes_correctly_cnr_graph() -> Result<()> {
     let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
 
     // (4) create elias fano
-    let ef = ANSBVGraph::build_elias_from_phases(phases, num_nodes)?;
-    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef);
+    let states: Box<[State]> = phases.iter().map(|phase| phase.state).collect();
+    let ef = ANSBVGraph::build_ef(phases, num_nodes)?;
+    let code_reader_builder = ANSBVGraphDecoderFactory::new(prelude, ef, states);
 
     let decoded_graph =
         BVGraph::<ANSBVGraphDecoderFactory>::new(code_reader_builder, num_nodes, num_arcs, 7, 2);

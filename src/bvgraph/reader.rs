@@ -1,15 +1,17 @@
 use crate::ans::decoder::ANSDecoder;
 use crate::ans::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;
-use crate::{State, EF};
+use crate::EF;
 use anyhow::Result;
 use sux::traits::indexed_dict::IndexedDict;
 use webgraph::graphs::{RandomAccessDecoderFactory, SequentialDecoderFactory};
 
 pub struct ANSBVGraphDecoderFactory {
-    /// The EliasFano containing the phases of the ANS encoding, that is a stream pointer
-    /// and state for each node. This data is merged into a single u64, one for each node.
+    /// The EliasFano containing the stream pointers for each of the nodes.
     phases: EF,
+
+    /// A list of states, one for each of the nodes.
+    states: Box<[u32]>,
 
     /// The prelude resulting from the encoding process of the graph.
     pub prelude: Prelude,
@@ -22,12 +24,13 @@ pub struct ANSBVGraphDecoderFactory {
 }
 
 impl ANSBVGraphDecoderFactory {
-    pub fn new(prelude: Prelude, phases: EF) -> Self {
+    pub fn new(prelude: Prelude, phases: EF, states: Box<[u32]>) -> Self {
         Self {
             phases,
             model: ANSModel4Decoder::new(&prelude.tables),
             num_nodes: prelude.number_of_nodes,
             prelude,
+            states,
         }
     }
 }
@@ -38,13 +41,14 @@ impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
     fn new_decoder(&self, node: usize) -> Result<Self::Decoder<'_>> {
         // nodes' phases are stored in reversed order. Thus, for example, let's
         // take the last phase if we want the phase of the first node.
-        let ef_entry = self.phases.get(self.num_nodes - node - 1);
+        let pointer = self.phases.get(self.num_nodes - node - 1);
+        let state = self.states[self.num_nodes - node - 1];
 
         Ok(ANSDecoder::from_raw_parts(
             &self.model,
             &self.prelude.stream,
-            ef_entry >> 32,
-            (ef_entry & u32::MAX as usize) as State,
+            pointer,
+            state,
         ))
     }
 }
