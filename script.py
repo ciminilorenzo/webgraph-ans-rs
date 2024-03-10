@@ -197,7 +197,7 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
             "{} B({})".format(ans_phases_sizes[index], occupation_phases),
             "{} B".format(ans_sizes[index] + ans_phases_sizes[index]),
             "{} ({})".format(random_access_speed[index], random_speed_comparison),
-            "{}".format(sequential_access_speed[index])
+            "{:.1f}".format(sequential_access_speed[index])
         ]
         writer.writerow(data)
 
