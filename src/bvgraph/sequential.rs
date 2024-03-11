@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use webgraph::prelude::BVGraphSeq;
 
 /// An ANS-encoded BVSeqGraph that can only be accessed sequentially.
-pub struct ANSBVGraphSeq(BVGraphSeq<ANSBVGraphSeqDecoderFactory>);
+pub struct ANSBVGraphSeq();
 
 impl ANSBVGraphSeq {
     /// Loads a previously ANS-encoded BVSeqGraph from disk.

@@ -19,7 +19,7 @@ use webgraph::graphs::{BVComp, BVGraph, BVGraphSeq};
 use webgraph::prelude::{suffix_path, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
-pub struct ANSBVGraph(BVGraph<ANSBVGraphDecoderFactory>);
+pub struct ANSBVGraph();
 
 impl ANSBVGraph {
     /// Loads a previously ANS-encoded BVGraph from disk.

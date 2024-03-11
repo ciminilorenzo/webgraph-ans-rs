@@ -24,10 +24,7 @@ profile.json
 *.pointers
 *.obl
 *.properties
-
 results/
-
 # venv
 venv/
-
 *.csv

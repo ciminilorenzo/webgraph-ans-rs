@@ -17,9 +17,6 @@ pub struct EntropyEstimator {
 
     /// Represent the threshold starting from which a symbol has to be folded, one for each [component](BVGraphComponent).
     folding_thresholds: Vec<u64>,
-
-    /// The offset used to fold the symbols, one for each [component](BVGraphComponent).
-    folding_offsets: Vec<u64>,
 }
 
 impl EntropyEstimator {
@@ -64,7 +61,6 @@ impl EntropyEstimator {
             table: costs_table,
             component_args,
             folding_thresholds,
-            folding_offsets,
         }
     }
 

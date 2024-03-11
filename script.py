@@ -5,7 +5,11 @@ import csv
 import re
 
 # Names of the graphs to be compressed
-ans_graphs = ["cnr-2000"]  # !!!! Modify this array by adding/removing graphs' name as pleased !!!!
+# !!!! Modify this array by adding/removing graphs' name as pleased !!!!
+ans_graphs = [
+    "dblp-2011", "enwiki-2023", "eu-2015", "eu-2015-host",
+    "gsh-2015", "gsh-2015-host", "hollywood-2011", "twitter-2010"
+]
 
 # The parameters to be used for the high compressed graphs
 high_compressed_params = {"w": "16", "c": "2000000000"}
@@ -73,12 +77,13 @@ for graph in ans_graphs:
     number_of_arcs = int(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8'))
     arcs.append(number_of_arcs)
 
-    # Grep on the .properties file to get the number of bits per link
+    # Grep on the .properties file to get the number of bits per link and then calculate total size of the .graph
     command = f"grep -w bitsperlink {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
     bit_per_link = float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("/n"))
     bv_graphs_size.append(int((bit_per_link * number_of_arcs) / 8))
 
-    # Grep on the .properties file of the .hc graph to get the number of bits per link
+    # Grep on the .properties file of the .hc graph to get the number of bits per link and then calculate total size of
+    # the -hc.graph
     command = f"grep -w bitsperlink {graphs_dir}{graph}/{graph}-hc.properties | cut -d'=' -f2"
     hc_bit_per_link = float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("/n"))
     bv_hc_graphs_size.append(int((hc_bit_per_link * number_of_arcs) / 8))
@@ -88,7 +93,7 @@ for graph in ans_graphs:
         "./target/release/bvcomp",
         f"{graphs_dir}{graph}/{graph}",
         f"{compressed_graphs_dir}{graph}"
-    ])
+    ])  # this will generate a file named <graph>.ans / <graph>.states / <graph>.pointers
 
     print(f"Starting high compression of {graph}")
     subprocess.run([
@@ -97,7 +102,7 @@ for graph in ans_graphs:
         f"{compressed_graphs_dir}{graph}-hc",
         "-w", f"{high_compressed_params.get('w')}",
         "-c", f"{high_compressed_params.get('c')}"
-    ])
+    ])  # this will generate a file named <graph>-hc.ans / <graph>-hc.states / <graph>-hc.pointers
 
     ans_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.ans"))
     ans_hc_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}-hc.ans"))

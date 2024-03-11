@@ -41,7 +41,7 @@ impl Default for ANSModel4EncoderBuilder {
 impl ANSModel4EncoderBuilder {
     /// The maximum frame size allowed for any of the [models](ANSComponentModel4Encoder) used by
     /// the ANS encoder.
-    const MAXIMUM_FRAME_SIZE: usize = 1 << 15;
+    const MAXIMUM_FRAME_SIZE: usize = 1 << 16;
 
     /// Pushes a new symbol for the given [component](BVGraphComponent) into the builder.
     ///
@@ -66,8 +66,6 @@ impl ANSModel4EncoderBuilder {
         let original_graph_cost = original_comp_costs.iter().sum::<f64>();
         // a vec of ANSComponentModel4Encoder, one for each component
         let mut models = Vec::with_capacity(BVGraphComponent::COMPONENTS);
-        // the cost of each folded component, before the scaling process.
-        let mut folded_comp_costs = Vec::with_capacity(BVGraphComponent::COMPONENTS);
         // the cost of each folded component, after the scaling process.
         let mut components_final_cost = Vec::with_capacity(BVGraphComponent::COMPONENTS);
 
@@ -79,9 +77,6 @@ impl ANSModel4EncoderBuilder {
                 components_final_cost.push(0.0);
                 continue;
             }
-
-            // the cost of the folded distribution for this component, before the scaling process.
-            let mut folded_cost = 0.0;
             // the final folded distribution for this component, scaled to sum up to a power of two.
             let mut scaled_distribution = Vec::new();
             let (mut fidelity, mut radix) = (0usize, 0usize);
@@ -158,15 +153,6 @@ impl ANSModel4EncoderBuilder {
                             // current best frame size, we can accept it.
                             if ratio <= THETA {
                                 if m < frame_size {
-                                    // the cost associated to this folded distribution with current fidelity and radix,
-                                    // not approximated yet.
-                                    folded_cost = Self::calculate_folded_distribution_cost(
-                                        &folded_sym_freqs,
-                                        self.total_freqs[component],
-                                        *fid,
-                                        *rad,
-                                    );
-
                                     lowest_cost = new_cost;
                                     new_distribution.drain(biggest_symbol as usize + 1..);
                                     scaled_distribution = new_distribution;
@@ -186,13 +172,6 @@ impl ANSModel4EncoderBuilder {
                                 // distribution that we could have accepted. This should happen only
                                 // with components with which the folding process don't work properly,
                                 // such as Residuals.
-                                folded_cost = Self::calculate_folded_distribution_cost(
-                                    &folded_sym_freqs,
-                                    self.total_freqs[component],
-                                    *fid,
-                                    *rad,
-                                );
-
                                 lowest_cost = new_cost;
                                 new_distribution.drain(biggest_symbol as usize + 1..);
                                 scaled_distribution = new_distribution;
@@ -210,9 +189,12 @@ impl ANSModel4EncoderBuilder {
                     }
                 }
             }
+            assert_ne!(frame_size, usize::MAX, "\
+            It's not been possible to approximate the folded distribution for the component {} with \
+            any of the available radix and fidelity and a frame size <= 2^16."
+            , BVGraphComponent::from(component));
 
             components_final_cost.push(lowest_cost);
-            folded_comp_costs.push(folded_cost);
 
             let mut table = Vec::with_capacity(scaled_distribution.len());
             let log_m = frame_size.ilog2() as usize;
@@ -222,7 +204,7 @@ impl ANSModel4EncoderBuilder {
 
             for freq in scaled_distribution.iter() {
                 table.push(EncoderModelEntry::new(*freq as u16, k, last_covered_freq));
-                last_covered_freq += *freq as u16;
+                last_covered_freq = last_covered_freq.checked_add(*freq as u16).unwrap_or(0);
             }
 
             models.push(ANSComponentModel4Encoder {
@@ -321,39 +303,6 @@ impl ANSModel4EncoderBuilder {
             };
 
             let prob = *approx_freq as f64 / new_frame_size;
-            information_content += (-prob.log2() + (folds * radix as f64)) * freq;
-        }
-        information_content
-    }
-
-    /// Given a folded distribution (with the given radix & fidelity), calculates minimum cost we have
-    /// to pay to encode the sequence of symbols, that is the self-information of every symbol times
-    /// its frequency, plus the bits we have to dump in the state to fold the symbol.
-    fn calculate_folded_distribution_cost(
-        freqs: &[usize],
-        total_freq: usize,
-        fidelity: usize,
-        radix: usize,
-    ) -> f64 {
-        let mut information_content = 0.0;
-        let folding_threshold = 1u64 << (fidelity + radix - 1);
-        let folding_offset = ((1 << radix) - 1) * (1 << (fidelity - 1));
-
-        for (symbol, freq) in freqs.iter().enumerate() {
-            if *freq == 0 {
-                continue;
-            }
-
-            let folds = match symbol < folding_threshold as usize {
-                true => 0_f64,
-                false => {
-                    ((symbol - folding_threshold as usize) / folding_offset as usize + 1usize)
-                        as f64
-                }
-            };
-
-            let freq = *freq as f64;
-            let prob = freq / total_freq as f64;
             information_content += (-prob.log2() + (folds * radix as f64)) * freq;
         }
         information_content

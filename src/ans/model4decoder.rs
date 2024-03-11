@@ -45,14 +45,14 @@ impl ANSModel4Decoder {
 
         tables.iter().for_each(|table| {
             let mut vec = vec![DecoderModelEntry::default(); 1 << table.frame_size];
-            let mut last_slot = 0; // the last slot of the frame we have actually filled with data
+            let mut last_slot: u32 = 0; // the last slot of the frame we have actually filled with data
 
             for (sym, symbol_entry) in table.table.iter().enumerate() {
                 if symbol_entry.freq == 0 {
                     continue; // let's skip symbols with frequency 0
                 }
 
-                for slot in last_slot..last_slot + symbol_entry.freq {
+                for slot in last_slot..last_slot + symbol_entry.freq as u32 {
                     // fill the symbol's slots with the data
                     *vec.get_mut(slot as usize).unwrap() = DecoderModelEntry {
                         freq: symbol_entry.freq,
@@ -65,7 +65,7 @@ impl ANSModel4Decoder {
                         ),
                     };
                 }
-                last_slot += symbol_entry.freq;
+                last_slot += symbol_entry.freq as u32;
             }
             vectors.push(ANSComponentModel4Decoder {
                 table: vec,
