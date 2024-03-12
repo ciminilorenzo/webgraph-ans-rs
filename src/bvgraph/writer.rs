@@ -131,6 +131,9 @@ pub struct ANSBVGraphMeasurableEncoder {
     /// The buffer where models associated to each collected symbol are collected before encoding.
     models: RevBuffer<NamedTempFile>,
 
+    symbols_vec: Vec<u64>,
+    models_vec: Vec<u8>,
+
     number_of_nodes: usize,
     number_of_arcs: u64,
     compression_window: usize,
@@ -155,6 +158,8 @@ impl ANSBVGraphMeasurableEncoder {
             encoder: ANSEncoder::new(model),
             symbols: RevBuffer::new(symbols_file).unwrap(),
             models: RevBuffer::new(models_file).unwrap(),
+            symbols_vec: Vec::new(),
+            models_vec: Vec::new(),
             number_of_nodes,
             number_of_arcs,
             compression_window,
@@ -202,56 +207,79 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::Outdegree as u64);
+        self.models_vec.push(8 - BVGraphComponent::Outdegree as u8);
         self.estimator.write_outdegree(value)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models
             .push(8 - BVGraphComponent::ReferenceOffset as u64);
+        self.models_vec
+            .push(8 - BVGraphComponent::ReferenceOffset as u8);
         self.estimator.write_reference_offset(value)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::BlockCount as u64);
+        self.models_vec.push(8 - BVGraphComponent::BlockCount as u8);
         self.estimator.write_block_count(value)
     }
 
     fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::Blocks as u64);
+        self.models_vec.push(8 - BVGraphComponent::Blocks as u8);
         self.estimator.write_block(value)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::IntervalCount as u64);
+        self.models_vec
+            .push(8 - BVGraphComponent::IntervalCount as u8);
         self.estimator.write_interval_count(value)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::IntervalStart as u64);
+        self.models_vec
+            .push(8 - BVGraphComponent::IntervalStart as u8);
         self.estimator.write_interval_start(value)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::IntervalLen as u64);
+        self.models_vec
+            .push(8 - BVGraphComponent::IntervalLen as u8);
         self.estimator.write_interval_len(value)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::FirstResidual as u64);
+        self.models_vec
+            .push(8 - BVGraphComponent::FirstResidual as u8);
         self.estimator.write_first_residual(value)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.symbols.push(value);
+        self.symbols_vec.push(value);
         self.models.push(8 - BVGraphComponent::Residual as u64);
+        self.models_vec.push(8 - BVGraphComponent::Residual as u8);
         self.estimator.write_residual(value)
     }
 
@@ -260,7 +288,12 @@ impl Encoder for ANSBVGraphMeasurableEncoder {
         let symbols_iter = self.symbols.flush().unwrap();
         let models_iter = self.models.flush().unwrap();
 
-        for (symbol, model) in symbols_iter.into_iter().zip(models_iter.into_iter()) {
+        for (&symbol, &model) in self
+            .symbols_vec
+            .iter()
+            .rev()
+            .zip(self.models_vec.iter().rev())
+        {
             let model = 8 - model as usize;
             self.encoder.encode(symbol, BVGraphComponent::from(model));
 
