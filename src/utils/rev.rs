@@ -136,10 +136,9 @@ impl<P: AsRef<Path>> RevBuffer<P> {
     }
 
     pub fn flush(&mut self) -> anyhow::Result<Iterable> {
-        let padding = u64::BITS as usize - self.bit_writer.flush()?;
         Ok(Iterable {
             len: self.len,
-            padding,
+            padding: (u64::BITS as usize - self.bit_writer.flush()?) % usize::BITS as usize,
             mmap: MmapBackend::load(&self.path, MmapFlags::SEQUENTIAL)?,
         })
     }
@@ -218,38 +217,68 @@ impl WordRead for RevReader<'_> {
     }
 }
 
-#[test]
-fn test_rev() -> anyhow::Result<()> {
-    use rand::rngs::SmallRng;
-    use rand::RngCore;
-    use rand::SeedableRng;
-    let tmp = tempfile::NamedTempFile::new()?;
-    let mut rev_writer = RevBuffer::new(tmp)?;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let mut v = vec![];
+    #[test]
+    fn test_rev() -> anyhow::Result<()> {
+        use rand::rngs::SmallRng;
+        use rand::RngCore;
+        use rand::SeedableRng;
+        let tmp = tempfile::NamedTempFile::new()?;
+        let mut rev_writer = RevBuffer::new(tmp)?;
 
-    let mut r = SmallRng::seed_from_u64(42);
+        let mut v = vec![];
 
-    for _ in 0..100000 {
-        let x = r.next_u64() % 1024;
-        v.push(x);
-        rev_writer.push(x);
+        let mut r = SmallRng::seed_from_u64(42);
+
+        for _ in 0..100000 {
+            let x = r.next_u64() % 1024;
+            v.push(x);
+            rev_writer.push(x);
+        }
+
+        let iterable = rev_writer.flush()?;
+        let mut into_iter = iterable.into_iter();
+
+        for &x in v.iter().rev() {
+            let y = into_iter.next().unwrap();
+            assert_eq!(y, x);
+        }
+
+        let mut into_iter = iterable.into_iter();
+
+        for &x in v.iter().rev() {
+            let y = into_iter.next().unwrap();
+            assert_eq!(y, x);
+        }
+
+        Ok(())
     }
 
-    let iterable = rev_writer.flush()?;
-    let mut into_iter = iterable.into_iter();
+    #[test]
+    fn test_no_flush() -> anyhow::Result<()> {
+        let tmp = tempfile::NamedTempFile::new()?;
+        let mut rev_writer = RevBuffer::new(tmp)?;
+        for _ in 0..42 {
+            rev_writer.push(1)?;
+        }
 
-    for &x in v.iter().rev() {
-        let y = into_iter.next().unwrap();
-        assert_eq!(y, x);
+        for _ in 0..2 {
+            rev_writer.push(0)?;
+        }
+
+        let iterable = rev_writer.flush()?;
+        let mut into_iter = iterable.into_iter();
+        for _ in 0..2 {
+            assert_eq!(into_iter.next().unwrap(), 0);
+        }
+
+        for _ in 0..42 {
+            assert_eq!(into_iter.next().unwrap(), 1);
+        }
+
+        Ok(())
     }
-
-    let mut into_iter = iterable.into_iter();
-
-    for &x in v.iter().rev() {
-        let y = into_iter.next().unwrap();
-        assert_eq!(y, x);
-    }
-
-    Ok(())
 }
