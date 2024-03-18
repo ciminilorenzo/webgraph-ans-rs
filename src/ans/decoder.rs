@@ -2,7 +2,7 @@ use crate::ans::model4decoder::ANSModel4Decoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, Symbol, B};
 
-use webgraph::graphs::Decoder;
+use webgraph::graphs::Decode;
 
 #[derive(Clone)]
 pub struct ANSDecoder<'a> {
@@ -102,7 +102,7 @@ impl<'a> ANSDecoder<'a> {
     }
 }
 
-impl<'a> Decoder for ANSDecoder<'a> {
+impl<'a> Decode for ANSDecoder<'a> {
     fn read_outdegree(&mut self) -> u64 {
         self.decode(BVGraphComponent::Outdegree)
     }

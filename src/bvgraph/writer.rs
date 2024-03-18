@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use tempfile::{Builder, NamedTempFile};
-use webgraph::graphs::{Encoder, MeasurableEncoder};
+use webgraph::graphs::{Encode, MeasurableEncoder};
 
 use crate::ans::encoder::ANSEncoder;
 use crate::ans::model4encoder::ANSModel4Encoder;
@@ -14,14 +14,14 @@ use crate::utils::rev::RevBuffer;
 ///
 /// Data for each [component](BVGraphComponent) is pushed into the [`ANSModel4EncoderBuilder`]. The [`ANSModel4Encoder`]
 /// is then built from the collected data.
-pub struct BVGraphModelBuilder<MW: Encoder> {
+pub struct BVGraphModelBuilder<MW: Encode> {
     model_builder: ANSModel4EncoderBuilder,
 
     /// The type of the mock writer used by this builder. It may either be a `Log2Estimator` or an `EntropyEstimator`.
     mock: MW,
 }
 
-impl<MW: Encoder> BVGraphModelBuilder<MW> {
+impl<MW: Encode> BVGraphModelBuilder<MW> {
     pub fn new(mock: MW) -> Self {
         Self {
             model_builder: ANSModel4EncoderBuilder::default(),
@@ -36,7 +36,7 @@ impl<MW: Encoder> BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: Encoder> MeasurableEncoder for BVGraphModelBuilder<MW> {
+impl<MW: Encode> MeasurableEncoder for BVGraphModelBuilder<MW> {
     type Estimator<'a> = &'a mut MW where Self: 'a;
 
     fn estimator(&mut self) -> Self::Estimator<'_> {
@@ -44,7 +44,7 @@ impl<MW: Encoder> MeasurableEncoder for BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: Encoder> Encoder for BVGraphModelBuilder<MW> {
+impl<MW: Encode> Encode for BVGraphModelBuilder<MW> {
     type Error = Infallible;
 
     fn start_node(_node: usize) -> Result<(), Self::Error> {
@@ -193,7 +193,7 @@ impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {
 /// Note that every Encoder's function write as model the component's index - 8 in order to have
 /// the most frequent components encoded with the smallest number of bits. Reversing the order of
 /// the components' indexes a good way to represent the expected frequency of the components.
-impl Encoder for ANSBVGraphMeasurableEncoder {
+impl Encode for ANSBVGraphMeasurableEncoder {
     type Error = Infallible;
 
     fn start_node(_node: usize) -> Result<(), Self::Error> {

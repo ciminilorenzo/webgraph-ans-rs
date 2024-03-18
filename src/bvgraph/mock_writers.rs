@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use webgraph::graphs::Encoder;
+use webgraph::graphs::Encode;
 
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
@@ -103,7 +103,7 @@ impl EntropyEstimator {
     }
 }
 
-impl Encoder for EntropyEstimator {
+impl Encode for EntropyEstimator {
     type Error = Infallible;
 
     fn start_node(_node: usize) -> Result<(), Self::Error> {
@@ -165,7 +165,7 @@ impl Log2Estimator {
     }
 }
 
-impl Encoder for Log2Estimator {
+impl Encode for Log2Estimator {
     type Error = Infallible;
 
     fn start_node(_node: usize) -> Result<(), Self::Error> {
