@@ -24,7 +24,6 @@ pub fn main() -> Result<()> {
 
     for i in 0..10 {
         eprintln!("Iteration number {} out of 10", i);
-        // Random-access speed test
         let mut rng = SmallRng::seed_from_u64(0);
         let mut c: u64 = 0;
 

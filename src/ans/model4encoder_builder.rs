@@ -122,7 +122,7 @@ impl ANSModel4EncoderBuilder {
 
                 loop {
                     if m > Self::MAXIMUM_FRAME_SIZE {
-                        // if we have reached the maximum frame size, we can't go further with
+                        // if we have reached the maximum frame size, we can go further with
                         // the next fidelity and radix combination.
                         break;
                     }

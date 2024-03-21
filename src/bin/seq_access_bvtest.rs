@@ -1,5 +1,5 @@
 use clap::Parser;
-use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
+use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
 use lender::Lender;
 use webgraph::prelude::SequentialLabeling;
 
@@ -12,7 +12,7 @@ struct Args {
 
 pub fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let graph = ANSBVGraph::load(args.basename)?;
+    let graph = ANSBVGraphSeq::load(args.basename)?;
 
     for i in 0..10 {
         eprintln!("Iteration number {} out of 10", i);

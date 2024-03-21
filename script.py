@@ -4,6 +4,15 @@ import sys
 import csv
 import re
 
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
 # Names of the graphs to be compressed
 # !!!! Modify this array by adding/removing graphs' name as pleased !!!!
 ans_graphs = [
@@ -164,12 +173,12 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         # Get the median of the speeds
         bv_random_speed = speeds[len(speeds) // 2]
 
-        # print(f"Starting sequential speed test of {ans_graphs[index]}-hc with webgraph-rs")
-        # command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
-        # lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
-        # speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
+        print(f"Starting sequential speed test of {ans_graphs[index]}-hc with webgraph-rs")
+        command = f"{webgraph_rs_dir}target/release/webgraph bench bvgraph {graphs_dir}{ans_graphs[index]}/{ans_graphs[index]}-hc"
+        lines = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8')
+        speeds = sorted([float((re.split(' +', line))[1]) for line in lines.split("\n")[:-1]])
         # Get the median of the speeds
-        # bv_seq_speed = speeds[len(speeds) // 2]
+        bv_seq_speed = speeds[len(speeds) // 2]
 
         # bit/link .ans
         bit_link = "{:.3f}".format((ans_sizes[index] * 8) / arcs[index])
@@ -188,21 +197,21 @@ with open('results.csv', 'w', encoding='UTF8', newline='') as f:
         random_speed_comparison = "{:.1f}%".format(
             -(((bv_random_speed - random_access_speed[index]) / bv_random_speed) * 100))
         # Sequential speed comparison
-        # sequential_speed_comparison = "{:.1f}%".format(
-        #    -(((bv_seq_speed - sequential_access_speed[index]) / bv_seq_speed) * 100))
+        sequential_speed_comparison = "{:.1f}%".format(
+            -(((bv_seq_speed - sequential_access_speed[index]) / bv_seq_speed) * 100))
 
         data = [
             ans_graphs[index],
-            "{} B".format(bv_graphs_size[index]),
-            "{} B".format(ans_sizes[index]),
+            "{} B".format(sizeof_fmt(bv_graphs_size[index])),
+            "{} B".format(sizeof_fmt(ans_sizes[index])),
             "{} ({})".format(bit_link, occupation),
-            "{} B".format(bv_hc_graphs_size[index]),
-            "{} B".format(ans_hc_sizes[index]),
+            "{} B".format(sizeof_fmt(bv_hc_graphs_size[index])),
+            "{} B".format(sizeof_fmt(ans_hc_sizes[index])),
             "{} ({})".format(hc_bit_link, occupation_hc),
-            "{} B({})".format(ans_phases_sizes[index], occupation_phases),
-            "{} B".format(ans_sizes[index] + ans_phases_sizes[index]),
+            "{} B({})".format(sizeof_fmt(ans_phases_sizes[index]), occupation_phases),
+            "{} B".format(sizeof_fmt(ans_sizes[index] + ans_phases_sizes[index])),
             "{} ({})".format(random_access_speed[index], random_speed_comparison),
-            "{:.1f}".format(sequential_access_speed[index])
+            "{:.1f} ({})".format(sequential_access_speed[index], sequential_speed_comparison)
         ]
         writer.writerow(data)
 
