@@ -75,9 +75,9 @@ impl ANSBVGraph {
         // (1) setup for the first iteration with Log2Estimator
         let log2_mock = Log2Estimator::default();
 
-        let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-        let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(
-            model_builder,
+        let mut model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
+        let mut bvcomp = BVComp::new(
+            &mut model_builder,
             compression_window,
             max_ref_count,
             min_interval_length,
@@ -97,7 +97,8 @@ impl ANSBVGraph {
 
         pl.start("Building the model with Log2Estimator...");
         // get the ANSModel4Encoder obtained from the first iteration
-        let model4encoder = bvcomp.flush()?.build();
+        bvcomp.flush()?;
+        let model4encoder = model_builder.build();
         pl.done();
 
         // (2) setup for the second iteration with EntropyEstimator
@@ -105,9 +106,10 @@ impl ANSBVGraph {
         let folding_params = model4encoder.get_folding_params();
         // create a new table of costs based on params obtained from the previous step
         let entropy_estimator = EntropyEstimator::new(&model4encoder, folding_params);
-        let model_builder = BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
-        let mut bvcomp = BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(
-            model_builder,
+        let mut model_builder =
+            BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
+        let mut bvcomp = BVComp::new(
+            &mut model_builder,
             compression_window,
             max_ref_count,
             min_interval_length,
@@ -127,19 +129,21 @@ impl ANSBVGraph {
 
         pl.start("Building the model with EntropyEstimator...");
         // get the final ANSModel4Encoder from the second iteration
-        let model4encoder = bvcomp.flush()?.build();
+        bvcomp.flush()?;
+        let model4encoder = model_builder.build();
         pl.done();
 
+        let mut enc = ANSBVGraphMeasurableEncoder::new(
+            model4encoder,
+            entropy_estimator,
+            seq_graph.num_nodes(),
+            seq_graph.num_arcs_hint().unwrap(),
+            compression_window,
+            min_interval_length,
+        );
         // (3) setup for the compression of the BVGraph
-        let mut bvcomp = BVComp::<ANSBVGraphMeasurableEncoder>::new(
-            ANSBVGraphMeasurableEncoder::new(
-                model4encoder,
-                entropy_estimator,
-                seq_graph.num_nodes(),
-                seq_graph.num_arcs_hint().unwrap(),
-                compression_window,
-                min_interval_length,
-            ),
+        let mut bvcomp = BVComp::new(
+            &mut enc,
             compression_window,
             max_ref_count,
             min_interval_length,
@@ -158,7 +162,8 @@ impl ANSBVGraph {
         pl.done();
 
         // get phases and the prelude after the graph's compression
-        let (prelude, phases) = bvcomp.flush()?.into_prelude_phases();
+        bvcomp.flush()?;
+        let (prelude, phases) = enc.into_prelude_phases();
 
         // (5) serialize
         let mut buf = PathBuf::from(&new_basename);

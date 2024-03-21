@@ -47,8 +47,8 @@ impl<MW: Encode> MeasurableEncoder for BVGraphModelBuilder<MW> {
 impl<MW: Encode> Encode for BVGraphModelBuilder<MW> {
     type Error = Infallible;
 
-    fn start_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn start_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -109,8 +109,8 @@ impl<MW: Encode> Encode for BVGraphModelBuilder<MW> {
         Ok(0)
     }
 
-    fn end_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn end_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 }
 
@@ -196,8 +196,8 @@ impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {
 impl Encode for ANSBVGraphMeasurableEncoder {
     type Error = Infallible;
 
-    fn start_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn start_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -273,7 +273,7 @@ impl Encode for ANSBVGraphMeasurableEncoder {
         Ok(0)
     }
 
-    fn end_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn end_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 }

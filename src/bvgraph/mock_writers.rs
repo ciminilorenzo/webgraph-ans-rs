@@ -106,8 +106,8 @@ impl EntropyEstimator {
 impl Encode for EntropyEstimator {
     type Error = Infallible;
 
-    fn start_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn start_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -150,8 +150,8 @@ impl Encode for EntropyEstimator {
         Ok(0)
     }
 
-    fn end_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn end_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 }
 
@@ -168,8 +168,8 @@ impl Log2Estimator {
 impl Encode for Log2Estimator {
     type Error = Infallible;
 
-    fn start_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn start_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
@@ -212,7 +212,7 @@ impl Encode for Log2Estimator {
         Ok(0)
     }
 
-    fn end_node(_node: usize) -> Result<(), Self::Error> {
-        Ok(())
+    fn end_node(&mut self, _node: usize) -> Result<usize, Self::Error> {
+        Ok(0)
     }
 }
