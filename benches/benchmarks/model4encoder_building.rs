@@ -13,13 +13,13 @@ fn model4encoder_building_bench(c: &mut Criterion) {
         .unwrap();
 
     let log2_mock = Log2Estimator::default();
-    let model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::<BVGraphModelBuilder<Log2Estimator>>::new(model_builder, 7, 3, 2, 0);
+    let mut model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
+    let mut bvcomp = BVComp::new(&mut model_builder, 7, 3, 2, 0);
 
     // First iteration with Log2MockWriter
     bvcomp.extend(graph.iter()).unwrap();
-
-    let model4encoder = bvcomp.flush().unwrap().build();
+    bvcomp.flush().unwrap();
+    let model4encoder = model_builder.build();
     let folding_params = model4encoder.get_folding_params();
     let entropic_mock = EntropyEstimator::new(&model4encoder, folding_params);
 
