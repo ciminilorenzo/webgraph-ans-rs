@@ -6,7 +6,7 @@ use dsi_bitstream::{
 use mmap_rs::*;
 
 use std::{fs::File, io::BufWriter, iter::FusedIterator, path::Path};
-use webgraph::utils::MmapBackend;
+use webgraph::utils::MmapHelper;
 
 ///Table used to speed up the writing of gamma codes
 pub const WRITE_BE: &[u16] = &[
@@ -139,7 +139,7 @@ impl<P: AsRef<Path>> RevBuffer<P> {
         Ok(Iterable {
             len: self.len,
             padding: (u64::BITS as usize - self.bit_writer.flush()?) % usize::BITS as usize,
-            mmap: MmapBackend::load(&self.path, MmapFlags::SEQUENTIAL)?,
+            mmap: MmapHelper::mmap(&self.path, MmapFlags::SEQUENTIAL)?,
         })
     }
 }
@@ -147,7 +147,7 @@ impl<P: AsRef<Path>> RevBuffer<P> {
 pub struct Iterable {
     len: u64,
     padding: usize,
-    mmap: MmapBackend<u32>,
+    mmap: MmapHelper<u32>,
 }
 
 impl<'a> IntoIterator for &'a Iterable {

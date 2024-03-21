@@ -7,7 +7,6 @@ use anyhow::{Context, Result};
 use dsi_bitstream::prelude::BE;
 use dsi_progress_logger::{ProgressLog, ProgressLogger};
 use epserde::prelude::*;
-use epserde::ser::Serialize;
 use lender::for_;
 use log::info;
 use std::fs::File;
@@ -16,7 +15,7 @@ use std::path::PathBuf;
 use sux::dict::EliasFanoBuilder;
 use sux::traits::ConvertTo;
 use webgraph::graphs::{BVComp, BVGraph, BVGraphSeq};
-use webgraph::prelude::{suffix_path, SequentialLabeling};
+use webgraph::prelude::SequentialLabeling;
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
 pub struct ANSBVGraph();
@@ -33,12 +32,12 @@ impl ANSBVGraph {
         let prelude = Prelude::load_full(buf.as_path())?;
 
         // load pointers
-        let ef_path = suffix_path(&basename, ".pointers");
-        let phases = EF::load_full(ef_path)?;
+        buf.set_extension("pointers");
+        let phases = EF::load_full(buf.as_path())?;
 
         // load states
-        let states_path = suffix_path(&basename, ".states");
-        let states = Box::<[State]>::load_full(states_path)?;
+        buf.set_extension("states");
+        let states = Box::<[State]>::load_full(buf.as_path())?;
 
         let nun_nodes = prelude.number_of_nodes;
         let num_arcs = prelude.number_of_arcs;
