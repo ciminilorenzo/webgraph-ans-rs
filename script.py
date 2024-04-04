@@ -31,17 +31,17 @@ webgraph_rs_dir = sys.argv[3]
 
 # Check all needed directories are present before actually starting the script.
 if not os.path.isdir(graphs_dir):
-    print(f"{graphs_dir} it not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> <webgraph-rs "
+    print(f"{graphs_dir} it not a directory.\nUsage is: python script.py <graphs dir> <new graphs dir> <webgraph-rs "
           f"dir>")
     exit(1)
 
 if not os.path.isdir(webgraph_rs_dir):
-    print(f"{webgraph_rs_dir} is not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> "
+    print(f"{webgraph_rs_dir} is not a directory.\nUsage is: python script.py <graphs dir> <new graphs dir> "
           f"<webgraph-rs dir>")
     exit(1)
 
 if not os.path.isdir(compressed_graphs_dir):
-    print(f"{compressed_graphs_dir} is not a directory.\nUsage is: python script.py <graphs' dir> <new graphs' dir> "
+    print(f"{compressed_graphs_dir} is not a directory.\nUsage is: python script.py <graphs dir> <new graphs dir> "
           f"<webgraph-rs dir>")
     exit(1)
 
@@ -101,8 +101,8 @@ for graph in ans_graphs:
     subprocess.run([
         "./target/release/bvcomp",
         f"{graphs_dir}{graph}/{graph}",
-        f"{compressed_graphs_dir}{graph}"
-    ])  # this will generate a file named <graph>.ans / <graph>.states / <graph>.pointers
+        f"{compressed_graphs_dir}{graph}",
+    ], stderr=open(f"{compressed_graphs_dir}{graph}.output", "w"))
 
     print(f"Starting high compression of {graph}")
     subprocess.run([
@@ -110,8 +110,8 @@ for graph in ans_graphs:
         f"{graphs_dir}{graph}/{graph}",
         f"{compressed_graphs_dir}{graph}-hc",
         "-w", f"{high_compressed_params.get('w')}",
-        "-c", f"{high_compressed_params.get('c')}"
-    ])  # this will generate a file named <graph>-hc.ans / <graph>-hc.states / <graph>-hc.pointers
+        "-c", f"{high_compressed_params.get('c')}",
+    ], stderr=open(f"{compressed_graphs_dir}{graph}-hc.output", "w"))
 
     ans_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}.ans"))
     ans_hc_sizes.append(os.path.getsize(f"{compressed_graphs_dir}{graph}-hc.ans"))

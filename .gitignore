@@ -19,6 +19,7 @@ profile.json
 .DS_Store
 
 # There may be results of either bvcomp or tests somewhere.
+*-hc.graph
 *.ans
 *.states
 *.pointers

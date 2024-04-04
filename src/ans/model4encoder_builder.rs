@@ -243,7 +243,7 @@ impl ANSModel4EncoderBuilder {
         }
 
         info!(
-            "Final graph's entropy before ANS encoding is {:?} B (+{:.2}% w.r.t the original cost)\n",
+            "Final graph entropy before ANS encoding is {:?} B (+{:.2}% w.r.t the original cost)\n",
             (final_graph_cost / 8f64).round() as usize,
             ((final_graph_cost - original_graph_cost) / final_graph_cost) * 100.0
         );

@@ -1,0 +1,76 @@
+import os
+import subprocess
+import sys
+import csv
+
+
+def sizeof_fmt(num, suffix="B"):
+    for unit in ("", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"):
+        if abs(num) < 1024.0:
+            return f"{num:3.1f}{unit}{suffix}"
+        num /= 1024.0
+    return f"{num:.1f}Yi{suffix}"
+
+
+ans_graphs = [
+    "dblp-2011", "enwiki-2023", "eu-2015", "eu-2015-host",
+    "gsh-2015", "gsh-2015-host", "hollywood-2011", "twitter-2010"
+]
+
+# The first parameter must be the path to the directory containing the whole set of ans_graphs
+graphs_dir = sys.argv[1]
+# The second parameter must be the path where the new graph will be stored.
+compressed_graphs_dir = sys.argv[2]
+
+for graph in ans_graphs:
+    if not os.path.isfile(f"{graphs_dir}{graph}/{graph}.properties"):
+        print(f"{graph} is missing .properties in {graphs_dir}{graph}")
+        exit(1)
+
+    if not os.path.isfile(f"{compressed_graphs_dir}{graph}.output"):
+        print(f"{graph} is missing .output in {compressed_graphs_dir}")
+        exit(1)
+
+with open('components_analysis.csv', 'w', encoding='UTF8', newline='') as f:
+    writer = csv.writer(f)
+    # write the header
+    writer.writerow([
+        'name',
+        'Blocks',
+        'Intervals',
+        'Residuals',
+        'References',
+        'Outdegree'
+    ])
+
+    for graph in ans_graphs:
+        # Get bytes used by bvgraph to represent its components
+        command = f"grep ^bitsfor {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        output = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').split("\n")
+        bv_blocks = int(float(output[0]) / 8)
+        bv_intervals = int(float(output[1]) / 8)
+        bv_residuals = int(float(output[2]) / 8)
+        bv_references = int(float(output[3]) / 8)
+        bv_outdegrees = int(float(output[4]) / 8)
+
+        # Get bytes used by ANSBVGraph to represent its components
+        command = (
+            f"grep -wns 'Building the model with EntropyEstimator...' {compressed_graphs_dir}{graph}.output -A 10 | "
+            f"cut -d'|' -f5 | cut -d'(' -f1")
+        output = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').split("\n")
+        ans_blocks = int(output[4]) + int(output[5])
+        ans_intervals = int(output[6]) + int(output[7]) + int(output[8])
+        ans_residuals = int(output[9]) + int(output[10])
+        ans_references = int(output[3])
+        ans_outdegree = int(output[2])
+
+        writer.writerow([
+            graph,
+            "{} ({:.1f}%)".format(sizeof_fmt(ans_blocks), -(((bv_blocks - ans_blocks) / bv_blocks) * 100)),
+            "{} ({:.1f}%)".format(sizeof_fmt(ans_intervals), -(((bv_intervals - ans_intervals) / bv_intervals) * 100)),
+            "{} ({:.1f}%)".format(sizeof_fmt(ans_residuals), -(((bv_residuals - ans_residuals) / bv_residuals) * 100)),
+            "{} ({:.1f}%)".format(sizeof_fmt(ans_references),
+                                  -(((bv_references - ans_references) / bv_references) * 100)),
+            "{} ({:.1f}%)".format(sizeof_fmt(ans_outdegree),
+                                  -(((bv_outdegrees - ans_outdegree) / bv_outdegrees) * 100))
+        ])
