@@ -18,8 +18,9 @@ two decades, by adding another layer of compression by means of
 ### Compressor
 Since the BVGraph format is composed of 9 models (Outdegree, ReferenceOffset, BlockCount, Blocks, IntervalCount, 
 IntervalStart, IntervalLen, FirstResidual, Residual), the model used by the compressor is going to be switched on the 
-fly among the nine built for each specific component of the compression format. Moreover, to overcome the problem of dealing with enormous alphabets (we set as maximum symbol 2^48 - 1), the 
-symbol folding technique introduced by Moffat and Petri in their [work](https://dl.acm.org/doi/10.1145/3397175) is 
+fly among the nine built for each specific component of the compression format. Moreover, to overcome the problem of 
+dealing with enormous alphabets (we set as maximum symbol $2^{48} - 1$), the symbol folding technique introduced 
+by Moffat and Petri in their [work](https://dl.acm.org/doi/10.1145/3397175) is 
 implemented.
 
 In general, the coder uses a 32-bit state and 16-bit renormalization step with some other constraints discussed below.
@@ -29,11 +30,11 @@ The compressor's interval for each model is defined as:
  I = [M * K, M * K * B) 
 ``` 
 where:
-1. $M$ is the sum of all symbols frequencies (power of two) for a specific model.
+1. $M$ is the sum (power of two) of all approximated symbols frequencies for a specific model.
 2. $K = 2^{16} - M$
 3. $B = 2^{16}$
 
-All this is done to guarantee that the shared interval between all models is $[2^16, 2^32)$, a guarantee needed to make the compressor
+All this is done to guarantee that the shared interval between all models is $[2^{16}, 2^{32})$, a guarantee needed to make the compressor
 able to switch models on the fly.
 
 PS: This implementation assumes that the most frequent symbols are the smallest positive integers.
