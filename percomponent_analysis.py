@@ -45,13 +45,20 @@ with open('components_analysis.csv', 'w', encoding='UTF8', newline='') as f:
 
     for graph in ans_graphs:
         # Get bytes used by bvgraph to represent its components
-        command = f"grep ^bitsfor {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
-        output = subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').split("\n")
-        bv_blocks = int(float(output[0]) / 8)
-        bv_intervals = int(float(output[1]) / 8)
-        bv_residuals = int(float(output[2]) / 8)
-        bv_references = int(float(output[3]) / 8)
-        bv_outdegrees = int(float(output[4]) / 8)
+        command = f"grep ^bitsforblocks {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        bv_blocks = int(float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("\n")) / 8)
+
+        command = f"grep ^bitsforintervals {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        bv_intervals = int(float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("\n")) / 8)
+
+        command = f"grep ^bitsforresiduals {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        bv_residuals = int(float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("\n")) / 8)
+
+        command = f"grep ^bitsforreferences {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        bv_references = int(float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("\n")) / 8)
+
+        command = f"grep ^bitsforoutdegrees {graphs_dir}{graph}/{graph}.properties | cut -d'=' -f2"
+        bv_outdegrees = int(float(subprocess.run(command, capture_output=True, shell=True).stdout.decode('utf-8').strip("\n")) / 8)
 
         # Get bytes used by ANSBVGraph to represent its components
         command = (
@@ -74,3 +81,5 @@ with open('components_analysis.csv', 'w', encoding='UTF8', newline='') as f:
             "{} ({:.1f}%)".format(sizeof_fmt(ans_outdegree),
                                   -(((bv_outdegrees - ans_outdegree) / bv_outdegrees) * 100))
         ])
+
+print("Saving results in ./components_analysis.csv")
