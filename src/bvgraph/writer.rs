@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 use tempfile::{Builder, NamedTempFile};
-use webgraph::graphs::{Encode, MeasurableEncoder};
+use webgraph::graphs::{Encode, EncodeAndEstimate};
 
 use crate::ans::encoder::ANSEncoder;
 use crate::ans::model4encoder::ANSModel4Encoder;
@@ -36,7 +36,7 @@ impl<MW: Encode> BVGraphModelBuilder<MW> {
     }
 }
 
-impl<MW: Encode> MeasurableEncoder for BVGraphModelBuilder<MW> {
+impl<MW: Encode> EncodeAndEstimate for BVGraphModelBuilder<MW> {
     type Estimator<'a> = &'a mut MW where Self: 'a;
 
     fn estimator(&mut self) -> Self::Estimator<'_> {
@@ -115,7 +115,7 @@ impl<MW: Encode> Encode for BVGraphModelBuilder<MW> {
 }
 
 /// An [`Encoder`] that writes to an [`ANSEncoder`].
-pub struct ANSBVGraphMeasurableEncoder {
+pub struct ANSBVGraphEncodeAndEstimate {
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
 
@@ -137,7 +137,7 @@ pub struct ANSBVGraphMeasurableEncoder {
     min_interval_length: usize,
 }
 
-impl ANSBVGraphMeasurableEncoder {
+impl ANSBVGraphEncodeAndEstimate {
     pub fn new(
         model: ANSModel4Encoder,
         estimator: EntropyEstimator,
@@ -182,7 +182,7 @@ impl ANSBVGraphMeasurableEncoder {
     }
 }
 
-impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {
+impl EncodeAndEstimate for ANSBVGraphEncodeAndEstimate {
     type Estimator<'a> = &'a mut EntropyEstimator where Self: 'a;
 
     fn estimator(&mut self) -> Self::Estimator<'_> {
@@ -193,7 +193,7 @@ impl MeasurableEncoder for ANSBVGraphMeasurableEncoder {
 /// Note that every Encoder's function write as model the component's index - 8 in order to have
 /// the most frequent components encoded with the smallest number of bits. Reversing the order of
 /// the components' indexes a good way to represent the expected frequency of the components.
-impl Encode for ANSBVGraphMeasurableEncoder {
+impl Encode for ANSBVGraphEncodeAndEstimate {
     type Error = Infallible;
 
     fn start_node(&mut self, _node: usize) -> Result<usize, Self::Error> {

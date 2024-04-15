@@ -4,7 +4,7 @@ use std::iter::Iterator;
 use folded_streaming_rans::bvgraph::reader::{
     ANSBVGraphDecoderFactory, ANSBVGraphSeqDecoderFactory,
 };
-use folded_streaming_rans::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
+use folded_streaming_rans::bvgraph::writer::{ANSBVGraphEncodeAndEstimate, BVGraphModelBuilder};
 
 use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
@@ -58,7 +58,7 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
     }
     bvcomp.flush()?;
     let model4encoder = model_builder.build();
-    let mut enc = ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_costs_table, 6, 4, 7, 2);
+    let mut enc = ANSBVGraphEncodeAndEstimate::new(model4encoder, entropic_costs_table, 6, 4, 7, 2);
     let mut bvcomp = BVComp::new(&mut enc, 7, 3, 2, 0);
 
     // now encode the graph
@@ -120,7 +120,7 @@ fn decodes_correctly_cnr_graph() -> Result<()> {
     bvcomp.flush()?;
     let model4encoder = model_builder.build();
     let mut enc =
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2);
+        ANSBVGraphEncodeAndEstimate::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2);
 
     let mut bvcomp = BVComp::new(&mut enc, 7, 3, 2, 0);
 
@@ -174,7 +174,7 @@ fn decodes_correctly_sequential_cnr_graph() -> Result<()> {
     let model4encoder = model_builder.build();
 
     let mut enc =
-        ANSBVGraphMeasurableEncoder::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2);
+        ANSBVGraphEncodeAndEstimate::new(model4encoder, entropic_mock, num_nodes, num_arcs, 7, 2);
     let mut bvcomp = BVComp::new(&mut enc, 7, 3, 2, 0);
 
     // Encoding the graph

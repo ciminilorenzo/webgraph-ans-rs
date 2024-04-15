@@ -1,7 +1,7 @@
 use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
 use crate::bvgraph::reader::ANSBVGraphDecoderFactory;
-use crate::bvgraph::writer::{ANSBVGraphMeasurableEncoder, BVGraphModelBuilder};
+use crate::bvgraph::writer::{ANSBVGraphEncodeAndEstimate, BVGraphModelBuilder};
 use crate::{State, EF};
 use anyhow::{Context, Result};
 use dsi_bitstream::prelude::BE;
@@ -133,7 +133,7 @@ impl ANSBVGraph {
         let model4encoder = model_builder.build();
         pl.done();
 
-        let mut enc = ANSBVGraphMeasurableEncoder::new(
+        let mut enc = ANSBVGraphEncodeAndEstimate::new(
             model4encoder,
             entropy_estimator,
             seq_graph.num_nodes(),
