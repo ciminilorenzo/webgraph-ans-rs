@@ -13,9 +13,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use sux::dict::EliasFanoBuilder;
-use sux::traits::ConvertTo;
-use webgraph::graphs::{BVComp, BVGraph, BVGraphSeq};
-use webgraph::prelude::SequentialLabeling;
+use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
 pub struct ANSBVGraph();
@@ -24,7 +22,7 @@ impl ANSBVGraph {
     /// Loads a previously ANS-encoded BVGraph from disk.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
-    ) -> Result<BVGraph<ANSBVGraphDecoderFactory>> {
+    ) -> Result<BvGraph<ANSBVGraphDecoderFactory>> {
         let mut buf = PathBuf::from(&basename);
 
         // load prelude
@@ -45,7 +43,7 @@ impl ANSBVGraph {
         let min_interval_length = prelude.min_interval_length;
         let factory = ANSBVGraphDecoderFactory::new(prelude, phases, states);
 
-        Ok(BVGraph::<ANSBVGraphDecoderFactory>::new(
+        Ok(BvGraph::<ANSBVGraphDecoderFactory>::new(
             factory,
             nun_nodes,
             num_arcs,
@@ -68,7 +66,7 @@ impl ANSBVGraph {
         let mut pl = ProgressLogger::default();
 
         info!("Loading BVGraph...");
-        let seq_graph = BVGraphSeq::with_basename(&basename)
+        let seq_graph = BvGraphSeq::with_basename(&basename)
             .endianness::<BE>()
             .load()?;
 
@@ -76,7 +74,7 @@ impl ANSBVGraph {
         let log2_mock = Log2Estimator::default();
 
         let mut model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-        let mut bvcomp = BVComp::new(
+        let mut bvcomp = BvComp::new(
             &mut model_builder,
             compression_window,
             max_ref_count,
@@ -108,7 +106,7 @@ impl ANSBVGraph {
         let entropy_estimator = EntropyEstimator::new(&model4encoder, folding_params);
         let mut model_builder =
             BVGraphModelBuilder::<EntropyEstimator>::new(entropy_estimator.clone());
-        let mut bvcomp = BVComp::new(
+        let mut bvcomp = BvComp::new(
             &mut model_builder,
             compression_window,
             max_ref_count,
@@ -142,7 +140,7 @@ impl ANSBVGraph {
             min_interval_length,
         );
         // (3) setup for the compression of the BVGraph
-        let mut bvcomp = BVComp::new(
+        let mut bvcomp = BvComp::new(
             &mut enc,
             compression_window,
             max_ref_count,
@@ -197,7 +195,7 @@ impl ANSBVGraph {
         let mut efb = EliasFanoBuilder::new(num_nodes, upper_bound + 1);
 
         for phase in phases.iter() {
-            efb.push(phase.stream_pointer)?;
+            efb.push(phase.stream_pointer);
         }
         efb.build().convert_to()
     }

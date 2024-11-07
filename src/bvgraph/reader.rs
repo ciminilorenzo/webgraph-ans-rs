@@ -3,8 +3,7 @@ use crate::ans::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;
 use crate::EF;
 use anyhow::Result;
-use sux::traits::indexed_dict::IndexedDict;
-use webgraph::graphs::{RandomAccessDecoderFactory, SequentialDecoderFactory};
+use webgraph::prelude::{RandomAccessDecoderFactory, SequentialDecoderFactory};
 
 pub struct ANSBVGraphDecoderFactory {
     /// The EliasFano containing the stream pointers for each of the nodes.

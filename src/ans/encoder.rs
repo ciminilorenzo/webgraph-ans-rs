@@ -5,9 +5,6 @@ use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 
-#[cfg(feature = "arm")]
-use crate::Freq;
-
 #[derive(Clone)]
 pub struct ANSEncoder {
     /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).

@@ -308,7 +308,7 @@ impl ANSModel4EncoderBuilder {
         information_content
     }
 
-    /// Returns all possibile combinations of radix and fidelity which sum is at least 4 and at most
+    /// Returns all possible combinations of radix and fidelity which sum is at least 4 and at most
     /// 11.
     /// These values are chosen since we want to explicitly represent at least the numbers in the
     /// interval [0; 8) and at most the numbers in the interval [0; 1024).

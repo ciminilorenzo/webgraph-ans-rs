@@ -21,7 +21,7 @@ pub struct ANSComponentModel4Encoder {
     /// The fidelity used by the current model.
     pub fidelity: usize,
 
-    /// The threshold representing the symbol from which we have to start folding, based on the current fidelity and radix.
+    /// The threshold representing the symbol from which the folding starts.
     pub folding_threshold: u64,
 
     pub folding_offset: u64,

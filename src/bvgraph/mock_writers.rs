@@ -1,7 +1,5 @@
 use std::convert::Infallible;
-
-use webgraph::graphs::Encode;
-
+use webgraph::prelude::Encode;
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::ans_utils::fold_without_streaming_out;

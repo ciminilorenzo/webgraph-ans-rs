@@ -1,7 +1,6 @@
 use std::convert::Infallible;
 use tempfile::{Builder, NamedTempFile};
-use webgraph::graphs::{Encode, EncodeAndEstimate};
-
+use webgraph::prelude::{Encode, EncodeAndEstimate};
 use crate::ans::encoder::ANSEncoder;
 use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::ans::model4encoder_builder::ANSModel4EncoderBuilder;
