@@ -1,7 +1,7 @@
 use crate::ans::{ANSCompressorPhase, Prelude};
-use crate::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
-use crate::bvgraph::reader::ANSBVGraphDecoderFactory;
-use crate::bvgraph::writer::{ANSBVGraphEncodeAndEstimate, BVGraphModelBuilder};
+use crate::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use crate::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
+use crate::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
 use crate::{State, EF};
 use anyhow::{Context, Result};
 use dsi_bitstream::prelude::BE;
@@ -14,6 +14,8 @@ use std::io::BufWriter;
 use std::path::PathBuf;
 use sux::dict::EliasFanoBuilder;
 use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
+use crate::bvgraph::estimators::log2_estimator::Log2Estimator;
+use crate::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
 pub struct ANSBVGraph();

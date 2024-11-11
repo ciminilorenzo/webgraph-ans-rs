@@ -1,5 +1,5 @@
 use crate::ans::Prelude;
-use crate::bvgraph::reader::ANSBVGraphSeqDecoderFactory;
+use crate::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
 use epserde::prelude::*;
 use std::path::PathBuf;
 use webgraph::prelude::BvGraphSeq;

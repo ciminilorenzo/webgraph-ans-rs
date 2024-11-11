@@ -110,7 +110,7 @@ impl ANSModel4EncoderBuilder {
                     false => n.next_power_of_two(),
                 };
 
-                // We need the list of symbols' indexes sorted by the frequency of the related
+                // We need the list of symbols indexes sorted by the frequency of the related
                 // symbol, in ascending order.
                 let sorted_indexes = folded_sym_freqs
                     .iter()

@@ -1,13 +1,12 @@
 use std::fmt::Display;
 
-pub mod mock_writers;
 pub mod random_access;
-pub mod reader;
+pub mod factories;
 pub mod sequential;
-pub mod writer;
+pub mod estimators;
+pub mod writers;
 
-/// An enumeration of the components getting a different model in the Rust
-/// implementation of the BV format.
+/// An enumeration of the components composing the BVGraph format.
 #[derive(Clone, Copy, Debug)]
 pub enum BVGraphComponent {
     Outdegree,
@@ -19,6 +18,12 @@ pub enum BVGraphComponent {
     IntervalLen,
     FirstResidual,
     Residual,
+}
+
+impl BVGraphComponent {
+
+    /// The number of components in the BVGraph format.
+    pub const COMPONENTS: usize = 9;
 }
 
 impl Display for BVGraphComponent {
@@ -52,9 +57,4 @@ impl From<usize> for BVGraphComponent {
             _ => panic!("Invalid component."),
         }
     }
-}
-
-impl BVGraphComponent {
-    /// The number of components in the BVGraph format.
-    pub const COMPONENTS: usize = 9;
 }

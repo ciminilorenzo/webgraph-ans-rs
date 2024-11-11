@@ -1,18 +1,19 @@
 use anyhow::Result;
 use std::iter::Iterator;
 
-use folded_streaming_rans::bvgraph::reader::{
-    ANSBVGraphDecoderFactory, ANSBVGraphSeqDecoderFactory,
-};
-use folded_streaming_rans::bvgraph::writer::{ANSBVGraphEncodeAndEstimate, BVGraphModelBuilder};
+use folded_streaming_rans::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
+use folded_streaming_rans::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
 
 use dsi_bitstream::prelude::BE;
-use folded_streaming_rans::bvgraph::mock_writers::{EntropyEstimator, Log2Estimator};
+use folded_streaming_rans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
 use folded_streaming_rans::State;
 use lender::for_;
 use webgraph::prelude::*;
+use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
+use folded_streaming_rans::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
+use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 
 #[test]
 fn decodes_correctly_dummy_graph() -> Result<()> {

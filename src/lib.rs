@@ -8,9 +8,6 @@ mod traits;
 
 /// The parameter with the same name in Duda's paper. In this case we store the logarithm of the
 /// parameter since, if b = 2^k, we extract/insert k bits from the state at once.
-///
-/// Having said that, in this project b is fixed to be 32 in order to extract/insert 32 bits from/to
-/// the state at once.
 pub const B: usize = 16;
 
 /// The maximum symbol that can be encoded/decoded.
