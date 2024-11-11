@@ -1,11 +1,11 @@
 use criterion::{criterion_group, BatchSize, Criterion};
 use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
 use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 use pprof::criterion::{Output, PProfProfiler};
 use webgraph::graphs::{BVComp, BVGraph};
 use webgraph::prelude::SequentialLabeling;
-use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
 
 fn model4encoder_building_bench(c: &mut Criterion) {
     let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")

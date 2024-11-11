@@ -1,9 +1,9 @@
 use std::fmt::Display;
 
-pub mod random_access;
-pub mod factories;
-pub mod sequential;
 pub mod estimators;
+pub mod factories;
+pub mod random_access;
+pub mod sequential;
 pub mod writers;
 
 /// An enumeration of the components composing the BVGraph format.
@@ -21,7 +21,6 @@ pub enum BVGraphComponent {
 }
 
 impl BVGraphComponent {
-
     /// The number of components in the BVGraph format.
     pub const COMPONENTS: usize = 9;
 }

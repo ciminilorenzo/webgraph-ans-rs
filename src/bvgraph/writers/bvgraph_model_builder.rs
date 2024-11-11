@@ -1,8 +1,8 @@
-use webgraph::prelude::{Encode, EncodeAndEstimate};
-use std::convert::Infallible;
-use crate::ans::model4encoder::ANSModel4Encoder;
 use crate::ans::model4encoder_builder::ANSModel4EncoderBuilder;
+use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
+use std::convert::Infallible;
+use webgraph::prelude::{Encode, EncodeAndEstimate};
 
 /// An [`Encoder`] that writes to an [`ANSModel4EncoderBuilder`]. to collect data for each
 ///
@@ -31,7 +31,10 @@ impl<MW: Encode> BVGraphModelBuilder<MW> {
 }
 
 impl<MW: Encode> EncodeAndEstimate for BVGraphModelBuilder<MW> {
-    type Estimator<'a> = &'a mut MW where Self: 'a;
+    type Estimator<'a>
+        = &'a mut MW
+    where
+        Self: 'a;
 
     fn estimator(&mut self) -> Self::Estimator<'_> {
         &mut self.mock

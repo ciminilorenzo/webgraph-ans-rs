@@ -1,13 +1,15 @@
 use webgraph::prelude::Encode;
+
 use std::convert::Infallible;
-use crate::ans::model4encoder::ANSModel4Encoder;
-use crate::{Freq, Symbol, MAX_RAW_SYMBOL};
+
+use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::ans_utils::fold_without_streaming_out;
+use crate::{Freq, Symbol, MAX_RAW_SYMBOL};
 
 #[derive(Clone)]
 pub struct EntropyEstimator {
-    /// A table containing the cost of each symbol contained in every [`BVGraphComponent`](component).
+    /// A table containing, for each [`BVGraphComponent`], the cost of each symbol.
     table: Vec<Vec<usize>>,
 
     /// The fidelity and radix values used by each [component](BVGraphComponent).
@@ -18,7 +20,8 @@ pub struct EntropyEstimator {
 }
 
 impl EntropyEstimator {
-
+    /// Creates a new [`EntropyEstimator`] for the specific [`ANSModel4Encoder`] which uses the
+    /// provided pairs of radix and fidelity to fold each component.
     pub fn new(model: &ANSModel4Encoder, component_args: Vec<(usize, usize)>) -> Self {
         let mut folding_thresholds = Vec::new();
         let mut folding_offsets = Vec::new();
@@ -63,7 +66,7 @@ impl EntropyEstimator {
         }
     }
 
-    /// Calculates, and then returns, the cost of the symbol folded with the given parameters, calculated as follows:
+    /// Returns the cost of the symbol folded with the given parameters, calculated as follows:
     /// ```text
     ///     cost = -log2(probability) * 2^16 + (folds * radix) * 2^16
     /// ```

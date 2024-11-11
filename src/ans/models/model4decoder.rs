@@ -1,33 +1,7 @@
-use std::ops::Index;
-
-use crate::ans::model4encoder::ANSComponentModel4Encoder;
-use crate::ans::DecoderModelEntry;
+use crate::ans::models::component_model4decoder::{ANSComponentModel4Decoder, DecoderModelEntry};
+use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, Symbol};
-
-/// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode one of its [symbols](Symbol).
-pub struct ANSComponentModel4Decoder {
-    /// A table containing, at each index, an [entry](DecoderModelEntry) for the symbol equal to that index.
-    pub table: Vec<DecoderModelEntry>,
-
-    /// The log2 of the frame size for this [component](BVGraphComponent).
-    frame_size: usize,
-
-    /// The radix used by the current model.
-    radix: usize,
-
-    /// The fidelity used by the current model.
-    fidelity: usize,
-}
-
-impl Index<Symbol> for ANSComponentModel4Decoder {
-    type Output = DecoderModelEntry;
-
-    #[inline(always)]
-    fn index(&self, symbol: Symbol) -> &Self::Output {
-        &self.table[symbol as usize]
-    }
-}
 
 /// The container for the whole set of models, one for each [component](BVGraphComponent) used by the ANS decoder to
 /// decode symbols.
@@ -67,12 +41,12 @@ impl ANSModel4Decoder {
                 }
                 last_slot += symbol_entry.freq as u32;
             }
-            vectors.push(ANSComponentModel4Decoder {
-                table: vec,
-                frame_size: table.frame_size,
-                radix: table.radix,
-                fidelity: table.fidelity,
-            });
+            vectors.push(ANSComponentModel4Decoder::new(
+                vec,
+                table.frame_size,
+                table.radix,
+                table.fidelity,
+            ))
         });
 
         Self { tables: vectors }

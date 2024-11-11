@@ -1,16 +1,9 @@
-use webgraph::prelude::Encode;
 use std::convert::Infallible;
-use crate::bvgraph::BVGraphComponent;
+use webgraph::prelude::Encode;
 
-/// An estimator that simply returns the cost of each symbol calculated as the log2 of the value plus 2.
+/// An estimator that simply returns the number of bits needed to represent a specific value.
 #[derive(Clone, Default)]
 pub struct Log2Estimator {}
-
-impl Log2Estimator {
-    fn get_symbol_cost(&self, value: u64, _component: BVGraphComponent) -> usize {
-        u64::ilog2(value + 2) as usize
-    }
-}
 
 impl Encode for Log2Estimator {
     type Error = Infallible;
@@ -20,39 +13,39 @@ impl Encode for Log2Estimator {
     }
 
     fn write_outdegree(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::Outdegree))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_reference_offset(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::ReferenceOffset))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_block_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::BlockCount))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_block(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::Blocks))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_interval_count(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::IntervalCount))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_interval_start(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::IntervalStart))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_interval_len(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::IntervalLen))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_first_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::FirstResidual))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn write_residual(&mut self, value: u64) -> Result<usize, Self::Error> {
-        Ok(self.get_symbol_cost(value, BVGraphComponent::Residual))
+        Ok(u64::ilog2(value + 2) as usize)
     }
 
     fn flush(&mut self) -> Result<usize, Self::Error> {

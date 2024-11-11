@@ -1,53 +1,6 @@
-use epserde::Epserde;
-use mem_dbg::{MemDbg, MemSize};
-use std::ops::Index;
-
-use crate::ans::EncoderModelEntry;
+use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::RawSymbol;
-
-#[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
-/// The ANS model of a specific [component](BVGraphComponent) used by the encoder to encode its symbols.
-pub struct ANSComponentModel4Encoder {
-    /// A table containing, at each index, the data related to the symbol equal to that index.
-    pub table: Vec<EncoderModelEntry>,
-
-    /// The log2 of the frame size for this [`BVGraphComponent`](component).
-    pub frame_size: usize,
-
-    /// The radix used by the current model.
-    pub radix: usize,
-
-    /// The fidelity used by the current model.
-    pub fidelity: usize,
-
-    /// The threshold representing the symbol from which the folding starts.
-    pub folding_threshold: u64,
-
-    pub folding_offset: u64,
-}
-
-impl Default for ANSComponentModel4Encoder {
-    fn default() -> Self {
-        Self {
-            table: Vec::new(),
-            frame_size: 0,
-            radix: 2,
-            fidelity: 2,
-            folding_threshold: 10,
-            folding_offset: 10,
-        }
-    }
-}
-
-impl Index<RawSymbol> for ANSComponentModel4Encoder {
-    type Output = EncoderModelEntry;
-
-    #[inline(always)]
-    fn index(&self, symbol: RawSymbol) -> &Self::Output {
-        &self.table[symbol as usize]
-    }
-}
 
 /// The main and unique model used by the ANS encoder to encode symbols of every [component](BVGraphComponent). Every
 /// [component](BVGraphComponent) has its own [model](ANSComponentModel4Encoder) that is used to encode its symbols.

@@ -1,5 +1,6 @@
 use webgraph::prelude::Decode;
-use crate::ans::model4decoder::ANSModel4Decoder;
+
+use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, Symbol, B};
 

@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 
-use crate::ans::model4encoder::{ANSComponentModel4Encoder, ANSModel4Encoder};
+use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
+use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::ans::ANSCompressorPhase;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};

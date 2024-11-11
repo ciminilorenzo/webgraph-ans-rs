@@ -1,12 +1,14 @@
 use anyhow::{bail, Result};
+
 use itertools::Itertools;
+
 use log::info;
+
 use std::cmp::max;
 use std::collections::HashMap;
 
-use crate::ans::model4encoder::ANSComponentModel4Encoder;
-use crate::ans::model4encoder::ANSModel4Encoder;
-use crate::ans::EncoderModelEntry;
+use crate::ans::models::component_model4encoder::{ANSComponentModel4Encoder, EncoderModelEntry};
+use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::ans_utils::fold_without_streaming_out;
 use crate::utils::data_utils::scale_freqs;

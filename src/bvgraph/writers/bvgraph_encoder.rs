@@ -1,12 +1,12 @@
-use webgraph::prelude::{Encode, EncodeAndEstimate};
+use crate::ans::encoder::ANSEncoder;
+use crate::ans::models::model4encoder::ANSModel4Encoder;
+use crate::ans::{ANSCompressorPhase, Prelude};
+use crate::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use crate::bvgraph::BVGraphComponent;
+use crate::utils::rev::RevBuffer;
 use std::convert::Infallible;
 use tempfile::{Builder, NamedTempFile};
-use crate::ans::{ANSCompressorPhase, Prelude};
-use crate::ans::encoder::ANSEncoder;
-use crate::ans::model4encoder::ANSModel4Encoder;
-use crate::bvgraph::BVGraphComponent;
-use crate::bvgraph::estimators::entropy_estimator::EntropyEstimator;
-use crate::utils::rev::RevBuffer;
+use webgraph::prelude::{Encode, EncodeAndEstimate};
 
 /// An [`Encoder`] that writes to an [`ANSEncoder`].
 pub struct ANSBVGraphEncodeAndEstimate {
@@ -77,7 +77,10 @@ impl ANSBVGraphEncodeAndEstimate {
 }
 
 impl EncodeAndEstimate for ANSBVGraphEncodeAndEstimate {
-    type Estimator<'a> = &'a mut EntropyEstimator where Self: 'a;
+    type Estimator<'a>
+        = &'a mut EntropyEstimator
+    where
+        Self: 'a;
 
     fn estimator(&mut self) -> Self::Estimator<'_> {
         &mut self.estimator

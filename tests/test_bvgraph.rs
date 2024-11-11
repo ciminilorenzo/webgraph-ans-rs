@@ -6,14 +6,14 @@ use folded_streaming_rans::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAn
 
 use dsi_bitstream::prelude::BE;
 use folded_streaming_rans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
+use folded_streaming_rans::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
 use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
 use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
+use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 use folded_streaming_rans::State;
 use lender::for_;
 use webgraph::prelude::*;
-use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
-use folded_streaming_rans::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
-use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 
 #[test]
 fn decodes_correctly_dummy_graph() -> Result<()> {

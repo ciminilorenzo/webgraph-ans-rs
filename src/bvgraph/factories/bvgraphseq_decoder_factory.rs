@@ -1,7 +1,7 @@
-use webgraph::prelude::SequentialDecoderFactory;
 use crate::ans::decoder::ANSDecoder;
-use crate::ans::model4decoder::ANSModel4Decoder;
+use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;
+use webgraph::prelude::SequentialDecoderFactory;
 
 pub struct ANSBVGraphSeqDecoderFactory {
     /// The prelude resulting from the encoding process of the graph.
@@ -21,7 +21,10 @@ impl ANSBVGraphSeqDecoderFactory {
 }
 
 impl SequentialDecoderFactory for ANSBVGraphSeqDecoderFactory {
-    type Decoder<'b> = ANSDecoder<'b> where Self: 'b;
+    type Decoder<'b>
+        = ANSDecoder<'b>
+    where
+        Self: 'b;
 
     fn new_decoder(&self) -> anyhow::Result<Self::Decoder<'_>> {
         Ok(ANSDecoder::new(
