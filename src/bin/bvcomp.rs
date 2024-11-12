@@ -1,7 +1,9 @@
 use anyhow::Result;
+
 use clap::Parser;
-use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
+
 use webgraph::cli::CompressArgs;
+use webgraph_ans::bvgraph::random_access::ANSBVGraph;
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]

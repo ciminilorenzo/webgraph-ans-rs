@@ -1,2 +1,2 @@
 pub mod fastdiv;
-pub mod model4encoder_building;
+mod model4encoder_building;

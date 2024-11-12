@@ -1,7 +1,10 @@
 use clap::Parser;
-use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
+
 use lender::Lender;
+
 use webgraph::prelude::SequentialLabeling;
+
+use webgraph_ans::bvgraph::sequential::ANSBVGraphSeq;
 
 #[derive(Parser, Debug)]
 #[command(about = "Tests the speed of an ANS graph", long_about = None)]

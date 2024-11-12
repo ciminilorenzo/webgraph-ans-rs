@@ -2,12 +2,15 @@ use std::hint::black_box;
 use std::iter::Iterator;
 
 use anyhow::Result;
+
 use clap::Parser;
-use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
+
 use rand::rngs::SmallRng;
 use rand::Rng;
 use rand::SeedableRng;
+
 use webgraph::prelude::*;
+use webgraph_ans::bvgraph::random_access::ANSBVGraph;
 
 const RANDOM_TEST_SAMPLES: u64 = 10_000_000;
 

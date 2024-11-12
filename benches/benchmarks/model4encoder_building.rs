@@ -1,21 +1,25 @@
 use criterion::{criterion_group, BatchSize, Criterion};
+
 use dsi_bitstream::prelude::BE;
-use folded_streaming_rans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
-use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
-use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
+
 use pprof::criterion::{Output, PProfProfiler};
-use webgraph::graphs::{BVComp, BVGraph};
-use webgraph::prelude::SequentialLabeling;
+
+use webgraph::prelude::{BvComp, SequentialLabeling};
+use webgraph::graphs::bvgraph::BvGraph;
+
+use webgraph_ans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use webgraph_ans::bvgraph::estimators::log2_estimator::Log2Estimator;
+use webgraph_ans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 
 fn model4encoder_building_bench(c: &mut Criterion) {
-    let graph = BVGraph::with_basename("tests/data/cnr-2000/cnr-2000")
+    let graph = BvGraph::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()
         .unwrap();
 
     let log2_mock = Log2Estimator::default();
     let mut model_builder = BVGraphModelBuilder::<Log2Estimator>::new(log2_mock);
-    let mut bvcomp = BVComp::new(&mut model_builder, 7, 3, 2, 0);
+    let mut bvcomp = BvComp::new(&mut model_builder, 7, 3, 2, 0);
 
     // First iteration with Log2MockWriter
     bvcomp.extend(graph.iter()).unwrap();
@@ -33,7 +37,7 @@ fn model4encoder_building_bench(c: &mut Criterion) {
             || {
                 let model_builder =
                     BVGraphModelBuilder::<EntropyEstimator>::new(entropic_mock.clone());
-                BVComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0)
+                BvComp::<BVGraphModelBuilder<EntropyEstimator>>::new(model_builder, 7, 3, 2, 0)
             },
             |mut bvcomp|
                 // second iteration with EntropyMockWriter
