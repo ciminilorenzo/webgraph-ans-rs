@@ -21,6 +21,20 @@ use crate::{RawSymbol, Symbol, MAX_RAW_SYMBOL};
 /// approximated distributions that lead to a cost of at most 1000,1 bytes.
 const THETA: f64 = 1.0001;
 
+/// All possible combinations of radix and fidelity which sum is at least 4 and at most 11.
+/// These values are chosen since we want to explicitly represent at least the numbers in the
+/// interval [0; 8) and at most the numbers in the interval [0; 1024).
+const PARAMS_COMBINATIONS: Vec<(usize, usize)> = vec![
+    (1, 3), (2, 2), (3, 1),
+    (1, 4), (2, 3), (3, 2), (4, 1),
+    (1, 5), (2, 4), (3, 3), (4, 2), (5, 1),
+    (1, 6), (2, 5), (3, 4), (4, 3), (5, 2), (6, 1),
+    (1, 7), (2, 6), (3, 5), (4, 4), (5, 3), (6, 2), (7, 1),
+    (1, 8), (2, 7), (3, 6), (4, 5), (5, 4), (6, 3), (7, 2), (8, 1),
+    (1, 9), (2, 8), (3, 7), (4, 6), (5, 5), (6, 4), (7, 3), (8, 2), (9, 1),
+    (1, 10), (2, 9), (3, 8), (4, 7), (5, 6), (6, 5), (7, 4), (8, 3), (9, 2), (10, 1)
+];
+
 pub struct ANSModel4EncoderBuilder {
     /// The frequencies of the raw symbols for each component.
     real_freqs: Vec<HashMap<RawSymbol, usize>>,
@@ -79,15 +93,14 @@ impl ANSModel4EncoderBuilder {
                 components_final_cost.push(0.0);
                 continue;
             }
+
             // the final folded distribution for this component, scaled to sum up to a power of two.
             let mut scaled_distribution = Vec::new();
             let (mut fidelity, mut radix) = (0usize, 0usize);
             let mut frame_size = usize::MAX;
             let mut lowest_cost = f64::MAX;
 
-            let params_combinations = Self::get_folding_params();
-
-            for (fid, rad) in params_combinations.iter() {
+            for (fid, rad) in PARAMS_COMBINATIONS.iter() {
                 let max_bucket = fold_without_streaming_out(MAX_RAW_SYMBOL, *rad, *fid);
                 let folding_threshold = 1u64 << (fid + rad - 1);
                 let mut folded_sym_freqs = vec![0_usize; max_bucket as usize];
@@ -180,7 +193,6 @@ impl ANSModel4EncoderBuilder {
                                 frame_size = m;
                                 fidelity = *fid;
                                 radix = *rad;
-
                                 break;
                             }
                             m *= 2;
@@ -191,6 +203,7 @@ impl ANSModel4EncoderBuilder {
                     }
                 }
             }
+
             assert_ne!(frame_size, usize::MAX, "\
             It's not been possible to approximate the folded distribution for the component {} with \
             any of the available radix and fidelity and a frame size <= 2^16."
@@ -307,19 +320,7 @@ impl ANSModel4EncoderBuilder {
             let prob = *approx_freq as f64 / new_frame_size;
             information_content += (-prob.log2() + (folds * radix as f64)) * freq;
         }
-        information_content
-    }
 
-    /// Returns all possible combinations of radix and fidelity which sum is at least 4 and at most
-    /// 11.
-    /// These values are chosen since we want to explicitly represent at least the numbers in the
-    /// interval [0; 8) and at most the numbers in the interval [0; 1024).
-    pub fn get_folding_params() -> Vec<(usize, usize)> {
-        [1usize, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-            .iter()
-            .combinations_with_replacement(2)
-            .map(|v| (*v[0], *v[1]))
-            .filter(|(fidelity, radix)| fidelity + radix <= 11 && fidelity + radix >= 4)
-            .collect()
+        information_content
     }
 }

@@ -5,7 +5,7 @@ use epserde::Epserde;
 use crate::bvgraph::BVGraphComponent;
 use crate::{Freq, Symbol};
 
-/// The entry containing all the needed data to decode a specific [`Symbol`].
+/// The entry containing all the data needed to decode a specific [`Symbol`].
 #[derive(Clone, Copy, Debug, Default, Epserde)]
 #[repr(C)]
 #[zero_copy]
@@ -21,7 +21,7 @@ pub struct DecoderModelEntry {
     pub quasi_folded: u64,
 }
 
-/// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode one of its [symbols](Symbol).
+/// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode its [symbols](Symbol).
 pub struct ANSComponentModel4Decoder {
     /// A table containing, at each index, an [entry](DecoderModelEntry) for the symbol equal to that index.
     pub table: Vec<DecoderModelEntry>,
