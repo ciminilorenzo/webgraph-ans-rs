@@ -19,9 +19,9 @@ use sux::prelude::SelectAdaptConst;
 use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
-pub struct ANSBVGraph();
+pub struct ANSBvGraph();
 
-impl ANSBVGraph {
+impl ANSBvGraph {
     /// Loads a previously ANS-encoded BVGraph from disk.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,

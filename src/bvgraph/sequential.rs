@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use webgraph::prelude::BvGraphSeq;
 
 /// An ANS-encoded BVSeqGraph that can only be accessed sequentially.
-pub struct ANSBVGraphSeq();
+pub struct ANSBvGraphSeq();
 
-impl ANSBVGraphSeq {
+impl ANSBvGraphSeq {
     /// Loads a previously ANS-encoded BVSeqGraph from disk.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,

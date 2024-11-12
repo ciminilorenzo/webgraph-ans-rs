@@ -10,7 +10,7 @@ use rand::Rng;
 use rand::SeedableRng;
 
 use webgraph::prelude::*;
-use webgraph_ans::bvgraph::random_access::ANSBVGraph;
+use webgraph_ans::bvgraph::random_access::ANSBvGraph;
 
 const RANDOM_TEST_SAMPLES: u64 = 10_000_000;
 
@@ -23,7 +23,7 @@ struct Args {
 
 pub fn main() -> Result<()> {
     let args = Args::parse();
-    let graph = ANSBVGraph::load(args.basename)?;
+    let graph = ANSBvGraph::load(args.basename)?;
 
     for i in 0..10 {
         eprintln!("Iteration number {} out of 10", i);

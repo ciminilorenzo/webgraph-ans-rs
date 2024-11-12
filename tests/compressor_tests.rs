@@ -3,6 +3,7 @@ mod utils;
 use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
 
 use rand::prelude::SliceRandom;
+
 use webgraph_ans::ans::decoder::ANSDecoder;
 use webgraph_ans::ans::encoder::ANSEncoder;
 use webgraph_ans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
@@ -138,7 +139,8 @@ fn decodes_correctly_dummy_sequences() {
     let mut second_decoded_sequence: Vec<RawSymbol> = Vec::new();
 
     for _ in 0..first_source.len() {
-        second_decoded_sequence.push(decoder.decode(BVGraphComponent::BlockCount)); // let's start from the last encoded
+        // let's start from the last encoded
+        second_decoded_sequence.push(decoder.decode(BVGraphComponent::BlockCount));
         first_decoded_sequence.push(decoder.decode(BVGraphComponent::Outdegree));
     }
 
@@ -169,7 +171,7 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
         .map(|symbol| (BVGraphComponent::Residual, *symbol))
         .collect::<Vec<(BVGraphComponent, RawSymbol)>>();
 
-    // now let's unify each source in a single one and randomize it
+    // now let's create a single sequence and then randomize it.
     let mut source = vec![first_sequence, second_sequence, third_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
@@ -187,10 +189,6 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
 
     for (component, symbol) in &source {
         expected[*component as usize].push(*symbol);
-    }
-
-    // now encode each symbol with the corresponding model previously associated
-    for (component, symbol) in source.iter() {
         encoder.encode(*symbol, *component);
     }
 
@@ -199,13 +197,15 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
     let mut decoder = ANSDecoder::new(&model, &prelude.1, prelude.2);
     let mut decoded: Vec<Vec<RawSymbol>> = vec![Vec::new(); BVGraphComponent::COMPONENTS];
 
-    source.reverse(); // now let's reverse the order of the model_index-symbol pairs to decode in reverse
+    // now let's reverse the order of the model_index-symbol pairs to decode in reverse
+    source.reverse();
 
     for (component, _symbol) in &source {
         decoded[*component as usize].push(decoder.decode(*component));
     }
 
-    decoded.iter_mut().for_each(|sequence| sequence.reverse()); // they have been decoded in reversed order
+    // they have been decoded in reversed order
+    decoded.iter_mut().for_each(|sequence| sequence.reverse());
 
     assert_eq!(expected[0], decoded[0]);
     assert_eq!(expected[1], decoded[1]);

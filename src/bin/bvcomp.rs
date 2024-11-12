@@ -3,7 +3,9 @@ use anyhow::Result;
 use clap::Parser;
 
 use webgraph::cli::CompressArgs;
-use webgraph_ans::bvgraph::random_access::ANSBVGraph;
+
+use webgraph_ans::bvgraph::random_access::ANSBvGraph;
+
 
 #[derive(Parser, Debug)]
 #[command(about = "Recompress a BVGraph", long_about = None)]
@@ -28,7 +30,7 @@ pub fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    ANSBVGraph::store(
+    ANSBvGraph::store(
         &args.basename,
         &args.new_basename,
         args.compressions_args.compression_window,

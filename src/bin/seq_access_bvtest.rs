@@ -4,7 +4,7 @@ use lender::Lender;
 
 use webgraph::prelude::SequentialLabeling;
 
-use webgraph_ans::bvgraph::sequential::ANSBVGraphSeq;
+use webgraph_ans::bvgraph::sequential::ANSBvGraphSeq;
 
 #[derive(Parser, Debug)]
 #[command(about = "Tests the speed of an ANS graph", long_about = None)]
@@ -15,7 +15,7 @@ struct Args {
 
 pub fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let graph = ANSBVGraphSeq::load(args.basename)?;
+    let graph = ANSBvGraphSeq::load(args.basename)?;
 
     for i in 0..10 {
         eprintln!("Iteration number {} out of 10", i);

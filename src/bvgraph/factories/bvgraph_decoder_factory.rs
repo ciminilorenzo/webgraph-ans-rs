@@ -1,11 +1,12 @@
 use sux::prelude::IndexedSeq;
+
 use crate::ans::decoder::ANSDecoder;
 use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;
 use crate::EF;
+
 use webgraph::prelude::RandomAccessDecoderFactory;
 
-/// A factory that creates decoders
 pub struct ANSBVGraphDecoderFactory {
     /// The EliasFano containing the stream pointers for each of the nodes.
     phases: EF,
@@ -42,7 +43,7 @@ impl RandomAccessDecoderFactory for ANSBVGraphDecoderFactory {
         Self: 'b;
 
     fn new_decoder(&self, node: usize) -> anyhow::Result<Self::Decoder<'_>> {
-        // nodes' phases are stored in reversed order. Thus, for example, let's
+        // nodes phases are stored in reversed order. Thus, for example, let's
         // take the last phase if we want the phase of the first node.
         let pointer = self.phases.get(self.num_nodes - node - 1);
         let state = self.states[self.num_nodes - node - 1];
