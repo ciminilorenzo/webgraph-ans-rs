@@ -2,7 +2,6 @@ use std::ops::Index;
 
 use epserde::Epserde;
 
-use crate::bvgraph::BVGraphComponent;
 use crate::{Freq, Symbol};
 
 /// The entry containing all the data needed to decode a specific [`Symbol`].
@@ -27,13 +26,13 @@ pub struct ANSComponentModel4Decoder {
     pub table: Vec<DecoderModelEntry>,
 
     /// The log2 of the frame size for this [component](BVGraphComponent).
-    frame_size: usize,
+    pub frame_size: usize,
 
     /// The radix used by the current model.
-    radix: usize,
+    pub radix: usize,
 
     /// The fidelity used by the current model.
-    fidelity: usize,
+    pub fidelity: usize,
 }
 
 impl ANSComponentModel4Decoder {

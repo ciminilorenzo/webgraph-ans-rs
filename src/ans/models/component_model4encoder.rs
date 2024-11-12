@@ -4,8 +4,7 @@ use mem_dbg::{MemDbg, MemSize};
 
 use epserde::Epserde;
 
-use crate::bvgraph::BVGraphComponent;
-use crate::{Freq, RawSymbol, State, Symbol, B};
+use crate::{Freq, RawSymbol, State, B};
 
 /// The entry containing all the needed data to encode a specific [`Symbol`].
 #[derive(Clone, Copy, Debug, Epserde, MemDbg, MemSize)]

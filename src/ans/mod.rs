@@ -1,7 +1,7 @@
 pub mod decoder;
 pub mod encoder;
 pub mod model4encoder_builder;
-mod models;
+pub mod models;
 
 use epserde::Epserde;
 

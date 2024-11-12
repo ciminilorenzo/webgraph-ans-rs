@@ -1,11 +1,14 @@
 use crate::ans::encoder::ANSEncoder;
-use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::ans::{ANSCompressorPhase, Prelude};
 use crate::bvgraph::estimators::entropy_estimator::EntropyEstimator;
 use crate::bvgraph::BVGraphComponent;
 use crate::utils::rev::RevBuffer;
+use crate::ans::models::model4encoder::ANSModel4Encoder;
+
 use std::convert::Infallible;
+
 use tempfile::{Builder, NamedTempFile};
+
 use webgraph::prelude::{Encode, EncodeAndEstimate};
 
 /// An [`Encoder`] that writes to an [`ANSEncoder`].

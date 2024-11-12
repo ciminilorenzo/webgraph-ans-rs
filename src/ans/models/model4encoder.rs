@@ -1,4 +1,4 @@
-use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
+use crate::ans::models::component_model4encoder::{ANSComponentModel4Encoder, EncoderModelEntry};
 use crate::bvgraph::BVGraphComponent;
 use crate::RawSymbol;
 

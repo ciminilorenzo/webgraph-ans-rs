@@ -24,7 +24,7 @@ const THETA: f64 = 1.0001;
 /// All possible combinations of radix and fidelity which sum is at least 4 and at most 11.
 /// These values are chosen since we want to explicitly represent at least the numbers in the
 /// interval [0; 8) and at most the numbers in the interval [0; 1024).
-const PARAMS_COMBINATIONS: Vec<(usize, usize)> = vec![
+const PARAMS_COMBINATIONS: &[(usize, usize)] = &[
     (1, 3), (2, 2), (3, 1),
     (1, 4), (2, 3), (3, 2), (4, 1),
     (1, 5), (2, 4), (3, 3), (4, 2), (5, 1),

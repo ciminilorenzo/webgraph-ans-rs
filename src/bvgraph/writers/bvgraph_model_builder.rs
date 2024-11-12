@@ -1,7 +1,9 @@
 use crate::ans::model4encoder_builder::ANSModel4EncoderBuilder;
 use crate::ans::models::model4encoder::ANSModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
+
 use std::convert::Infallible;
+
 use webgraph::prelude::{Encode, EncodeAndEstimate};
 
 /// An [`Encoder`] that writes to an [`ANSModel4EncoderBuilder`]. to collect data for each

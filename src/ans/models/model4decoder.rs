@@ -6,6 +6,7 @@ use crate::{RawSymbol, Symbol};
 /// The container for the whole set of models, one for each [component](BVGraphComponent) used by the ANS decoder to
 /// decode symbols.
 pub struct ANSModel4Decoder {
+
     /// A table containing the whole set of [models](ANSComponentModel4Decoder) used by the ANS decoder, one for each
     /// [component](BVGraphComponent).
     pub tables: Vec<ANSComponentModel4Decoder>,

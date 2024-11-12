@@ -1,13 +1,10 @@
 mod utils;
 
 use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
-use folded_streaming_rans::ans::decoder::ANSDecoder;
-use folded_streaming_rans::ans::encoder::ANSEncoder;
-use folded_streaming_rans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
-use folded_streaming_rans::ans::models::model4decoder::ANSModel4Decoder;
-use folded_streaming_rans::bvgraph::BVGraphComponent;
-use folded_streaming_rans::RawSymbol;
+
 use rand::prelude::SliceRandom;
+use folded_streaming_rans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
+use folded_streaming_rans::bvgraph::BVGraphComponent;
 
 #[test]
 fn decodes_correctly_single_dummy_sequence() {

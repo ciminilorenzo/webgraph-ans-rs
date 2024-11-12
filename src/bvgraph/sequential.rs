@@ -1,7 +1,10 @@
 use crate::ans::Prelude;
 use crate::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
+
 use epserde::prelude::*;
+
 use std::path::PathBuf;
+
 use webgraph::prelude::BvGraphSeq;
 
 /// An ANS-encoded BVSeqGraph that can only be accessed sequentially.
