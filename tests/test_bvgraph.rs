@@ -1,19 +1,21 @@
 use anyhow::Result;
+
 use std::iter::Iterator;
 
-use folded_streaming_rans::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
-use folded_streaming_rans::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
-
 use dsi_bitstream::prelude::BE;
-use folded_streaming_rans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
-use folded_streaming_rans::bvgraph::estimators::log2_estimator::Log2Estimator;
-use folded_streaming_rans::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
-use folded_streaming_rans::bvgraph::random_access::ANSBVGraph;
-use folded_streaming_rans::bvgraph::sequential::ANSBVGraphSeq;
-use folded_streaming_rans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
-use folded_streaming_rans::State;
+
 use lender::for_;
+
 use webgraph::prelude::*;
+use webgraph_ans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
+use webgraph_ans::bvgraph::estimators::log2_estimator::Log2Estimator;
+use webgraph_ans::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
+use webgraph_ans::bvgraph::factories::bvgraphseq_decoder_factory::ANSBVGraphSeqDecoderFactory;
+use webgraph_ans::bvgraph::random_access::ANSBVGraph;
+use webgraph_ans::bvgraph::sequential::ANSBVGraphSeq;
+use webgraph_ans::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
+use webgraph_ans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
+use webgraph_ans::State;
 
 #[test]
 fn decodes_correctly_dummy_graph() -> Result<()> {

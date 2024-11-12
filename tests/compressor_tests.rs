@@ -3,8 +3,12 @@ mod utils;
 use crate::utils::{get_zipfian_distr, SYMBOL_LIST_LENGTH};
 
 use rand::prelude::SliceRandom;
-use folded_streaming_rans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
-use folded_streaming_rans::bvgraph::BVGraphComponent;
+use webgraph_ans::ans::decoder::ANSDecoder;
+use webgraph_ans::ans::encoder::ANSEncoder;
+use webgraph_ans::ans::model4encoder_builder::ANSModel4EncoderBuilder;
+use webgraph_ans::ans::models::model4decoder::ANSModel4Decoder;
+use webgraph_ans::bvgraph::BVGraphComponent;
+use webgraph_ans::RawSymbol;
 
 #[test]
 fn decodes_correctly_single_dummy_sequence() {
