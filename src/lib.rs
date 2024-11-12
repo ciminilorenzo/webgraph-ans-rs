@@ -44,6 +44,6 @@ pub const NORMALIZATION_MASK: u32 = 0xFFFF;
 
 /// The default version of EliasFano
 pub type EF = sux::dict::EliasFano<
-    sux::rank_sel::SelectFixed2<sux::bits::CountBitVec, Vec<u64>, 10>,
-    sux::bits::BitFieldVec,
+    sux::rank_sel::SelectAdaptConst<sux::bits::BitVec<Box<[usize]>>, Box<[usize]>, 12, 4>,
+    sux::bits::BitFieldVec<usize, Box<[usize]>>,
 >;

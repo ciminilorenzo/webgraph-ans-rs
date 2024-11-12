@@ -1,3 +1,4 @@
+use sux::prelude::IndexedSeq;
 use crate::ans::decoder::ANSDecoder;
 use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;

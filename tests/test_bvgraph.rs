@@ -7,6 +7,7 @@ use dsi_bitstream::prelude::BE;
 use lender::for_;
 
 use webgraph::prelude::*;
+
 use webgraph_ans::bvgraph::estimators::entropy_estimator::EntropyEstimator;
 use webgraph_ans::bvgraph::estimators::log2_estimator::Log2Estimator;
 use webgraph_ans::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
@@ -208,7 +209,6 @@ fn decodes_correctly_cnr_written_and_loaded_from_disk() -> Result<()> {
         .endianness::<BE>()
         .load()?;
 
-    // (1) encode the BVGraph
     ANSBVGraph::store(
         "tests/data/cnr-2000/cnr-2000",
         "tests/data/cnr-2000/results",
@@ -217,7 +217,6 @@ fn decodes_correctly_cnr_written_and_loaded_from_disk() -> Result<()> {
         2,
     )?;
 
-    // (3) load the compressed graph from disk
     let decoded_graph = ANSBVGraph::load("tests/data/cnr-2000/results")?;
 
     for node_index in 0..decoded_graph.num_nodes() {
@@ -232,7 +231,7 @@ fn decodes_correctly_cnr_written_and_loaded_from_disk() -> Result<()> {
 
 #[test]
 fn decodes_correctly_sequential_cnr_written_and_loaded_from_disk() -> Result<()> {
-    let graph = BvGraph::with_basename("tests/data/cnr-2000/cnr-2000")
+    let graph = BvGraphSeq::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
 

@@ -15,6 +15,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
 use sux::dict::EliasFanoBuilder;
+use sux::prelude::SelectAdaptConst;
 use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
@@ -199,6 +200,9 @@ impl ANSBVGraph {
         for phase in phases.iter() {
             efb.push(phase.stream_pointer);
         }
-        efb.build().convert_to()
+
+        let ef = efb.build();
+
+        Ok(unsafe { ef.map_high_bits(SelectAdaptConst::<_, _, 12, 4>::new) })
     }
 }
