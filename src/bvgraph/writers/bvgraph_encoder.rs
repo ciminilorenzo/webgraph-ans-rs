@@ -11,7 +11,7 @@ use tempfile::{Builder, NamedTempFile};
 
 use webgraph::prelude::{Encode, EncodeAndEstimate};
 
-/// An [`Encoder`] that writes to an [`ANSEncoder`].
+/// An [encoder](`Encode`) that writes to an [`ANSEncoder`].
 pub struct ANSBVGraphEncodeAndEstimate {
     /// A buffer containing a [`ANSCompressorPhase`], one for each node.
     phases: Vec<ANSCompressorPhase>,
@@ -65,15 +65,15 @@ impl ANSBVGraphEncodeAndEstimate {
         let compression_results = self.encoder.get_compression_results();
 
         (
-            Prelude::new(
-                compression_results.0,
-                compression_results.1,
-                compression_results.2,
-                self.number_of_nodes,
-                self.number_of_arcs,
-                self.compression_window,
-                self.min_interval_length,
-            ),
+            Prelude {
+                tables: compression_results.0,
+                stream: compression_results.1,
+                state: compression_results.2,
+                number_of_nodes: self.number_of_nodes,
+                compression_window: self.compression_window,
+                min_interval_length: self.min_interval_length,
+                number_of_arcs: self.number_of_arcs,
+            },
             self.phases,
         )
     }

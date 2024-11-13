@@ -2,7 +2,8 @@ use webgraph::prelude::Decode;
 
 use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::bvgraph::BVGraphComponent;
-use crate::{RawSymbol, State, Symbol, B};
+use crate::{RawSymbol, State, Symbol};
+use crate::ans::{B, INTERVAL_LOWER_BOUND};
 
 #[derive(Clone)]
 pub struct ANSDecoder<'a> {
@@ -12,7 +13,7 @@ pub struct ANSDecoder<'a> {
     /// The normalized bits during the encoding process.
     pub stream: &'a Vec<u16>,
 
-    /// The current state of the decoder.
+    /// The state of the decoder.
     pub state: State,
 
     /// The index of the next normalized 32-bits chunk to be read.
@@ -20,9 +21,6 @@ pub struct ANSDecoder<'a> {
 }
 
 impl<'a> ANSDecoder<'a> {
-    /// The lower bound of the interval.
-    const LOWER_BOUND: State = 1 << 16;
-
     /// The number of bits reserved to represent the symbol in the quasi-folded value.
     const BIT_RESERVED_FOR_SYMBOL: u64 = 48;
 
@@ -55,8 +53,8 @@ impl<'a> ANSDecoder<'a> {
     }
 }
 
-impl<'a> ANSDecoder<'a> {
-    /// Decodes a single symbol of a specific [`Component`](BVGraphComponent).
+impl ANSDecoder<'_> {
+    /// Decodes a single symbol using the model associated to the  given [`component`](BVGraphComponent).
     pub fn decode(&mut self, component: BVGraphComponent) -> RawSymbol {
         let slot = self.state & self.model.get_frame_mask(component) as State;
         let symbol_entry = self.model.symbol(slot as Symbol, component);
@@ -66,7 +64,7 @@ impl<'a> ANSDecoder<'a> {
             + slot as State
             - (symbol_entry.cumul_freq as State);
 
-        if self.state < Self::LOWER_BOUND {
+        if self.state < INTERVAL_LOWER_BOUND {
             self.extend_state();
         }
 
@@ -74,14 +72,14 @@ impl<'a> ANSDecoder<'a> {
         let mut fold = 0u64;
 
         for _ in 0..folds {
-            if self.state < Self::LOWER_BOUND {
+            if self.state < INTERVAL_LOWER_BOUND {
                 self.extend_state();
             }
             fold = (fold << self.model.get_radix(component))
                 | (self.state as u64) & ((1 << self.model.get_radix(component)) - 1);
             self.state >>= self.model.get_radix(component);
 
-            if self.state < Self::LOWER_BOUND {
+            if self.state < INTERVAL_LOWER_BOUND {
                 self.extend_state();
             }
         }
@@ -102,7 +100,7 @@ impl<'a> ANSDecoder<'a> {
     }
 }
 
-impl<'a> Decode for ANSDecoder<'a> {
+impl Decode for ANSDecoder<'_> {
     fn read_outdegree(&mut self) -> u64 {
         self.decode(BVGraphComponent::Outdegree)
     }

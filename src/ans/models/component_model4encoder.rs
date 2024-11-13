@@ -4,7 +4,8 @@ use mem_dbg::{MemDbg, MemSize};
 
 use epserde::Epserde;
 
-use crate::{Freq, RawSymbol, State, B};
+use crate::{Freq, State, Symbol};
+use crate::ans::B;
 
 /// The entry containing all the needed data to encode a specific [`Symbol`].
 #[derive(Clone, Copy, Debug, Epserde, MemDbg, MemSize)]
@@ -33,12 +34,12 @@ impl EncoderModelEntry {
 }
 
 #[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
-/// The ANS model of a specific [component](BVGraphComponent) used by the encoder to encode its symbols.
+/// The ANS model used by the encoder to encode symbols of a specific component.
 pub struct ANSComponentModel4Encoder {
-    /// A table containing, at each index, the data related to the symbol equal to that index.
+    /// A table containing, at each index, the data related to the [`Symbol`] at that index.
     pub table: Vec<EncoderModelEntry>,
 
-    /// The log2 of the frame size for this [`BVGraphComponent`](component).
+    /// The log2 of the frame size for this component.
     pub frame_size: usize,
 
     /// The radix used by the current model.
@@ -66,11 +67,11 @@ impl Default for ANSComponentModel4Encoder {
     }
 }
 
-impl Index<RawSymbol> for ANSComponentModel4Encoder {
+impl Index<Symbol> for ANSComponentModel4Encoder {
     type Output = EncoderModelEntry;
 
     #[inline(always)]
-    fn index(&self, symbol: RawSymbol) -> &Self::Output {
+    fn index(&self, symbol: Symbol) -> &Self::Output {
         &self.table[symbol as usize]
     }
 }

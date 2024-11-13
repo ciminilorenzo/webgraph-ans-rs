@@ -3,10 +3,11 @@ use sux::prelude::IndexedSeq;
 use crate::ans::decoder::ANSDecoder;
 use crate::ans::models::model4decoder::ANSModel4Decoder;
 use crate::ans::Prelude;
-use crate::EF;
+use crate::bvgraph::factories::EF;
 
 use webgraph::prelude::RandomAccessDecoderFactory;
 
+/// The factory responsible for creating instances of [`ANSDecoder`] initialized on a specific node.
 pub struct ANSBVGraphDecoderFactory {
     /// The EliasFano containing the stream pointers for each of the nodes.
     phases: EF,

@@ -13,6 +13,7 @@ use crate::bvgraph::BVGraphComponent;
 use crate::utils::ans_utils::fold_without_streaming_out;
 use crate::utils::data_utils::scale_freqs;
 use crate::{RawSymbol, Symbol, MAX_RAW_SYMBOL};
+use crate::ans::MAXIMUM_FRAME_SIZE;
 
 /// Multiplicative constant used to fix a maximum increase, in terms of cost, that we can accept
 /// when scaling a folded distribution.
@@ -55,10 +56,6 @@ impl Default for ANSModel4EncoderBuilder {
 }
 
 impl ANSModel4EncoderBuilder {
-    /// The maximum frame size allowed for any of the [models](ANSComponentModel4Encoder) used by
-    /// the ANS encoder.
-    const MAXIMUM_FRAME_SIZE: usize = 1 << 16;
-
     /// Pushes a new symbol for the given [component](BVGraphComponent) into the builder.
     ///
     /// Note: it returns an error if the pushed symbol is bigger than [MAX_RAW_SYMBOL].
@@ -136,7 +133,7 @@ impl ANSModel4EncoderBuilder {
                     .collect::<Vec<usize>>();
 
                 loop {
-                    if m > Self::MAXIMUM_FRAME_SIZE {
+                    if m > MAXIMUM_FRAME_SIZE {
                         // if we have reached the maximum frame size, we can go further with
                         // the next fidelity and radix combination.
                         break;
@@ -175,7 +172,7 @@ impl ANSModel4EncoderBuilder {
                                     fidelity = *fid;
                                     radix = *rad;
                                 }
-                            } else if m == Self::MAXIMUM_FRAME_SIZE {
+                            } else if m == MAXIMUM_FRAME_SIZE {
                                 // if we reach the maximum frame size and the cost is higher
                                 // than the current lowest cost, it means that we previously
                                 // found the best distribution with a smaller frame size.

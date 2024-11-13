@@ -2,6 +2,11 @@
 name = "webgraph-ans"
 version = "0.1.0"
 edition = "2021"
+description = "Web graphs compression using ANS over BvGraph format."
+repository = "https://github.com/ciminilorenzo/webgraph-ans-rs"
+readme = "README.md"
+keywords = ["graph", "compression", "ans", "entropy-encoding"]
+categories = ["compression", "data-structures"]
 
 [profile.release]
 debug = true

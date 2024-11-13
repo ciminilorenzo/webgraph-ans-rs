@@ -6,10 +6,8 @@ use std::convert::Infallible;
 
 use webgraph::prelude::{Encode, EncodeAndEstimate};
 
-/// An [`Encoder`] that writes to an [`ANSModel4EncoderBuilder`]. to collect data for each
-///
-/// Data for each [component](BVGraphComponent) is pushed into the [`ANSModel4EncoderBuilder`]. The [`ANSModel4Encoder`]
-/// is then built from the collected data.
+/// An [encoder](Encode) that writes to an [`ANSModel4EncoderBuilder`] to collect data for each
+/// [component](BVGraphComponent). The [`ANSModel4Encoder`] is then built from the collected data.
 pub struct BVGraphModelBuilder<MW: Encode> {
     model_builder: ANSModel4EncoderBuilder,
 

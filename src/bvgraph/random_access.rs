@@ -4,7 +4,7 @@ use crate::bvgraph::estimators::log2_estimator::Log2Estimator;
 use crate::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory;
 use crate::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
 use crate::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
-use crate::{State, EF};
+use crate::State;
 
 use anyhow::{Context, Result};
 
@@ -25,6 +25,7 @@ use sux::dict::EliasFanoBuilder;
 use sux::prelude::SelectAdaptConst;
 
 use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
+use crate::bvgraph::factories::EF;
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
 pub struct ANSBvGraph();
@@ -70,9 +71,9 @@ impl ANSBvGraph {
     /// The function stores three files with the following content:
     /// - `basename.ans`: contains the prelude of the ANS encoding.
     /// - `basename.pointers`: contains, for each [`ANSCompressorPhase`], the pointer to its state
-    /// in the .states file.
+    ///     in the .states file.
     /// - `basename.states`: contains the list of states associated to each [`ANSCompressorPhase`]
-    /// collected during the encoding.
+    ///     collected during the encoding.
     pub fn store(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
         new_basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,

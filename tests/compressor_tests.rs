@@ -172,7 +172,7 @@ fn decodes_correctly_real_interleaved_sequences_with_different_frame_sizes() {
         .collect::<Vec<(BVGraphComponent, RawSymbol)>>();
 
     // now let's create a single sequence and then randomize it.
-    let mut source = vec![first_sequence, second_sequence, third_sequence].concat();
+    let mut source = [first_sequence, second_sequence, third_sequence].concat();
     source.shuffle(&mut rand::thread_rng());
 
     let mut model4encoder_builder = ANSModel4EncoderBuilder::default();

@@ -20,12 +20,12 @@ pub struct DecoderModelEntry {
     pub quasi_folded: u64,
 }
 
-/// The model of a specific [component](BVGraphComponent) used by the ANS decoder to decode its [symbols](Symbol).
+/// The ANS model used by the decoder to decode symbols of a specific BvGraph component.
 pub struct ANSComponentModel4Decoder {
     /// A table containing, at each index, an [entry](DecoderModelEntry) for the symbol equal to that index.
     pub table: Vec<DecoderModelEntry>,
 
-    /// The log2 of the frame size for this [component](BVGraphComponent).
+    /// The log2 of the frame size for this component.
     pub frame_size: usize,
 
     /// The radix used by the current model.

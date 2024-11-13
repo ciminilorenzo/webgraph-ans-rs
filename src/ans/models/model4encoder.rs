@@ -1,6 +1,6 @@
 use crate::ans::models::component_model4encoder::{ANSComponentModel4Encoder, EncoderModelEntry};
 use crate::bvgraph::BVGraphComponent;
-use crate::RawSymbol;
+use crate::Symbol;
 
 /// The main and unique model used by the ANS encoder to encode symbols of every [component](BVGraphComponent). Every
 /// [component](BVGraphComponent) has its own [model](ANSComponentModel4Encoder) that is used to encode its symbols.
@@ -47,7 +47,7 @@ impl ANSModel4Encoder {
     /// Returns a reference to the [entry](EncoderModelEntry) of the symbol of the
     /// given [component](BVGraphComponent).
     #[inline(always)]
-    pub fn symbol(&self, symbol: RawSymbol, component: BVGraphComponent) -> &EncoderModelEntry {
+    pub fn symbol(&self, symbol: Symbol, component: BVGraphComponent) -> &EncoderModelEntry {
         &self.component_models[component as usize][symbol]
     }
 

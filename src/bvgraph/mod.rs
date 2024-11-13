@@ -1,3 +1,5 @@
+//! The module providing ANSBvGraph and ANSBvGraphSeq
+
 use std::fmt::Display;
 
 pub mod estimators;

@@ -175,7 +175,7 @@ pub struct IntoIter<'a> {
     bit_reader: BufBitReader<LE, RevReader<'a>>,
 }
 
-impl<'a> Iterator for IntoIter<'a> {
+impl Iterator for IntoIter<'_> {
     type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -189,7 +189,7 @@ impl<'a> Iterator for IntoIter<'a> {
     }
 }
 
-impl<'a> FusedIterator for IntoIter<'a> {}
+impl FusedIterator for IntoIter<'_> {}
 
 struct RevReader<'a> {
     data: &'a [u32],

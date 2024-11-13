@@ -2,13 +2,13 @@ use std::num::NonZeroU32;
 
 use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
 use crate::ans::models::model4encoder::ANSModel4Encoder;
-use crate::ans::ANSCompressorPhase;
+use crate::ans::{ANSCompressorPhase, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
 use crate::bvgraph::BVGraphComponent;
-use crate::{RawSymbol, State, B, INTERVAL_LOWER_BOUND, NORMALIZATION_MASK};
+use crate::{RawSymbol, State, Symbol};
 
 #[derive(Clone)]
 pub struct ANSEncoder {
-    /// The model used by the ANS encoder to encode symbols coming from every [component](BVGraphComponent).
+    /// The main model used by the ANS encoder to encode symbols of every [component](BVGraphComponent).
     pub model: ANSModel4Encoder,
 
     /// The normalized bits during the encoding process.
@@ -35,9 +35,7 @@ impl ANSEncoder {
 }
 
 impl ANSEncoder {
-    /// Encodes a single symbol of a specific [`Component`](BVGraphComponent).
-    ///
-    /// Note that the ANS decodes the sequence in reverse order.
+    /// Encodes a single symbol using the model associated to the given [`component`](BVGraphComponent).
     pub fn encode(&mut self, mut symbol: RawSymbol, component: BVGraphComponent) {
         // if symbol has to be folded, dump the bytes we have to fold
         if symbol >= self.model.get_folding_threshold(component) {
@@ -60,7 +58,7 @@ impl ANSEncoder {
             }
             symbol += self.model.get_folding_offset(component) * folds as RawSymbol;
         }
-        let sym_data = self.model.symbol(symbol, component);
+        let sym_data = self.model.symbol(symbol as Symbol, component);
 
         if self.state >= sym_data.upperbound {
             self.state = Self::shrink_state(self.state, &mut self.stream);

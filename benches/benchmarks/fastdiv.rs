@@ -38,7 +38,7 @@ impl DoubleAdd {
             // a := t; -> rounding down the reciprocal
             // b := t;
             false => {
-                let t = ((1u64 << m + 32) / divisor as u64) as u32;
+                let t = ((1u64 << (m + 32)) / divisor as u64) as u32;
                 let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
                 match r <= (1u32 << m) {
@@ -81,7 +81,7 @@ impl MulShiftTwoFields {
                 mul: 1,
             },
             false => {
-                let t = ((1u64 << m + 32) / divisor as u64) as u32;
+                let t = ((1u64 << (m + 32)) / divisor as u64) as u32;
                 let r = (divisor as u64 * (t as u64 + 1) - (1u64 << (m + 32))) as u32;
 
                 match r <= (1u32 << m) {
@@ -103,15 +103,15 @@ impl MulShiftTwoFields {
     #[inline(always)]
     pub fn div_test(&self, dividend: u32) -> u32 {
         if self.mul == 0 {
-            (self.a as u64 * dividend as u64 >> 32) as u32 >> self.shift
+            ((self.a as u64 * dividend as u64) >> 32) as u32 >> self.shift
         } else {
-            (self.a as u64 * (dividend as u64 + 1) >> 32) as u32 >> self.shift
+            ((self.a as u64 * (dividend as u64 + 1)) >> 32) as u32 >> self.shift
         }
     }
 
     #[inline(always)]
     pub fn div_arith(&self, dividend: u32) -> u32 {
-        (self.a as u64 * (dividend as u64 + self.mul as u64) >> 32) as u32 >> self.shift
+        ((self.a as u64 * (dividend as u64 + self.mul as u64)) >> 32) as u32 >> self.shift
     }
 }
 
@@ -133,15 +133,15 @@ impl MulShiftOneField {
     #[inline(always)]
     pub fn div_test(&self, dividend: u32) -> u32 {
         if self.magic & 1 == 0 {
-            (self.a as u64 * dividend as u64 >> 32) as u32 >> (self.magic >> 1)
+            ((self.a as u64 * dividend as u64) >> 32) as u32 >> (self.magic >> 1)
         } else {
-            (self.a as u64 * (dividend as u64 + 1) >> 32) as u32 >> (self.magic >> 1)
+            ((self.a as u64 * (dividend as u64 + 1)) >> 32) as u32 >> (self.magic >> 1)
         }
     }
 
     #[inline(always)]
     pub fn div_arith(&self, dividend: u32) -> u32 {
-        (self.a as u64 * (dividend as u64 + (self.magic & 1) as u64) >> 32) as u32
+        ((self.a as u64 * (dividend as u64 + (self.magic & 1) as u64)) >> 32) as u32
             >> (self.magic >> 1)
     }
 }

@@ -18,7 +18,8 @@ use webgraph_ans::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 use webgraph_ans::State;
 
 /// Check that we are correctly able to first encode a dummy graph and then decode what previously
-/// encoded.
+/// encoded. Since this graph is not a BvGraph, we have to do the whole pipeline that allows us
+/// to encode it as a ANSBvGraph here.
 #[test]
 fn decodes_correctly_dummy_graph() -> Result<()> {
     let mut graph = VecGraph::new();
@@ -99,15 +100,14 @@ fn decodes_correctly_dummy_graph() -> Result<()> {
     Ok(())
 }
 
-/// Checks that we are correctly able to encode on disk the graph (1), then decode it as a
-/// ANSBVGraph(2) and check that what we decode is the same we previously encoded (3).
+/// Checks that we are correctly able to encode on disk the graph, then decode it as a
+/// ANSBVGraph and check that what we decode is the same we previously encoded.
 #[test]
 fn decodes_correctly_random_access_graph() -> Result<()> {
-    let graph = BvGraph::with_basename("tests/data/cnr-2000/cnr-2000")
+    let original_graph = BvGraph::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
 
-    // (1) encode the BvGraph using ANS
     ANSBvGraph::store(
         "tests/data/cnr-2000/cnr-2000",
         "tests/data/cnr-2000/results",
@@ -116,29 +116,26 @@ fn decodes_correctly_random_access_graph() -> Result<()> {
         2,
     )?;
 
-    // (2) load the compressed graph
     let decoded_graph = ANSBvGraph::load("tests/data/cnr-2000/results")?;
 
-    // (3) check equality
     for node_index in 0..decoded_graph.num_nodes() {
-        let successors = graph.successors(node_index).collect::<Vec<_>>();
+        let original_successors = original_graph.successors(node_index).collect::<Vec<_>>();
         let decoded_successors = decoded_graph.successors(node_index).collect::<Vec<_>>();
 
-        assert_eq!(successors, decoded_successors);
+        assert_eq!(original_successors, decoded_successors);
     }
 
     Ok(())
 }
 
-/// Checks that we are correctly able to encode on disk the graph (1), then decode it as a
-/// ANSBVGraphSeq(2) and check that what we decode is the same we previously encoded (3).
+/// Checks that we are correctly able to encode on disk the graph, then decode it as a
+/// ANSBVGraphSeq and check that what we decode is the same we previously encoded.
 #[test]
 fn decodes_correctly_sequential_graph() -> Result<()> {
-    let graph = BvGraphSeq::with_basename("tests/data/cnr-2000/cnr-2000")
+    let original_graph = BvGraphSeq::with_basename("tests/data/cnr-2000/cnr-2000")
         .endianness::<BE>()
         .load()?;
 
-    // (1) encode the BvGraph using ANS
     ANSBvGraph::store(
         "tests/data/cnr-2000/cnr-2000",
         "tests/data/cnr-2000/results",
@@ -147,12 +144,10 @@ fn decodes_correctly_sequential_graph() -> Result<()> {
         2,
     )?;
 
-    // (2) load the compressed graph
     let decoded_graph = ANSBvGraphSeq::load("tests/data/cnr-2000/results")?;
 
-    // (3) check equality
-    for_![ ((_, s), (_, t)) in lender::zip(graph.iter(), decoded_graph.iter()){
-        assert!(itertools::equal(s, t));
+    for_![ ((_, original_successors), (_, decoded_successors)) in lender::zip(original_graph.iter(), decoded_graph.iter()){
+        assert!(itertools::equal(original_successors, decoded_successors));
     }];
 
     Ok(())
