@@ -12,6 +12,9 @@ pub struct ANSBvGraphSeq();
 
 impl ANSBvGraphSeq {
     /// Loads a previously ANS-encoded BVSeqGraph from disk.
+    ///
+    /// To correctly reconstruct a previously encoded graph, the path specified in `basename`
+    /// must lead to a directory containing the file `basename.ans`.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
     ) -> anyhow::Result<BvGraphSeq<ANSBVGraphSeqDecoderFactory>> {

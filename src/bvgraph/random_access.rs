@@ -5,17 +5,25 @@ use crate::bvgraph::factories::bvgraph_decoder_factory::ANSBVGraphDecoderFactory
 use crate::bvgraph::writers::bvgraph_encoder::ANSBVGraphEncodeAndEstimate;
 use crate::bvgraph::writers::bvgraph_model_builder::BVGraphModelBuilder;
 use crate::{State, EF};
+
 use anyhow::{Context, Result};
+
 use dsi_bitstream::prelude::BE;
 use dsi_progress_logger::{ProgressLog, ProgressLogger};
+
 use epserde::prelude::*;
+
 use lender::for_;
+
 use log::info;
+
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::PathBuf;
+
 use sux::dict::EliasFanoBuilder;
 use sux::prelude::SelectAdaptConst;
+
 use webgraph::prelude::{BvComp, BvGraph, BvGraphSeq, SequentialLabeling};
 
 /// An ANS-encoded BVGraph that can be accessed both randomly and sequentially.
@@ -23,6 +31,9 @@ pub struct ANSBvGraph();
 
 impl ANSBvGraph {
     /// Loads a previously ANS-encoded BVGraph from disk.
+    ///
+    /// To correctly reconstruct a previously encoded graph, the path specified in `basename`
+    /// must lead to a directory containing the following files: `basename.ans`, `basename.pointers`, and `basename.states`.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
     ) -> Result<BvGraph<ANSBVGraphDecoderFactory>> {
@@ -56,9 +67,12 @@ impl ANSBvGraph {
     }
 
     /// Recompresses a BVGraph stored in `basename` and stores the result in `new_basename`.
-    /// The function stores two files with the following structure:
+    /// The function stores three files with the following content:
     /// - `basename.ans`: contains the prelude of the ANS encoding.
-    /// - `basename.phases`: contains the phases of the ANS encoding.
+    /// - `basename.pointers`: contains, for each [`ANSCompressorPhase`], the pointer to its state
+    /// in the .states file.
+    /// - `basename.states`: contains the list of states associated to each [`ANSCompressorPhase`]
+    /// collected during the encoding.
     pub fn store(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
         new_basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
