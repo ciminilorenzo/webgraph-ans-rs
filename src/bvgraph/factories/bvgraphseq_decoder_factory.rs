@@ -7,7 +7,7 @@ pub struct ANSBVGraphSeqDecoderFactory {
     /// The prelude resulting from the encoding process of the graph.
     prelude: Prelude,
 
-    /// The ANSModel4Decoder used by the decoder to decode the graph.
+    /// The [ANSModel4Decoder] used by the decoder to decode the graph.
     model: ANSModel4Decoder,
 }
 

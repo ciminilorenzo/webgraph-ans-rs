@@ -19,7 +19,7 @@ This crate supplies two different unit structs exposing methods to load a previo
 a BvGraph using the ANS-based approach.
 
 Two unit structures, `ANSBvGraph` and `ANSBvGraphSeq`, are available to load respectively a [`BvGraph`] or
-a [`BvGraphSeq`]
+a [`BvGraphSeq`].
 
 ### ANSBvGraph
 Can be used to load a [`BvGraph`], that is a graph that can be visited both randomly and iteratively. To
@@ -35,15 +35,15 @@ to use the method `ANSBvGraph::store()` to indicate where the BvGraph is located
 the output of the encoding must be located, together with customized compression parameters if 
 needed.
 
-We can achieve the same goal by using the binary `bvcomp`
+We can achieve the same goal by using the binary `bvcomp`:
 
-```
+```ignore
 $ cargo build --release --bin bvcomp
 $ ./target/release/bvcomp <path_to_graph> <output_dir> <new_graph_name> [<compression_params>]
 ```
 
 For example:
-```
+```ignore
 $ ./target/release/bvcomp tests/data/cnr-2000/cnr-2000 ans-cnr-2000
 ```
 
