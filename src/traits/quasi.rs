@@ -1,6 +1,9 @@
 /*
-   Traits that could be useful in the future if one wants to have models for decoder that have
-   different quasi_folded types.
+    This traits can be useful in the future if one wants to switch to an approach where every
+    model has its own quasi-folded type.
+
+    At the moment, every model used by the decoder has a `quasi_folded` an u64. These traits allow
+    for the usage of u32 with 3 bits reserved to represent the number of folds.
 */
 
 use crate::{RawSymbol, Symbol};
