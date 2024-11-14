@@ -1,30 +1,28 @@
 # webgraph-ans 
+Very large graphs, such as Web snapshots, large social networks,
+or software dependency graphs, can be analyzed using two approaches: distributing 
+the computation on multiple computational
+units or compressing the graph to fit in the memory of a single
+one. A popular instance of the latter approach is the [WebGraph
+framework](https://dl.acm.org/doi/10.1145/988672.988752), which has been recently
+rethink and reimplemented in [Rust](https://github.com/vigna/webgraph-rs) due to 
+some Java limitations such as limited array size ($2^{31}$ elements).
 
-GENERAL -> ANS + FOLDING -> brief discussion about results
-In practical terms, a web graph is a mathematical abstraction in which there is a node for each web page 
-and an arc from node 𝑥 to node 𝑦 if the page associated to the first node contains a hyperlink to the page associated to
-the second. It's easy to guess that the size of these enormous structures makes the traditional way of storing them
-not efficient. 
-
-One of the greatest frameworks built with the goal of compressing web graphs is [WebGraph](https://github.com/vigna/webgraph-rs),
-a framework that, beyond offering various tools that can be used to operate un such structures, exploits the properties 
-of web graphs (locality and similarity), as well as some other ideas tailored for the context, to compress them in an efficient format called BVGraph.
- 
-This project aims to improve the records of the mentioned frameworks, which have been standing for almost
-two decades, by switching from instantaneous codes to [Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS) when compressing
-the graph in the BvGraph format.  
-
-To know more about the format, see the paper.
+This complementary project aims at enhancing compression performances by replacing
+instantaneous codes used by WebGraph with a recently proposed entropy coder,
+[Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS from now on) which, together with other ideas 
+such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be 
+extremely effective.
 
 ## Quick setup
 This crate supplies two different unit structs exposing methods to load a previously ANS-encoded BvGraph or recompress
 a BvGraph using the ANS-based approach.
 
-Since this crate is based on [webgraph](https://github.com/vigna/webgraph-rs), please refer to its
+Since this crate is based on [WebGraph](https://github.com/vigna/webgraph-rs), please refer to its
 docs to learn more about the files and structs cited next.
 
 ### Loading a BVGraphSeq with ANSBvGraphSeq
-To load a [`BvGraphSeq`], you only need the `BASENAME.ans`file. Then, you can use `ANSBvGraphSeq`:
+To load a [`BvGraphSeq`], you only need the `BASENAME.ans` file. Then, you can use `ANSBvGraphSeq`:
 
 ```ignore
  let graph = ANSBvGraphSeq::load("BASENAME")?;
@@ -103,12 +101,12 @@ All experiments were performed on an Intel 12th Gen i7-12700KF CPU equipped with
 and native CPU instructions.
 
 Ps: the tables present in the next sections are computed using `percomponent_analysis.py` and `script.py`, hence you can
-see which are the performances on your machine running the mentioned scripts.
+see the performances on your machine running the mentioned scripts.
 
 ### Standard compression
-The next tables show the comparison between WebGraph and the proposed methodology. In particular:
-- **BVGraph** is the size of the compressed file by means of WebGraph;
-- **ANSBVGraph** is the size of the one resulting from the compression of the latter with the proposed methodology; 
+The next tables show the comparison between WebGraph and the proposed methodology. In particular, given a graph:
+- **BVGraph** is the size of the compressed graph using WebGraph;
+- **ANSBVGraph** is the size of the file resulting from the compression of the latter with the proposed methodology; 
 - **bit/link** represents the number of bits required to represent an arc of the graph (i.e a link); 
 - **phases** indicates the cost of representing all the needed data to randomly access the graph;
 - **random speed**  the time needed to enumerate the successors of 10 million random nodes.
