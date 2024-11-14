@@ -74,7 +74,7 @@ the output of the encoding must be located, together with customized compression
         basename,
         new_basename,
         compression_window,
-        max_ref_count as usize,
+        max_ref_count,
         min_interval_length,
  )?;
 ```
@@ -106,8 +106,8 @@ see the performances on your machine running the mentioned scripts.
 ### Standard compression
 The next tables show the comparison between WebGraph and the proposed methodology. In particular, given a graph:
 - **BVGraph** is the size of the compressed graph using WebGraph;
-- **ANSBVGraph** is the size of the file resulting from the compression of the latter with the proposed methodology; 
-- **bit/link** represents the number of bits required to represent an arc of the graph (i.e a link); 
+- **ANSBVGraph** is the size of the file resulting from the compression of the graph with the proposed methodology; 
+- **bit/link** represents the number of bits required to represent an arc of the graph;
 - **phases** indicates the cost of representing all the needed data to randomly access the graph;
 - **random speed**  the time needed to enumerate the successors of 10 million random nodes.
 
