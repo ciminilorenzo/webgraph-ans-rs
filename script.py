@@ -59,8 +59,8 @@ for graph in ans_graphs:
 
 # Build bins
 subprocess.run(["cargo", "build", "--release", "--bin", "bvcomp"])
-subprocess.run(["cargo", "build", "--release", "--bin", "random_access_bvtest"])
-subprocess.run(["cargo", "build", "--release", "--bin", "seq_access_bvtest"])
+subprocess.run(["cargo", "build", "--release", "--example", "bench_random_access"])
+subprocess.run(["cargo", "build", "--release", "--example", "bench_seq_access"])
 subprocess.run(["cargo", "build", "--release", "--manifest-path", f"{webgraph_rs_dir}/Cargo.toml"])
 
 # The size, in bytes, of the compressed graphs (.graph)
@@ -123,7 +123,7 @@ for graph in ans_graphs:
     # The sequential speed test is performed by running seq_access_bvtest on the high compressed graph.
     print(f"Starting sequential speed test on {graph}")
     sequential_speed = (subprocess.run([
-        "./target/release/seq_access_bvtest",
+        "./target/release/examples/bench_seq_access",
         f"{compressed_graphs_dir}{graph}-hc",
     ], stdout=subprocess.PIPE))
 
@@ -134,7 +134,7 @@ for graph in ans_graphs:
     # The random speed test is performed by running random_access_bvtest on the compressed graph.
     print(f"Starting random speed test on {graph}")
     random_speed = (subprocess.run([
-        "./target/release/random_access_bvtest",
+        "./target/release/examples/bench_random_access",
         f"{compressed_graphs_dir}{graph}",
     ], stdout=subprocess.PIPE))
 
