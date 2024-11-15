@@ -86,19 +86,15 @@ impl ANSEncoder {
     }
 
     /// Returns the results of the compression:
-    /// - the model used to encode the symbols, which contains an ANSComponentModel4Encoder for each component
-    /// - the normalized bits
-    /// - the final state of the encoder
+    /// - the full set of [`ANSComponentModel4Encoder`] used by the encoder to encode symbols
+    /// of every [`BVGraphComponent`];
+    /// - the bits normalized during the encoding process;
+    /// - the final state of the encoder.
     pub fn get_compression_results(self) -> (Vec<ANSComponentModel4Encoder>, Vec<u16>, State) {
         (self.model.component_models, self.stream, self.state)
     }
 
-    /// Returns the current phase of the compressor, that is: the current state and the index of the last chunk of 32 bits
-    /// that have been normalized.
-    ///
-    /// An [`ANSCompressorPhase`] can be utilized to restore the state of the compressor at a given point in time. In the
-    /// specific, if the compressor actual phase is `phase`, then the next decode symbol will be the same as the one
-    /// that led the compressor to the phase `phase`.
+    /// Returns the current [`ANSCompressorPhase`] of the compressor.
     pub fn get_current_compressor_phase(&self) -> ANSCompressorPhase {
         ANSCompressorPhase {
             state: self.state,

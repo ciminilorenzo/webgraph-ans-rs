@@ -3,12 +3,12 @@ use crate::ans::models::component_model4encoder::ANSComponentModel4Encoder;
 use crate::bvgraph::BVGraphComponent;
 use crate::{RawSymbol, Symbol};
 
-/// The container for the whole set of models, one for each [component](BVGraphComponent) used by the ANS decoder to
-/// decode symbols.
+/// The main and unique model used by the ANS decoder to decode symbols of every [component](BVGraphComponent).
+/// Every [component](BVGraphComponent) has its own [model](ANSComponentModel4Decoder) that is used
+/// to decode its symbols.
 pub struct ANSModel4Decoder {
-
-    /// A table containing the whole set of [models](ANSComponentModel4Decoder) used by the ANS decoder, one for each
-    /// [component](BVGraphComponent).
+    /// The whole set of [models](ANSComponentModel4Decoder) used by the ANS decoder, one for
+    /// each [component](BVGraphComponent).
     pub tables: Vec<ANSComponentModel4Decoder>,
 }
 

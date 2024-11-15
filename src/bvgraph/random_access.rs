@@ -31,10 +31,24 @@ use crate::bvgraph::factories::EF;
 pub struct ANSBvGraph();
 
 impl ANSBvGraph {
-    /// Loads a previously ANS-encoded BVGraph from disk.
+    /// Loads a previously ANS-encoded [`BVGraph`] from disk.
     ///
-    /// To correctly reconstruct a previously encoded graph, the path specified in `basename`
-    /// must lead to a directory containing the following files: `basename.ans`, `basename.pointers`, and `basename.states`.
+    /// This function reconstructs a previously encoded graph using the files located in the directory
+    /// specified by the `basename`. The directory must contain the following files for the reconstruction
+    /// to succeed:
+    /// - `basename.ans`: Contains the prelude of the ANS encoding, which holds metadata about the graph.
+    /// - `basename.pointers`: Maps each [`ANSCompressorPhase`] to its corresponding state in the `.states` file.
+    /// - `basename.states`: Stores the list of states associated with each [`ANSCompressorPhase`], gathered during encoding.
+    ///
+    /// # Parameters
+    /// - `basename`: A path to the directory containing the required files.
+    ///
+    /// # Returns
+    /// - Returns a [`BvGraph`] instance.
+    ///
+    /// # Errors
+    /// - Returns an error if any of the required files (`ans`, `pointers`, `states`) are missing or
+    ///   invalid.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
     ) -> Result<BvGraph<ANSBVGraphDecoderFactory>> {
@@ -67,13 +81,13 @@ impl ANSBvGraph {
         ))
     }
 
-    /// Recompresses a BVGraph stored in `basename` and stores the result in `new_basename`.
-    /// The function stores three files with the following content:
-    /// - `basename.ans`: contains the prelude of the ANS encoding.
-    /// - `basename.pointers`: contains, for each [`ANSCompressorPhase`], the pointer to its state
-    ///     in the .states file.
-    /// - `basename.states`: contains the list of states associated to each [`ANSCompressorPhase`]
-    ///     collected during the encoding.
+    /// Recompresses a [`BVGraph`] stored in `basename` and saves the result to `new_basename`.
+    ///
+    /// This function reads an existing BVGraph, performs ANS-based recompression, and writes the resulting
+    /// compressed graph into three files in the `new_basename` location:
+    /// - `new_basename.ans`: Contains the prelude of the ANS encoding, which holds metadata about the graph.
+    /// - `new_basename.pointers`: Maps each [`ANSCompressorPhase`] to its corresponding state in the `.states` file.
+    /// - `new_basename.states`: Stores the list of states associated with each [`ANSCompressorPhase`], gathered during encoding.
     pub fn store(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
         new_basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,

@@ -56,9 +56,14 @@ impl Default for ANSModel4EncoderBuilder {
 }
 
 impl ANSModel4EncoderBuilder {
-    /// Pushes a new symbol for the given [component](BVGraphComponent) into the builder.
+    /// Pushes a new symbol for the specified [`BVGraphComponent`] into the builder.
     ///
-    /// Note: it returns an error if the pushed symbol is bigger than [MAX_RAW_SYMBOL].
+    /// # Parameters
+    /// - `symbol`: A [`RawSymbol`] representing the value to be added. This must not exceed `MAX_RAW_SYMBOL`.
+    /// - `component`: The [`BVGraphComponent`] to which the symbol belongs.
+    ///
+    /// # Errors
+    /// - Returns an error if `symbol` exceeds the maximum allowed value ([`MAX_RAW_SYMBOL`]).
     pub fn push_symbol(&mut self, symbol: RawSymbol, component: BVGraphComponent) -> Result<()> {
         if symbol > MAX_RAW_SYMBOL {
             bail!("Symbol can't be bigger than u48::MAX");

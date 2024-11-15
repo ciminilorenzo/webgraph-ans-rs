@@ -5,14 +5,13 @@ the computation on multiple computational
 units or compressing the graph to fit in the memory of a single
 one. A popular instance of the latter approach is the [WebGraph
 framework](https://dl.acm.org/doi/10.1145/988672.988752), which has been recently
-rethink and reimplemented in [Rust](https://github.com/vigna/webgraph-rs) due to 
-some Java limitations such as limited array size ($2^{31}$ elements).
+rethought and reimplemented in [Rust](https://github.com/vigna/webgraph-rs) due to 
+some Java limitations such as restricted array size ($2^{31}$ elements).
 
-This complementary project aims at enhancing compression performances by replacing
+This project aims at enhancing compression performances by replacing
 instantaneous codes used by WebGraph with a recently proposed entropy coder,
 [Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS from now on) which, together with other ideas 
-such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be 
-extremely effective.
+such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be effective.
 
 ## Quick setup
 This crate supplies two different unit structs exposing methods to load a previously ANS-encoded BvGraph or recompress
@@ -28,6 +27,8 @@ To load a [`BvGraphSeq`], you only need the `BASENAME.ans` file. Then, you can u
  let graph = ANSBvGraphSeq::load("BASENAME")?;
 ```
 
+Once a [`BvGraphSeq`], you can use it to visit sequentially the graph.
+
 ### Loading a BVGraph with ANSBvGraph
 To load a [`BvGraph`] the user needs to supply the following files: `BASENAME.ans`, `BASENAME.pointers` and 
 `BASENAME.states`.
@@ -35,6 +36,8 @@ To load a [`BvGraph`] the user needs to supply the following files: `BASENAME.an
 ```ignore
  let graph = ANSBvGraph::load("BASENAME")?;
 ```
+
+Once a [`BvGraph`], you can use it to visit the graph, even randomly.
 
 ### Recompressing a BvGraph using bvcomp
 No matter which approach you use, recompressing a BvGraph will produce the `<graph_name>.ans`, 

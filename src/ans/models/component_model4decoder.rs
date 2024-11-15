@@ -15,14 +15,16 @@ pub struct DecoderModelEntry {
     /// The cumulative frequency of the symbol.
     pub cumul_freq: Freq,
 
-    /// A 64-bit integer, containing the number of folds that we need to successively unfold to get the raw symbol back
-    /// in the most significant 16 bits, and the quasi-folded symbol in the least significant 48 bits.
+    /// A 64-bit integer, containing the number of folds that we need to retrieve to get the original
+    /// symbol back in the most significant 16 bits, and the quasi-folded symbol in the least
+    /// significant 48 bits.
     pub quasi_folded: u64,
 }
 
 /// The ANS model used by the decoder to decode symbols of a specific BvGraph component.
 pub struct ANSComponentModel4Decoder {
-    /// A table containing, at each index, an [entry](DecoderModelEntry) for the symbol equal to that index.
+    /// A table containing, at each index, an [entry](DecoderModelEntry) associated with the [`Symbol`]
+    /// equal to that index.
     pub table: Vec<DecoderModelEntry>,
 
     /// The log2 of the frame size for this component.

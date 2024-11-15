@@ -55,6 +55,10 @@ pub struct Prelude {
 
 /// Represents the state of the compressor in a specific moment, that is: the current value of the
 /// encoder state and the current index of the stream where inserting extracted bits.
+///
+/// An [`ANSCompressorPhase`] can be used to restore the state of the compressor to a given point in time.
+/// Specifically, if the compressor actual phase is `phase`, then the next decode symbol will be
+/// the same as the one that led the compressor to the phase `phase`.
 #[derive(Debug, Clone, Copy, Epserde, MemDbg, MemSize)]
 #[zero_copy]
 #[repr(C)]

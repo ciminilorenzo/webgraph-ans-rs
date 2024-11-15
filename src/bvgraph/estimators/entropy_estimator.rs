@@ -10,7 +10,7 @@ use crate::MAX_RAW_SYMBOL;
 
 #[derive(Clone)]
 pub struct EntropyEstimator {
-    /// A table containing, for each [`BVGraphComponent`], the cost of each symbol.
+    /// A table containing, for each [`BVGraphComponent`], the cost of each of its symbols.
     table: Vec<Vec<usize>>,
 
     /// The fidelity and radix values used by each [component](BVGraphComponent).

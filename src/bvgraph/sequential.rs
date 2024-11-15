@@ -11,10 +11,21 @@ use webgraph::prelude::BvGraphSeq;
 pub struct ANSBvGraphSeq();
 
 impl ANSBvGraphSeq {
-    /// Loads a previously ANS-encoded BVSeqGraph from disk.
+    /// Loads a previously ANS-encoded [`BVSeqGraph`] from disk.
     ///
-    /// To correctly reconstruct a previously encoded graph, the path specified in `basename`
-    /// must lead to a directory containing the file `basename.ans`.
+    /// This function reconstructs an encoded sequential graph using the file located at the specified
+    /// `basename`. The function expects the presence of a single file, `basename.ans`, which contains the
+    /// necessary prelude information for decoding.
+    ///
+    /// # Parameters
+    /// - `basename`: A path to the base name of the ANS-encoded graph. This should be the path to the
+    ///   directory containing the `basename.ans` file, without the file extension.
+    ///
+    /// # Returns
+    /// - Returns a [`BvGraphSeq`] instance.
+    ///
+    /// # Errors
+    /// - Returns an error if the `basename.ans` file is missing, unreadable, or improperly formatted.
     pub fn load(
         basename: impl AsRef<std::path::Path> + AsRef<std::ffi::OsStr>,
     ) -> anyhow::Result<BvGraphSeq<ANSBVGraphSeqDecoderFactory>> {

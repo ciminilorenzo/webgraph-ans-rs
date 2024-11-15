@@ -12,8 +12,9 @@ use crate::ans::B;
 #[repr(C)]
 #[zero_copy]
 pub struct EncoderModelEntry {
-    /// The upperbound of the symbol, that is the maximum value starting from which we can safely encode this specific
-    /// symbol without overflowing the interval in which the state of the compressor can be.
+    /// The upperbound of the symbol, that is the maximum value starting from which we can safely
+    /// encode this symbol without overflowing the interval in which the state of the compressor
+    /// is allowed to be.
     pub upperbound: u32,
 
     /// The cumulative frequency of the symbol.
@@ -34,9 +35,10 @@ impl EncoderModelEntry {
 }
 
 #[derive(Clone, MemDbg, MemSize, Epserde, Debug)]
-/// The ANS model used by the encoder to encode symbols of a specific component.
+/// The ANS model used by the encoder to encode [`Symbol`] of a specific component.
 pub struct ANSComponentModel4Encoder {
-    /// A table containing, at each index, the data related to the [`Symbol`] at that index.
+    /// A table containing, at each index, an [entry](EncoderModelEntry) associated with the [`Symbol`]
+    /// equal to that index.
     pub table: Vec<EncoderModelEntry>,
 
     /// The log2 of the frame size for this component.
