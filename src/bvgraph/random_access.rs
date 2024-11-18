@@ -31,7 +31,7 @@ use crate::bvgraph::factories::EF;
 pub struct ANSBvGraph();
 
 impl ANSBvGraph {
-    /// Loads a previously ANS-encoded [`BVGraph`] from disk.
+    /// Loads a previously ANS-encoded [`BvGraph`] from disk.
     ///
     /// This function reconstructs a previously encoded graph using the files located in the directory
     /// specified by the `basename`. The directory must contain the following files for the reconstruction
@@ -81,7 +81,7 @@ impl ANSBvGraph {
         ))
     }
 
-    /// Recompresses a [`BVGraph`] stored in `basename` and saves the result to `new_basename`.
+    /// Recompresses a [`BvGraph`] stored in `basename` and saves the result to `new_basename`.
     ///
     /// This function reads an existing BVGraph, performs ANS-based recompression, and writes the resulting
     /// compressed graph into three files in the `new_basename` location:

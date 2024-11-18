@@ -8,10 +8,10 @@ framework](https://dl.acm.org/doi/10.1145/988672.988752), which has been recentl
 rethought and reimplemented in [Rust](https://github.com/vigna/webgraph-rs) due to 
 some Java limitations such as restricted array size ($2^{31}$ elements).
 
-This project aims at enhancing compression performances by replacing
+This project aims to enhance compression performances by replacing
 instantaneous codes used by WebGraph with a recently proposed entropy coder,
-[Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS from now on) which, together with other ideas 
-such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be effective.
+[Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS from now on) which, used together with other ideas
+such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be incredibly effective.
 
 ## Quick setup
 This crate supplies two different unit structs exposing methods to load a previously ANS-encoded BvGraph or recompress
@@ -107,7 +107,7 @@ Ps: the tables present in the next sections are computed using `percomponent_ana
 see the performances on your machine running the mentioned scripts.
 
 ### Standard compression
-The next tables show the comparison between WebGraph and the proposed methodology. In particular, given a graph:
+Next tables show the comparison between WebGraph and the proposed methodology. In particular, given a graph:
 - **BVGraph** is the size of the compressed graph using WebGraph;
 - **ANSBVGraph** is the size of the file resulting from the compression of the graph with the proposed methodology; 
 - **bit/link** represents the number of bits required to represent an arc of the graph;
@@ -135,10 +135,6 @@ patterns present in web graphs, are compressed with a better outcome.
 | hollywood-2011 | 139.6MiB | 132.0MiB   | 4.834 (-5%)  | 10.2MiB (+245%)  | 142.2MiB | 32.0 (+64.9%)         |
 | twitter-2010   | 2.4GiB   | 2.2GiB     | 12.974 (-8%) | 194.1MiB (+237%) | 2.4GiB   | 45.0 (+61.0%)         |
 
-
-
-
-
 The next table gives a more in-depth look at the compression results shown above. In particular, the compression rates 
 of the proposed methodology are shown and compared with those of WebGraph for each individual component of the BVGraph 
 format, allowing the performance of compression using ANS to be highlighted without taking into account the
@@ -157,7 +153,7 @@ cost associated with storing the models.
 
 
 ### High compression
-Table next table shows instead the encoding results of the high-compressed graphs, with an average increase of the 
+The next table shows instead the encoding results of the high-compressed graphs, with an average increase of the 
 compression performances of around 10% even in this scenario. Like in the previous results, the sequential speed, which 
 measures the time needed to enumerate the successors of all graph nodes visited sequentially, increases in a reasonable
 manner allowing the user to retrieve the data at very high speed despite the additional
@@ -190,9 +186,8 @@ WebGraph.
 | twitter-2010   | 26.2MiB (-18.7%)  | 13.5MiB (-5.9%)   | 97.8MiB (+9.6%)  | 6.3MiB (-51.3%)   | 2.0GiB (-8.8%)   |
 
 ### Conclusions 
-The final approach correctly uses ANS as a second step of compression over
-the encoding employing the BV format, successfully achieving the goal of improving its
-excellent performances while maintaining fast access time. The average increase in
+The proposed methodology has shown to be an excellent alternative to encode the BV format representation 
+of a web graph. The average increase in
 performance is by no means negligible, with an average value of 10% there is a saving in
 storage, which with very large web graphs can be significant.
 The proposed methodology represents the first and unique attempt to make this encoding

@@ -11,7 +11,7 @@ use webgraph::prelude::BvGraphSeq;
 pub struct ANSBvGraphSeq();
 
 impl ANSBvGraphSeq {
-    /// Loads a previously ANS-encoded [`BVSeqGraph`] from disk.
+    /// Loads a previously ANS-encoded [`BvGraphSeq`] from disk.
     ///
     /// This function reconstructs an encoded sequential graph using the file located at the specified
     /// `basename`. The function expects the presence of a single file, `basename.ans`, which contains the
