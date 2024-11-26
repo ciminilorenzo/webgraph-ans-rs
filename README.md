@@ -10,15 +10,37 @@ some Java limitations such as restricted array size ($2^{31}$ elements).
 
 This project aims to enhance compression performances by replacing
 instantaneous codes used by WebGraph with a recently proposed entropy coder,
-[Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) (ANS from now on) which, used together with other ideas
+[Asymmetrical Numeral Systems](https://en.wikipedia.org/wiki/Asymmetric_numeral_systems) which, used together with other ideas
 such as [symbol folding](https://dl.acm.org/doi/10.1145/3397175), has shown to be incredibly effective.
 
-## Quick setup
-This crate supplies two different unit structs exposing methods to load a previously ANS-encoded BvGraph or recompress
-a BvGraph using the ANS-based approach.
-
 Since this crate is based on [WebGraph](https://github.com/vigna/webgraph-rs), please refer to its
-docs to learn more about the files and structs cited next.
+docs to learn more about the files and structs mentioned next.
+
+### Recompressing a BvGraph
+Recompressing a BvGraph will produce the `<graph_name>.ans`,
+`<graph_name>.pointers` and`<graph_name>.states` files in the output directory.
+
+1. Compile the bvcomp binary:
+
+```ignore
+$ cargo build --release --bin bvcomp
+```
+
+2. Run bvcomp to recompress the graph
+
+```ignore
+$ ./target/release/bvcomp <path_to_graph> <output_dir> <new_graph_name> [<compression_params>]
+```
+For example
+
+```ignore
+$ ./target/release/bvcomp tests/data/cnr-2000/cnr-2000 ans-cnr-2000
+```
+
+This command recompresses the cnr-2000.graph file located in tests/data/cnr-2000/ and saves the output in
+current directory with the name ans-cnr-2000.
+
+Note: [compression_params] is optional. If omitted, [`default`] values are used.
 
 ### Loading a BVGraphSeq with ANSBvGraphSeq
 To load a [`BvGraphSeq`], you only need the `BASENAME.ans` file. Then, you can use `ANSBvGraphSeq`:
@@ -38,49 +60,6 @@ To load a [`BvGraph`] the user needs to supply the following files: `BASENAME.an
 ```
 
 Once a [`BvGraph`], you can use it to visit the graph, even randomly.
-
-### Recompressing a BvGraph using bvcomp
-No matter which approach you use, recompressing a BvGraph will produce the `<graph_name>.ans`, 
-`<graph_name>.pointers` and`<graph_name>.states` files in the output directory.
-
-The first approach is using the bvcomp binary: 
-
-1. Compile the bvcomp binary:
-
-```ignore
-$ cargo build --release --bin bvcomp
-```
-
-2. Run bvcomp to recompress the graph
-
-```ignore
-$ ./target/release/bvcomp <path_to_graph> <output_dir> <new_graph_name> [<compression_params>]
-```
-For example
-
-```ignore
-$ ./target/release/bvcomp tests/data/cnr-2000/cnr-2000 ans-cnr-2000
-```
-
-This command recompresses the cnr-2000.graph file located in tests/data/cnr-2000/ and saves the output in 
-current directory with the name ans-cnr-2000. 
-
-Note: [compression_params] is optional. If omitted, [`default`] values are used.
-
-### Recompressing a BvGraph using ANSBvGraph::store()
-ANSBvGraph can be even used to recompress a BvGraph using the ANS-based approach. You just need
-to use the method `ANSBvGraph::store()` to indicate where the BvGraph is located and where
-the output of the encoding must be located, together with customized compression parameters.
-
-```ignore
- ANSBvGraph::store(
-        basename,
-        new_basename,
-        compression_window,
-        max_ref_count,
-        min_interval_length,
- )?;
-```
 
 <details>
   <summary> <h2> Results </h2> </summary>

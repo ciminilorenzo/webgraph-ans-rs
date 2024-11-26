@@ -8,6 +8,13 @@ use crate::utils::ans_utils::fold_without_streaming_out;
 use crate::{Freq, Symbol};
 use crate::MAX_RAW_SYMBOL;
 
+/// An estimator that returns that, given a specific [`BVGraphComponent`], returns the cost
+/// of one of its [`Symbol`] calculated as follows:
+///
+/// C(s) = lg(1 / ps) · 2^16 + (folds · radix) · 2^16
+///
+/// where folds is the number of folds of size radix that must be performed to fold that specific
+/// symbol.
 #[derive(Clone)]
 pub struct EntropyEstimator {
     /// A table containing, for each [`BVGraphComponent`], the cost of each of its symbols.
